@@ -10,6 +10,7 @@ class AskQuestionCubit extends Cubit<AskQuestionState> {
     required String judul,
     required String isi,
     required List<int> tugasFungsiIds,
+    String? selectedTeam,
     bool isPublic = true,
   }) async {
     emit(AskQuestionSubmitting());
@@ -19,6 +20,7 @@ class AskQuestionCubit extends Cubit<AskQuestionState> {
         judul: judul,
         isi: isi,
         tugasFungsiIds: tugasFungsiIds,
+        selectedTeam: selectedTeam,
         isPublic: isPublic,
       );
       emit(AskQuestionSuccess());

@@ -1,5 +1,7 @@
+import 'user_role.dart';
+
 class UserModel {
-  final int? id;
+  final String? id;
   final String name;
   final String email;
   final String? role;
@@ -19,9 +21,12 @@ class UserModel {
     this.token,
   });
 
+  /// Helper untuk mendapatkan enum role yang terstandarisasi
+  UserRole get userRole => UserRole.fromString(role);
+
   factory UserModel.fromJson(Map<String, dynamic> json, {String? token}) {
     return UserModel(
-      id: json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? ''),
+      id: json['id']?.toString(),
       name: json['name']?.toString() ?? json['nama']?.toString() ?? '-',
       email: json['email']?.toString() ?? '-',
       role: json['role']?.toString(),
@@ -46,7 +51,7 @@ class UserModel {
   }
 
   UserModel copyWith({
-    int? id,
+    String? id,
     String? name,
     String? email,
     String? role,

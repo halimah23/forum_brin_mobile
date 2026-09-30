@@ -5,7 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
-import '../../dashboard/screens/dashboard_screen.dart';
+import '../../dashboard/screens/role_router_screen.dart';
 import '../cubits/auth_cubit.dart';
 import '../cubits/auth_state.dart';
 
@@ -69,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => DashboardScreen(user: state.user),
+                        builder: (context) => RoleRouterScreen(user: state.user),
                       ),
                     );
                   } else if (state is AuthError) {
@@ -83,42 +83,57 @@ class _LoginScreenState extends State<LoginScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Logo
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: AppColors.darkBlue,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Icon(
-                          Icons.forum_rounded,
-                          color: Colors.white,
-                          size: 42,
+                      Center(
+                        child: Container(
+                          width: 80,
+                          height: 80,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withAlpha(15),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Image.asset(
+                            AppConstants.logoAssetPath,
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 24),
                       const Text(
                         AppConstants.appTitle,
-                        style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primaryRed,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       const Text(
                         AppConstants.appSubtitle,
+                        textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 15,
+                          fontSize: 14,
                           color: AppColors.textSecondary,
-                          height: 1.5,
+                          height: 1.4,
                         ),
                       ),
                       const SizedBox(height: 36),
                       const Text(
-                        'Email',
+                        'Email Pegawai',
                         style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                       ),
                       const SizedBox(height: 8),
                       CustomTextField(
                         controller: emailController,
-                        hintText: 'Masukkan email',
+                        hintText: 'nama@brin.go.id',
                         keyboardType: TextInputType.emailAddress,
                         prefixIcon: const Icon(Icons.email_outlined),
                       ),
@@ -130,7 +145,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 8),
                       CustomTextField(
                         controller: passwordController,
-                        hintText: 'Masukkan password',
+                        hintText: 'Masukkan password akun Anda',
                         obscureText: obscurePassword,
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
@@ -151,29 +166,30 @@ class _LoginScreenState extends State<LoginScreen> {
                         text: 'Masuk',
                         onPressed: handleLogin,
                         isLoading: isLoading,
-                        backgroundColor: AppColors.darkBlue,
+                        backgroundColor: AppColors.primaryRed,
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
                       OutlinedButton.icon(
                         onPressed: isLoading
                             ? null
                             : () {
-                                showMessage('Login SSO belum diintegrasikan.');
+                                showMessage('Login SSO BRIN segera hadir pada pembaruan mendatang.');
                               },
-                        icon: const Icon(Icons.account_circle_outlined),
-                        label: const Text('Login dengan SSO'),
+                        icon: const Icon(Icons.badge_outlined),
+                        label: const Text('Login dengan SSO BRIN (Segera Hadir)'),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size.fromHeight(52),
+                          foregroundColor: Colors.grey.shade700,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 36),
-                      const Text(
-                        AppConstants.appTitle,
+                      const SizedBox(height: 32),
+                      Text(
+                        'Badan Riset dan Inovasi Nasional (BRIN)',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                       ),
                     ],
                   );
