@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/models/user_role.dart';
 import 'admin_dashboard_screen.dart';
+import 'eksekutif_dashboard_screen.dart';
 import 'ketua_tim_dashboard_screen.dart';
 import 'member_dashboard_screen.dart';
 import 'super_admin_dashboard_screen.dart';
@@ -26,6 +27,9 @@ class RoleRouterScreen extends StatelessWidget {
 
       case UserRole.ketuaTim:
         return KetuaTimDashboardScreen(user: user);
+
+      case UserRole.eksekutif:
+        return EksekutifDashboardScreen(user: user);
 
       case UserRole.member:
         return MemberDashboardScreen(user: user);

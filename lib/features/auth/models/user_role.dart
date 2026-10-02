@@ -2,6 +2,7 @@ enum UserRole {
   superAdmin,
   admin,
   ketuaTim,
+  eksekutif,
   member;
 
   static UserRole fromString(String? roleStr) {
@@ -19,11 +20,20 @@ enum UserRole {
       case 'anggota_tim':
       case 'staf':
       case 'staff':
+      case 'staf_admin':
+      case 'admin_lksdm':
+      case 'admin_pusat':
+      case 'adminpusat':
         return UserRole.admin;
       case 'ketua_tim':
       case 'ketuatim':
       case 'leader':
         return UserRole.ketuaTim;
+      case 'eksekutif':
+      case 'executive':
+      case 'pimpinan':
+      case 'direktur':
+        return UserRole.eksekutif;
       case 'member':
       case 'pegawai':
       case 'user':
@@ -37,11 +47,13 @@ enum UserRole {
       case UserRole.superAdmin:
         return 'Super Admin';
       case UserRole.admin:
-        return 'Admin';
+        return 'Staf Admin';
       case UserRole.ketuaTim:
         return 'Ketua Tim';
+      case UserRole.eksekutif:
+        return 'Eksekutif';
       case UserRole.member:
-        return 'Member';
+        return 'Pegawai';
     }
   }
 
@@ -53,6 +65,8 @@ enum UserRole {
         return 'admin';
       case UserRole.ketuaTim:
         return 'ketua_tim';
+      case UserRole.eksekutif:
+        return 'eksekutif';
       case UserRole.member:
         return 'member';
     }

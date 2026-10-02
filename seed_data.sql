@@ -1,169 +1,46 @@
--- ==========================================
--- SKEMA SUPABASE & DATA SEEDER BOSDM CONNECT
--- ==========================================
+-- ==============================================================
+-- DATA SEEDER LENGKAP PLATFORM BOSDM CONNECT (BRIN)
+-- Memuat: Auth Users, Profiles Role, Master Tusi (106 Items / 15 Tim), Tiket & Jawaban
+-- ==============================================================
 
--- 1. Create profiles table linked to auth.users
-CREATE TABLE IF NOT EXISTS public.profiles (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  email TEXT NOT NULL,
-  role TEXT DEFAULT 'pegawai',
-  unit TEXT,
-  tim TEXT,
-  jabatan TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- 1. SEEDER AUTH USERS (Memastikan ID User Ada di Schema auth.users)
+INSERT INTO auth.users (
+  id,
+  instance_id,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  created_at,
+  updated_at,
+  role,
+  aud
+) VALUES 
+  ('11111111-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', 'superadmin@brin.go.id', crypt('Password123!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Super Admin BOSDM","role":"super_admin"}', NOW(), NOW(), 'authenticated', 'authenticated'),
+  ('22222222-2222-2222-2222-222222222222', '00000000-0000-0000-0000-000000000000', 'ketua.ortala@brin.go.id', crypt('Password123!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Dr. Hendra (Ketua Tim Ortala)","role":"ketua_tim"}', NOW(), NOW(), 'authenticated', 'authenticated'),
+  ('33333333-3333-3333-3333-333333333333', '00000000-0000-0000-0000-000000000000', 'ketua.jf1@brin.go.id', crypt('Password123!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Rina Wati, S.T. (Ketua Tim Mutasi JF 1)","role":"ketua_tim"}', NOW(), NOW(), 'authenticated', 'authenticated'),
+  ('44444444-4444-4444-4444-444444444444', '00000000-0000-0000-0000-000000000000', 'analis.jf1@brin.go.id', crypt('Password123!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Analis JF Peneliti","role":"admin"}', NOW(), NOW(), 'authenticated', 'authenticated'),
+  ('55555555-5555-5555-5555-555555555555', '00000000-0000-0000-0000-000000000000', 'admin.lksdm.bandung@brin.go.id', crypt('Password123!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Staf LKSDM Kawasan Bandung","role":"admin"}', NOW(), NOW(), 'authenticated', 'authenticated'),
+  ('66666666-6666-6666-6666-666666666666', '00000000-0000-0000-0000-000000000000', 'direktur.bosdm@brin.go.id', crypt('Password123!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Dr. Ir. Bambang (Direktur BOSDM)","role":"eksekutif"}', NOW(), NOW(), 'authenticated', 'authenticated'),
+  ('77777777-7777-7777-7777-777777777777', '00000000-0000-0000-0000-000000000000', 'budi.pegawai@brin.go.id', crypt('Password123!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Budi Santoso (Pegawai Periset)","role":"member"}', NOW(), NOW(), 'authenticated', 'authenticated'),
+  ('88888888-8888-8888-8888-888888888888', '00000000-0000-0000-0000-000000000000', 'siti.periset@brin.go.id', crypt('Password123!', gen_salt('bf')), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Siti Rahma (Pegawai Administrasi)","role":"member"}', NOW(), NOW(), 'authenticated', 'authenticated')
+ON CONFLICT (id) DO NOTHING;
 
--- Trigger to automatically insert a profile when a new auth user signs up
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO public.profiles (id, name, email, role, unit, tim, jabatan)
-  VALUES (
-    NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'name', NEW.email),
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'role', 'pegawai'),
-    NEW.raw_user_meta_data->>'unit',
-    NEW.raw_user_meta_data->>'tim',
-    NEW.raw_user_meta_data->>'jabatan'
-  );
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+-- 2. SEEDER PROFILES (BERBAGAI ROLE & TIM/LKSDM)
+INSERT INTO public.profiles (id, name, email, role, unit, tim, jabatan) VALUES
+  ('11111111-1111-1111-1111-111111111111', 'Super Admin BOSDM', 'superadmin@brin.go.id', 'super_admin', 'BOSDM Pusat', 'Tim Pengelolaan Data dan Informasi SDM', 'Administrator Utama'),
+  ('22222222-2222-2222-2222-222222222222', 'Dr. Hendra (Ketua Tim Ortala)', 'ketua.ortala@brin.go.id', 'ketua_tim', 'BOSDM Pusat', 'Tim Ortala', 'Ketua Tim Organisasi & Tata Laksana'),
+  ('33333333-3333-3333-3333-333333333333', 'Rina Wati, S.T. (Ketua Tim Mutasi JF 1)', 'ketua.jf1@brin.go.id', 'ketua_tim', 'BOSDM Pusat', 'Tim Mutasi dan Pengelolaan JF 1', 'Ketua Tim Mutasi JF 1'),
+  ('44444444-4444-4444-4444-444444444444', 'Analis JF Peneliti', 'analis.jf1@brin.go.id', 'admin', 'BOSDM Pusat', 'Tim Mutasi dan Pengelolaan JF 1', 'Analis SDM Layanan JF'),
+  ('55555555-5555-5555-5555-555555555555', 'Staf LKSDM Kawasan Bandung', 'admin.lksdm.bandung@brin.go.id', 'admin', 'LKSDM Bandung', 'Tim LKSDM', 'Staf Layanan Kawasan Bandung'),
+  ('66666666-6666-6666-6666-666666666666', 'Dr. Ir. Bambang (Direktur BOSDM)', 'direktur.bosdm@brin.go.id', 'eksekutif', 'BOSDM Pusat', 'Pimpinan', 'Direktur BOSDM BRIN'),
+  ('77777777-7777-7777-7777-777777777777', 'Budi Santoso (Pegawai Periset)', 'budi.pegawai@brin.go.id', 'pegawai', 'PR Fisika', 'Kelompok Riset Optik', 'Periset Ahli Muda'),
+  ('88888888-8888-8888-8888-888888888888', 'Siti Rahma (Pegawai Administrasi)', 'siti.periset@brin.go.id', 'pegawai', 'PR Bioteknologi', 'Tata Usaha', 'Pranata Humas')
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name, email = EXCLUDED.email, role = EXCLUDED.role, unit = EXCLUDED.unit, tim = EXCLUDED.tim, jabatan = EXCLUDED.jabatan;
 
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- 2. Create tugas_fungsi table
-CREATE TABLE IF NOT EXISTS public.tugas_fungsi (
-  id BIGSERIAL PRIMARY KEY,
-  kode TEXT,
-  nama TEXT NOT NULL,
-  team_name TEXT
-);
-
--- 3. Create questions table
-CREATE TABLE IF NOT EXISTS public.questions (
-  id BIGSERIAL PRIMARY KEY,
-  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  ticket_number TEXT,
-  judul TEXT NOT NULL,
-  isi TEXT NOT NULL,
-  status TEXT DEFAULT 'menunggu_disposisi',
-  target_tim TEXT,
-  assigned_to TEXT,
-  tugas_fungsi_nama TEXT,
-  is_public BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 4. Create question_tugas_fungsi junction table
-CREATE TABLE IF NOT EXISTS public.question_tugas_fungsi (
-  question_id BIGINT REFERENCES public.questions(id) ON DELETE CASCADE,
-  tugas_fungsi_id BIGINT REFERENCES public.tugas_fungsi(id) ON DELETE CASCADE,
-  PRIMARY KEY (question_id, tugas_fungsi_id)
-);
-
--- 5. Create answers table for responses from teams/bots
-CREATE TABLE IF NOT EXISTS public.answers (
-  id BIGSERIAL PRIMARY KEY,
-  question_id BIGINT NOT NULL REFERENCES public.questions(id) ON DELETE CASCADE,
-  penjawab_nama TEXT NOT NULL,
-  penjawab_role TEXT DEFAULT 'Tim Layanan SDM BRIN',
-  isi_jawaban TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Enable RLS on all tables
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tugas_fungsi ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.questions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.question_tugas_fungsi ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.answers ENABLE ROW LEVEL SECURITY;
-
--- Policies for profiles
-CREATE POLICY "Public profiles are viewable by authenticated users"
-  ON public.profiles FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Users can update own profile"
-  ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id);
-
--- Policies for tugas_fungsi
-CREATE POLICY "Tugas fungsi viewable by authenticated users"
-  ON public.tugas_fungsi FOR SELECT TO authenticated USING (true);
-
--- Policies for questions
-CREATE POLICY "Questions viewable if public or owned by user"
-  ON public.questions FOR SELECT TO authenticated
-  USING (is_public = true OR auth.uid() = user_id);
-
-CREATE POLICY "Users can create questions for themselves"
-  ON public.questions FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own questions"
-  ON public.questions FOR UPDATE TO authenticated
-  USING (auth.uid() = user_id);
-
--- Policies for question_tugas_fungsi
-CREATE POLICY "Question categories viewable by authenticated users"
-  ON public.question_tugas_fungsi FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Authenticated users can link categories"
-  ON public.question_tugas_fungsi FOR INSERT TO authenticated WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.questions
-      WHERE id = question_id AND user_id = auth.uid()
-    )
-  );
-
--- Policies for answers
-CREATE POLICY "Answers viewable by authenticated users"
-  ON public.answers FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Authenticated users can insert answers"
-  ON public.answers FOR INSERT TO authenticated WITH CHECK (true);
-
-
--- ==========================================
--- ANALYTICS VIEWS (TOP CHART & TICKETING)
--- ==========================================
-
--- 1. View Top Chart Pertanyaan Paling Populer / Sering Ditanyakan per Tugas Fungsi
-CREATE OR REPLACE VIEW public.view_top_chart_questions AS
-SELECT 
-  tf.id AS tugas_fungsi_id,
-  tf.kode,
-  tf.nama AS tugas_fungsi_nama,
-  tf.team_name,
-  COUNT(q.id) AS total_pertanyaan,
-  COUNT(CASE WHEN q.status = 'selesai' OR q.status = 'dijawab' THEN 1 END) AS total_terjawab,
-  COUNT(CASE WHEN q.status = 'menunggu_disposisi' THEN 1 END) AS total_pending
-FROM public.tugas_fungsi tf
-LEFT JOIN public.question_tugas_fungsi qtf ON tf.id = qtf.tugas_fungsi_id
-LEFT JOIN public.questions q ON qtf.question_id = q.id
-GROUP BY tf.id, tf.kode, tf.nama, tf.team_name
-ORDER BY total_pertanyaan DESC, tf.id ASC;
-
--- 2. View Ringkasan Statistik Tiket per Tim BOSDM
-CREATE OR REPLACE VIEW public.view_team_ticket_stats AS
-SELECT 
-  COALESCE(q.target_tim, 'Tim Layanan SDM BOSDM') AS team_name,
-  COUNT(q.id) AS total_tiket,
-  COUNT(CASE WHEN q.status = 'menunggu_disposisi' THEN 1 END) AS total_menunggu_disposisi,
-  COUNT(CASE WHEN q.status = 'sedang_diproses' THEN 1 END) AS total_sedang_diproses,
-  COUNT(CASE WHEN q.status = 'dijawab' OR q.status = 'selesai' THEN 1 END) AS total_selesai
-FROM public.questions q
-GROUP BY COALESCE(q.target_tim, 'Tim Layanan SDM BOSDM')
-ORDER BY total_tiket DESC;
-
--- ==========================================
--- DATA SEEDER TUGAS & FUNGSI (15 TIM BOSDM)
--- ==========================================
-
+-- 3. SEEDER KATALOG MASTER TUGAS FUNGSI (106 TUSI - 15 TIM)
 INSERT INTO public.tugas_fungsi (id, kode, nama, team_name) VALUES
   -- 1. Tim Ortala
   (1, 'BRIN-04.03.01.01', 'BRIN-04.03.01.01 - Evaluasi Organisasi', 'Tim Ortala'),
@@ -303,7 +180,34 @@ INSERT INTO public.tugas_fungsi (id, kode, nama, team_name) VALUES
 ON CONFLICT (id) DO UPDATE 
 SET kode = EXCLUDED.kode, nama = EXCLUDED.nama, team_name = EXCLUDED.team_name;
 
--- Sinkronisasi sequence PostgreSQL agar ID tiket/jawaban/tusi baru tidak bentrok
+-- 4. SEEDER TIKET PERTANYAAN (MEMUAT VARIASI STATUS TICKETING & ROUTING TIM)
+INSERT INTO public.questions (id, user_id, ticket_number, judul, isi, status, target_tim, assigned_to, tugas_fungsi_nama, is_public, created_at) VALUES
+  (101, '77777777-7777-7777-7777-777777777777', 'TKT-202609-001', 'Persyaratan Usulan Hasil Kerja Maksimal (HKM) Peneliti Utama', 'Mohon informasi kelengkapan dokumen pendukung usulan HKM Peneliti jenjang Utama tahun 2026.', 'dijawab', 'Tim Mutasi dan Pengelolaan JF 1', 'Analis JF Peneliti', 'BRIN-04.03.06.02.01.01 - Penilaian Usulan HKM', true, NOW() - INTERVAL '2 days'),
+  
+  (102, '88888888-8888-8888-8888-888888888888', 'TKT-202609-002', 'Prosedur Penyusunan Evaluasi Jabatan Fungsional', 'Bagaimana tahapan pengajuan review Evaluasi Jabatan untuk unit riset baru?', 'sedang_diproses', 'Tim Ortala', 'Dr. Hendra', 'BRIN-04.03.01.04 - Penyusunan Evaluasi Jabatan', true, NOW() - INTERVAL '1 day'),
+  
+  (103, '77777777-7777-7777-7777-777777777777', 'TKT-202609-003', 'Pengajuan Cuti di Luar Tanggungan Negara (CLTN)', 'Apakah pengajuan CLTN untuk keperluan studi mandiri memerlukan rekomendasi dari kepala pusat?', 'menunggu_disposisi', 'Tim Internalisasi BerAKHLAK dan Pembinaan Disiplin ASN', NULL, 'BRIN-04.03.08.01 - CLTN (Cuti di Luar Tanggungan Negara)', false, NOW() - INTERVAL '5 hours'),
+
+  (104, '88888888-8888-8888-8888-888888888888', 'TKT-202609-004', 'Pencetakan Ulang ID Card Pegawai Hilang', 'ID card saya hilang saat penugasan lapangan. Apa saja berkas yang harus dilampirkan?', 'selesai', 'Tim Pengelolaan Data dan Informasi SDM', 'Super Admin BOSDM', 'BRIN-04.03.09.04 - Pencetakan Ulang ID Card Baru/Karena Hilang/Rusak', true, NOW() - INTERVAL '4 days')
+ON CONFLICT (id) DO UPDATE SET
+  ticket_number = EXCLUDED.ticket_number, judul = EXCLUDED.judul, isi = EXCLUDED.isi, status = EXCLUDED.status, target_tim = EXCLUDED.target_tim, assigned_to = EXCLUDED.assigned_to, tugas_fungsi_nama = EXCLUDED.tugas_fungsi_nama;
+
+-- 5. SEEDER RELASI PERTANYAAN & TUSI
+INSERT INTO public.question_tugas_fungsi (question_id, tugas_fungsi_id) VALUES
+  (101, 44),
+  (102, 4),
+  (103, 68),
+  (104, 81)
+ON CONFLICT DO NOTHING;
+
+-- 6. SEEDER JAWABAN RESMI TIM & AUTO-RESPONDER
+INSERT INTO public.answers (id, question_id, penjawab_nama, penjawab_role, isi_jawaban, created_at) VALUES
+  (1001, 101, 'Tim Mutasi dan Pengelolaan JF 1', 'Tim Layanan SDM BRIN', 'Halo Budi! Berkas pendukung usulan HKM Peneliti Utama mencakup: 1. Naskah Karya Tulis Ilmiah terpublikasi, 2. Surat Pernyataan Keabsahan Karya, 3. Rekomendasi Majelis Penilai. Berkas diunggah via portal SIMARIN.', NOW() - INTERVAL '1 day'),
+  (1002, 104, 'Tim Pengelolaan Data dan Informasi SDM', 'Staf Layanan Data SDM', 'Permohonan ID Card baru telah disetujui. Surat Keterangan Hilang dari Kepolisian dan Form Penggantian ID Card sudah terverifikasi. ID Card fisik dapat diambil di sekretariat BOSDM.', NOW() - INTERVAL '3 days')
+ON CONFLICT (id) DO UPDATE SET
+  penjawab_nama = EXCLUDED.penjawab_nama, penjawab_role = EXCLUDED.penjawab_role, isi_jawaban = EXCLUDED.isi_jawaban;
+
+-- 7. SINKRONISASI SEQUENCE DI POSGRESQL (MEMASTIKAN TIKET BARU PEGAWAI BISA MASUK KE DATABASE)
 SELECT setval('public.questions_id_seq', GREATEST(COALESCE((SELECT MAX(id) FROM public.questions), 1), 105));
 SELECT setval('public.answers_id_seq', GREATEST(COALESCE((SELECT MAX(id) FROM public.answers), 1), 1005));
 SELECT setval('public.tugas_fungsi_id_seq', GREATEST(COALESCE((SELECT MAX(id) FROM public.tugas_fungsi), 1), 110));

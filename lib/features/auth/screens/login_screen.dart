@@ -44,6 +44,12 @@ class _LoginScreenState extends State<LoginScreen> {
     context.read<AuthCubit>().login(email: email, password: password);
   }
 
+  void handleQuickDemoLogin(String email) {
+    emailController.text = email;
+    passwordController.text = 'password123';
+    context.read<AuthCubit>().login(email: email, password: 'password123');
+  }
+
   void showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -60,9 +66,9 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 430),
+              constraints: const BoxConstraints(maxWidth: 450),
               child: BlocConsumer<AuthCubit, AuthState>(
                 listener: (context, state) {
                   if (state is Authenticated) {
@@ -85,8 +91,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Logo
                       Center(
                         child: Container(
-                          width: 80,
-                          height: 80,
+                          width: 76,
+                          height: 76,
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: Colors.white,
@@ -105,44 +111,44 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       const Text(
                         AppConstants.appTitle,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 28,
+                          fontSize: 26,
                           fontWeight: FontWeight.bold,
                           color: AppColors.primaryRed,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       const Text(
                         AppConstants.appSubtitle,
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 13,
                           color: AppColors.textSecondary,
-                          height: 1.4,
+                          height: 1.3,
                         ),
                       ),
-                      const SizedBox(height: 36),
+                      const SizedBox(height: 28),
                       const Text(
                         'Email Pegawai',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       CustomTextField(
                         controller: emailController,
                         hintText: 'nama@brin.go.id',
                         keyboardType: TextInputType.emailAddress,
                         prefixIcon: const Icon(Icons.email_outlined),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
                       const Text(
                         'Password',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       CustomTextField(
                         controller: passwordController,
                         hintText: 'Masukkan password akun Anda',
@@ -161,14 +167,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           },
                         ),
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 24),
                       CustomButton(
                         text: 'Masuk',
                         onPressed: handleLogin,
                         isLoading: isLoading,
                         backgroundColor: AppColors.primaryRed,
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       OutlinedButton.icon(
                         onPressed: isLoading
                             ? null
@@ -178,24 +184,128 @@ class _LoginScreenState extends State<LoginScreen> {
                         icon: const Icon(Icons.badge_outlined),
                         label: const Text('Login dengan SSO BRIN (Segera Hadir)'),
                         style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(52),
+                          minimumSize: const Size.fromHeight(48),
                           foregroundColor: Colors.grey.shade700,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 32),
+
+                      const SizedBox(height: 28),
+
+                      // PANEL DEMO QUICK LOGIN (5 ROLE USER)
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.shade200),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha(5),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.touch_app_outlined, size: 18, color: AppColors.primaryRed),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Akses Cepat Pengujian (5 Role Akun)',
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Pilih role di bawah untuk simulasi login instan:',
+                              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _buildRoleChip(
+                                  label: '🧑‍💼 Pegawai (Member)',
+                                  color: Colors.blue.shade700,
+                                  onTap: () => handleQuickDemoLogin('pegawai@brin.go.id'),
+                                ),
+                                _buildRoleChip(
+                                  label: '🛡️ Staf LKSDM',
+                                  color: Colors.teal.shade800,
+                                  onTap: () => handleQuickDemoLogin('admin.lksdm1@brin.go.id'),
+                                ),
+                                _buildRoleChip(
+                                  label: '🏢 Staf Pusat',
+                                  color: AppColors.primaryBlue,
+                                  onTap: () => handleQuickDemoLogin('admin.pusat@brin.go.id'),
+                                ),
+                                _buildRoleChip(
+                                  label: '👨‍💼 Ketua Tim',
+                                  color: Colors.purple.shade700,
+                                  onTap: () => handleQuickDemoLogin('ketuatim@brin.go.id'),
+                                ),
+                                _buildRoleChip(
+                                  label: '👔 Eksekutif',
+                                  color: const Color(0xFF283593),
+                                  onTap: () => handleQuickDemoLogin('eksekutif@brin.go.id'),
+                                ),
+                                _buildRoleChip(
+                                  label: '⚡ Super Admin',
+                                  color: const Color(0xFF512DA8),
+                                  onTap: () => handleQuickDemoLogin('superadmin@brin.go.id'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
                       Text(
                         'Badan Riset dan Inovasi Nasional (BRIN)',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                        style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                       ),
                     ],
                   );
                 },
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoleChip({
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withAlpha(20),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withAlpha(80), width: 0.8),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            color: color,
           ),
         ),
       ),

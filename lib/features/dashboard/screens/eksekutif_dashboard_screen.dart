@@ -5,16 +5,15 @@ import '../../../core/constants/app_constants.dart';
 import '../../auth/cubits/auth_cubit.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/screens/login_screen.dart';
-import '../../questions/screens/ask_question_screen.dart';
 import '../../questions/screens/question_list_screen.dart';
 import '../widgets/bottom_action_menu.dart';
 import '../widgets/trending_chart_widget.dart';
 import '../widgets/user_info_card.dart';
 
-class KetuaTimDashboardScreen extends StatelessWidget {
+class EksekutifDashboardScreen extends StatelessWidget {
   final UserModel user;
 
-  const KetuaTimDashboardScreen({
+  const EksekutifDashboardScreen({
     super.key,
     required this.user,
   });
@@ -24,7 +23,7 @@ class KetuaTimDashboardScreen extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Konfirmasi Logout'),
-        content: const Text('Apakah Anda yakin ingin keluar dari akun Ketua Tim?'),
+        content: const Text('Apakah Anda yakin ingin keluar dari Panel Eksekutif?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -32,7 +31,7 @@ class KetuaTimDashboardScreen extends StatelessWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal.shade800,
+              backgroundColor: Colors.indigo.shade800,
               foregroundColor: Colors.white,
             ),
             onPressed: () => Navigator.pop(ctx, true),
@@ -55,8 +54,7 @@ class KetuaTimDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryTeal = Colors.teal.shade800;
-    final teamName = user.tim ?? 'Tim Layanan SDM BOSDM';
+    const primaryIndigo = Color(0xFF283593);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -72,29 +70,28 @@ class KetuaTimDashboardScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     AppConstants.appTitle,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: primaryTeal,
+                      color: primaryIndigo,
                     ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                     decoration: BoxDecoration(
-                      color: Colors.teal.shade50,
+                      color: Colors.indigo.shade50,
                       borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: primaryTeal, width: 0.5),
+                      border: Border.all(color: primaryIndigo, width: 0.5),
                     ),
-                    child: Text(
-                      'PANEL KETUA TIM ($teamName)',
+                    child: const Text(
+                      'PANEL EKSEKUTIF (MONITORING)',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
-                        color: primaryTeal,
+                        color: primaryIndigo,
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -104,7 +101,7 @@ class KetuaTimDashboardScreen extends StatelessWidget {
         ),
         actions: [
           PopupMenuButton<String>(
-            tooltip: 'Profil Ketua Tim',
+            tooltip: 'Profil Eksekutif',
             onSelected: (value) {
               if (value == 'logout') {
                 _handleLogout(context);
@@ -115,9 +112,9 @@ class KetuaTimDashboardScreen extends StatelessWidget {
                 value: 'profile',
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.supervised_user_circle,
-                      color: primaryTeal,
+                    const Icon(
+                      Icons.equalizer,
+                      color: primaryIndigo,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -130,9 +127,9 @@ class KetuaTimDashboardScreen extends StatelessWidget {
                             style: const TextStyle(fontWeight: FontWeight.bold),
                             overflow: TextOverflow.ellipsis,
                           ),
-                          Text(
-                            user.tim ?? 'Ketua Tim',
-                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          const Text(
+                            'Eksekutif / Pimpinan',
+                            style: TextStyle(fontSize: 11, color: Colors.grey),
                           ),
                         ],
                       ),
@@ -161,14 +158,14 @@ class KetuaTimDashboardScreen extends StatelessWidget {
                 ),
               ),
             ],
-            child: Padding(
-              padding: const EdgeInsets.only(right: 12),
+            child: const Padding(
+              padding: EdgeInsets.only(right: 12),
               child: CircleAvatar(
                 radius: 20,
-                backgroundColor: Colors.teal.shade50,
+                backgroundColor: Color(0xFFE8EAF6),
                 child: Icon(
-                  Icons.assignment_ind,
-                  color: primaryTeal,
+                  Icons.insights,
+                  color: primaryIndigo,
                 ),
               ),
             ),
@@ -186,9 +183,8 @@ class KetuaTimDashboardScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Greeting
                   Text(
-                    'Selamat datang,',
+                    'Selamat datang Pimpinan,',
                     style: TextStyle(
                       fontSize: 15,
                       color: Colors.grey.shade600,
@@ -205,12 +201,55 @@ class KetuaTimDashboardScreen extends StatelessWidget {
 
                   const SizedBox(height: 18),
 
-                  // User Info Card
                   UserInfoCard(user: user),
+
+                  const SizedBox(height: 20),
+
+                  // STATISTIK RINGKAS EKSEKUTIF
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(4),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.analytics_outlined, color: primaryIndigo),
+                            SizedBox(width: 8),
+                            Text(
+                              'Ringkasan Aktivitas Forum Kepegawaian',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Row(
+                          children: [
+                            _buildStatCard('Total Pertanyaan', '142', Colors.blue),
+                            const SizedBox(width: 10),
+                            _buildStatCard('Selesai di LKSDM', '98', Colors.teal),
+                            const SizedBox(width: 10),
+                            _buildStatCard('Eskalasi Pusat', '44', Colors.amber.shade900),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
 
                   const SizedBox(height: 24),
 
-                  // Trending Chart Widget
+                  // CHART TOPIK PERTANYAAN PALING BANYAK DITANYAKAN
                   const TrendingChartWidget(),
 
                   const SizedBox(height: 20),
@@ -224,19 +263,34 @@ class KetuaTimDashboardScreen extends StatelessWidget {
       floatingActionButton: BottomActionMenu(
         items: [
           BottomMenuItem(
-            label: 'Disposisi',
-            icon: Icons.mark_email_unread_outlined,
-            color: primaryTeal,
+            label: 'Pantau',
+            icon: Icons.forum_outlined,
+            color: primaryIndigo,
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => QuestionListScreen(
                     user: user,
-                    initialTeamFilter: user.tim,
-                    initialStatusFilter: 'menunggu_disposisi',
                     isPublicOnly: true,
-                    title: 'Antrean Masuk Publik ($teamName)',
+                    title: 'Seluruh Obrolan Publik Forum',
+                  ),
+                ),
+              );
+            },
+          ),
+          BottomMenuItem(
+            label: 'Terjawab',
+            icon: Icons.task_alt_rounded,
+            color: Colors.teal.shade700,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuestionListScreen(
+                    user: user,
+                    initialStatusFilter: 'selesai',
+                    title: 'Jawaban Terjawab (Staf & Ketua Tim)',
                   ),
                 ),
               );
@@ -244,71 +298,49 @@ class KetuaTimDashboardScreen extends StatelessWidget {
           ),
           BottomMenuItem(
             label: 'Proses',
-            icon: Icons.engineering_outlined,
-            color: Colors.blue.shade700,
+            icon: Icons.chat_bubble_rounded,
+            color: Colors.amber.shade900,
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => QuestionListScreen(
                     user: user,
-                    initialTeamFilter: user.tim,
                     initialStatusFilter: 'sedang_diproses',
-                    title: 'Sedang Ditangani ($teamName)',
-                  ),
-                ),
-              );
-            },
-          ),
-          BottomMenuItem(
-            label: 'Selesai',
-            icon: Icons.task_alt_outlined,
-            color: Colors.green.shade700,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => QuestionListScreen(
-                    user: user,
-                    initialTeamFilter: user.tim,
-                    initialStatusFilter: 'selesai',
-                    title: 'Tiket Selesai ($teamName)',
-                  ),
-                ),
-              );
-            },
-          ),
-          BottomMenuItem(
-            label: 'Forum',
-            icon: Icons.forum_outlined,
-            color: AppColors.primaryRed,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => QuestionListScreen(
-                    user: user,
-                  ),
-                ),
-              );
-            },
-          ),
-          BottomMenuItem(
-            label: 'Tanya',
-            icon: Icons.add_comment_rounded,
-            color: Colors.purple,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AskQuestionScreen(
-                    token: user.token ?? '',
+                    title: 'Obrolan Aktif Sedang Diproses',
                   ),
                 ),
               );
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String title, String count, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: color.withAlpha(20),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withAlpha(80)),
+        ),
+        child: Column(
+          children: [
+            Text(
+              count,
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              title,
+              style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

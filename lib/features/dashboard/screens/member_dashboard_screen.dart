@@ -8,7 +8,8 @@ import '../../auth/screens/login_screen.dart';
 import '../../questions/screens/ask_question_screen.dart';
 import '../../questions/screens/my_questions_screen.dart';
 import '../../questions/screens/question_list_screen.dart';
-import '../widgets/menu_card.dart';
+import '../widgets/bottom_action_menu.dart';
+import '../widgets/trending_chart_widget.dart';
 import '../widgets/user_info_card.dart';
 
 class MemberDashboardScreen extends StatelessWidget {
@@ -173,6 +174,7 @@ class MemberDashboardScreen extends StatelessWidget {
         ],
       ),
       body: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 100),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(
@@ -191,9 +193,7 @@ class MemberDashboardScreen extends StatelessWidget {
                       color: Colors.grey.shade600,
                     ),
                   ),
-
                   const SizedBox(height: 4),
-
                   Text(
                     user.name,
                     style: const TextStyle(
@@ -202,82 +202,72 @@ class MemberDashboardScreen extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
                   // User Information
                   UserInfoCard(user: user),
 
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
 
-                  const Text(
-                    'Menu Layanan Pegawai',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  // CHART TOPIK PERTANYAAN PALING BANYAK DITANYAKAN
+                  const TrendingChartWidget(),
 
-                  const SizedBox(height: 16),
-
-                  // Menu Ajukan Pertanyaan
-                  MenuCard(
-                    icon: Icons.add_comment_outlined,
-                    title: 'Ajukan Pertanyaan Baru',
-                    subtitle: 'Konsultasikan kendala ke tim layanan BOSDM',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => AskQuestionScreen(
-                            token: user.token ?? '',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Menu Tanya Jawab
-                  MenuCard(
-                    icon: Icons.question_answer_outlined,
-                    title: 'Forum Tanya Jawab',
-                    subtitle: 'Lihat pertanyaan dan jawaban publik pegawai lain',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => QuestionListScreen(
-                            user: user,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Menu Pertanyaan Saya
-                  MenuCard(
-                    icon: Icons.list_alt_outlined,
-                    title: 'Pertanyaan Saya',
-                    subtitle: 'Lihat progres pertanyaan & jawaban dari Ketua Tim',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => MyQuestionsScreen(
-                            user: user,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
           ),
         ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: BottomActionMenu(
+        items: [
+          BottomMenuItem(
+            label: 'Tanya Baru',
+            icon: Icons.add_comment_rounded,
+            color: AppColors.primaryRed,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AskQuestionScreen(
+                    token: user.token ?? '',
+                  ),
+                ),
+              );
+            },
+          ),
+          BottomMenuItem(
+            label: 'Forum LKSDM',
+            icon: Icons.forum_rounded,
+            color: AppColors.primaryBlue,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuestionListScreen(
+                    user: user,
+                  ),
+                ),
+              );
+            },
+          ),
+          BottomMenuItem(
+            label: 'Pertanyaan Saya',
+            icon: Icons.collections_bookmark_rounded,
+            color: Colors.teal.shade700,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MyQuestionsScreen(
+                    user: user,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

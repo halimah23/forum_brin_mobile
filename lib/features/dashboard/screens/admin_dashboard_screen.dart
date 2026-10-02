@@ -5,9 +5,9 @@ import '../../../core/constants/app_constants.dart';
 import '../../auth/cubits/auth_cubit.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/screens/login_screen.dart';
-import '../../questions/screens/ask_question_screen.dart';
 import '../../questions/screens/question_list_screen.dart';
-import '../widgets/menu_card.dart';
+import '../widgets/bottom_action_menu.dart';
+import '../widgets/trending_chart_widget.dart';
 import '../widgets/user_info_card.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
@@ -54,8 +54,10 @@ class AdminDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final teamName = user.tim ?? 'Tim Layanan BOSDM';
-    const primaryColor = AppColors.primaryBlue;
+    final isAdminLksdm = user.isAdminLksdm;
+    final lksdmName = user.effectiveLksdm;
+    final teamName = user.tim ?? (isAdminLksdm ? lksdmName : 'Fungsi Pengelolaan data dan informasi SDM');
+    final primaryColor = isAdminLksdm ? Colors.teal.shade800 : AppColors.primaryBlue;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -71,7 +73,7 @@ class AdminDashboardScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     AppConstants.appTitle,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
@@ -82,13 +84,13 @@ class AdminDashboardScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                     decoration: BoxDecoration(
-                      color: AppColors.lightBlueBackground,
+                      color: primaryColor.withAlpha(20),
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(color: primaryColor.withAlpha(80), width: 0.5),
                     ),
                     child: Text(
-                      'PANEL ADMIN TIM ($teamName)',
-                      style: const TextStyle(
+                      isAdminLksdm ? 'STAF ADMIN LKSDM ($lksdmName)' : 'STAF ADMIN PUSAT ($teamName)',
+                      style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         color: primaryColor,
@@ -103,7 +105,7 @@ class AdminDashboardScreen extends StatelessWidget {
         ),
         actions: [
           PopupMenuButton<String>(
-            tooltip: 'Profil Admin Tim',
+            tooltip: 'Profil Staf Admin',
             onSelected: (value) {
               if (value == 'logout') {
                 _handleLogout(context);
@@ -114,7 +116,7 @@ class AdminDashboardScreen extends StatelessWidget {
                 value: 'profile',
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.shield_outlined,
                       color: primaryColor,
                     ),
@@ -130,7 +132,7 @@ class AdminDashboardScreen extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            user.tim ?? user.role ?? 'Admin Tim',
+                            isAdminLksdm ? 'Staf Admin $lksdmName' : 'Staf Admin $teamName',
                             style: const TextStyle(fontSize: 11, color: Colors.grey),
                           ),
                         ],
@@ -160,11 +162,11 @@ class AdminDashboardScreen extends StatelessWidget {
                 ),
               ),
             ],
-            child: const Padding(
-              padding: EdgeInsets.only(right: 12),
+            child: Padding(
+              padding: const EdgeInsets.only(right: 12),
               child: CircleAvatar(
                 radius: 20,
-                backgroundColor: AppColors.lightBlueBackground,
+                backgroundColor: primaryColor.withAlpha(25),
                 child: Icon(
                   Icons.admin_panel_settings,
                   color: primaryColor,
@@ -187,7 +189,7 @@ class AdminDashboardScreen extends StatelessWidget {
                 children: [
                   // Greeting
                   Text(
-                    'Selamat datang Admin Layanan,',
+                    isAdminLksdm ? 'Selamat datang Staf Admin Kawasan,' : 'Selamat datang Staf Admin Pusat,',
                     style: TextStyle(
                       fontSize: 15,
                       color: Colors.grey.shade600,
@@ -207,127 +209,127 @@ class AdminDashboardScreen extends StatelessWidget {
                   // Admin Profile Card
                   UserInfoCard(user: user),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
-                  const Text(
-                    'Manajemen & Jawaban Tiket Layanan',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  // JOBDESK SCOPE CARD DARI CSV
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withAlpha(15),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: primaryColor.withAlpha(50)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(isAdminLksdm ? Icons.location_city : Icons.account_tree, color: primaryColor, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                isAdminLksdm ? 'Cakupan Tugas & Fungsi $lksdmName' : 'Cakupan Tugas & Fungsi $teamName',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: primaryColor),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          isAdminLksdm
+                              ? '• Penegakan hukuman disiplin ringan-sedang\n• Fasilitasi Kenaikan Gaji Berkala (KGB)\n• Monitoring Tugas Belajar & Kehadiran Pegawai Kawasan\n• Layanan kepegawaian kawasan & verifikasi layanan pusat'
+                              : '• Penanganan eskalasi sesuai tupoksi $teamName\n• Penilaian & penetapan kebijakan tingkat pusat\n• Pendampingan percakapan tripartit (Pegawai + LKSDM + Tim Pusat)',
+                          style: const TextStyle(fontSize: 11, height: 1.4, color: Colors.black87),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
 
-                  // Menu 1: Antrean Masuk Tim Saya (Menunggu Tindak Lanjut / Jawaban)
-                  MenuCard(
-                    icon: Icons.mark_email_unread_outlined,
-                    title: 'Antrean Masuk Tim Saya',
-                    subtitle: 'Tinjau & jawab pertanyaan publik baru dari pegawai',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => QuestionListScreen(
-                            user: user,
-                            initialTeamFilter: user.tim,
-                            initialStatusFilter: 'menunggu_disposisi',
-                            isPublicOnly: true,
-                            title: 'Antrean Masuk ($teamName)',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                  const SizedBox(height: 24),
 
-                  const SizedBox(height: 12),
+                  // CHART TOPIK PERTANYAAN PALING BANYAK DITANYAKAN
+                  const TrendingChartWidget(),
 
-                  // Menu 2: Tiket Sedang Ditangani (Dialihkan / Disetujui Ketua Tim)
-                  MenuCard(
-                    icon: Icons.engineering_outlined,
-                    title: 'Tiket Sedang Ditangani',
-                    subtitle: 'Tiket publik yang dialihkan untuk dijawab & ditindaklanjuti',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => QuestionListScreen(
-                            user: user,
-                            initialTeamFilter: user.tim,
-                            initialStatusFilter: 'sedang_diproses',
-                            isPublicOnly: true,
-                            title: 'Sedang Ditangani ($teamName)',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Menu 3: Tiket Selesai / Terjawab
-                  MenuCard(
-                    icon: Icons.task_alt_outlined,
-                    title: 'Tiket Selesai / Terjawab',
-                    subtitle: 'Lihat arsip pertanyaan yang telah tuntas dijawab',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => QuestionListScreen(
-                            user: user,
-                            initialTeamFilter: user.tim,
-                            initialStatusFilter: 'selesai',
-                            isPublicOnly: true,
-                            title: 'Tiket Selesai ($teamName)',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Menu 4: Semua Forum Tanya Jawab Publik
-                  MenuCard(
-                    icon: Icons.forum_outlined,
-                    title: 'Semua Forum Tanya Jawab',
-                    subtitle: 'Lihat seluruh pertanyaan publik lintas tim di BOSDM Connect',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => QuestionListScreen(
-                            user: user,
-                            isPublicOnly: true,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Menu 5: Buat Tiket Pertanyaan Baru
-                  MenuCard(
-                    icon: Icons.add_circle_outline,
-                    title: 'Buat Tiket Pertanyaan Baru',
-                    subtitle: 'Ajukan konsultasi atau koordinasi antar tim layanan',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => AskQuestionScreen(
-                            token: user.token ?? '',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
           ),
         ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: BottomActionMenu(
+        items: [
+          BottomMenuItem(
+            label: 'Antrean',
+            icon: Icons.mark_email_unread_rounded,
+            color: primaryColor,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuestionListScreen(
+                    user: user,
+                    initialTeamFilter: isAdminLksdm ? lksdmName : teamName,
+                    initialStatusFilter: isAdminLksdm ? 'menunggu_lksdm' : 'dialihkan_ke_pusat',
+                    title: isAdminLksdm ? 'Antrean ($lksdmName)' : 'Antrean ($teamName)',
+                  ),
+                ),
+              );
+            },
+          ),
+          BottomMenuItem(
+            label: 'Aktif',
+            icon: Icons.chat_bubble_rounded,
+            color: Colors.amber.shade900,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuestionListScreen(
+                    user: user,
+                    initialTeamFilter: isAdminLksdm ? lksdmName : teamName,
+                    initialStatusFilter: 'ditangani_lksdm',
+                    title: 'Percakapan Aktif ($teamName)',
+                  ),
+                ),
+              );
+            },
+          ),
+          BottomMenuItem(
+            label: 'Selesai',
+            icon: Icons.task_alt_rounded,
+            color: Colors.green.shade700,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuestionListScreen(
+                    user: user,
+                    initialTeamFilter: isAdminLksdm ? lksdmName : teamName,
+                    initialStatusFilter: 'selesai',
+                    title: 'Tiket Selesai ($teamName)',
+                  ),
+                ),
+              );
+            },
+          ),
+          BottomMenuItem(
+            label: 'Forum',
+            icon: Icons.forum_rounded,
+            color: AppColors.primaryBlue,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuestionListScreen(
+                    user: user,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

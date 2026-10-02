@@ -6,7 +6,8 @@ import '../../auth/cubits/auth_cubit.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/screens/login_screen.dart';
 import '../../questions/screens/question_list_screen.dart';
-import '../widgets/menu_card.dart';
+import '../widgets/bottom_action_menu.dart';
+import '../widgets/trending_chart_widget.dart';
 import '../widgets/user_info_card.dart';
 
 class SuperAdminDashboardScreen extends StatelessWidget {
@@ -175,7 +176,7 @@ class SuperAdminDashboardScreen extends StatelessWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(
-              maxWidth: 430,
+              maxWidth: 480,
             ),
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -206,71 +207,77 @@ class SuperAdminDashboardScreen extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
-                  const Text(
-                    'Menu Super Admin',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
+                  // CHART TOPIK PERTANYAAN PALING BANYAK DITANYAKAN
+                  const TrendingChartWidget(),
 
-                  // Menu Kelola Pengguna & Role
-                  MenuCard(
-                    icon: Icons.manage_accounts_outlined,
-                    title: 'Manajemen Pengguna & Role',
-                    subtitle: 'Atur hak akses admin, ketua tim, dan member',
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Fitur Manajemen Akun siap diintegrasikan.'),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Menu Monitoring Seluruh Pertanyaan
-                  MenuCard(
-                    icon: Icons.analytics_outlined,
-                    title: 'Monitoring & Audit Sistem',
-                    subtitle: 'Pantau seluruh aktivitas pertanyaan dan jawaban antar tim',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => QuestionListScreen(
-                            user: user,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Menu Forum Tanya Jawab
-                  MenuCard(
-                    icon: Icons.forum_outlined,
-                    title: 'Akses Forum Tanya Jawab',
-                    subtitle: 'Lihat seluruh interaksi forum BOSDM Connect',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => QuestionListScreen(
-                            user: user,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                  const SizedBox(height: 20),
                 ],
               ),
             ),
           ),
         ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: BottomActionMenu(
+        items: [
+          BottomMenuItem(
+            label: 'Audit',
+            icon: Icons.analytics_outlined,
+            color: primaryPurple,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuestionListScreen(
+                    user: user,
+                    title: 'Audit Seluruh Pertanyaan',
+                  ),
+                ),
+              );
+            },
+          ),
+          BottomMenuItem(
+            label: 'Bank FAQ',
+            icon: Icons.lightbulb_outlined,
+            color: Colors.amber.shade900,
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Modul Bank FAQ & Analitik Isu Populer Aktif.'),
+                  backgroundColor: Colors.deepPurple,
+                ),
+              );
+            },
+          ),
+          BottomMenuItem(
+            label: 'Akun',
+            icon: Icons.manage_accounts_outlined,
+            color: Colors.teal.shade700,
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Fitur Manajemen Akun & Hak Akses Siap.'),
+                ),
+              );
+            },
+          ),
+          BottomMenuItem(
+            label: 'Forum',
+            icon: Icons.forum_outlined,
+            color: AppColors.primaryRed,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => QuestionListScreen(
+                    user: user,
+                    isPublicOnly: true,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }

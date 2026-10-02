@@ -77,15 +77,35 @@ class QuestionListView extends StatefulWidget {
 
 class _QuestionListViewState extends State<QuestionListView> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final List<String> _statuses = ['semua', 'menunggu_disposisi', 'sedang_diproses', 'selesai'];
-  final List<String> _tabLabels = ['Semua', 'Menunggu Disposisi', 'Sedang Diproses', 'Selesai'];
+  late final List<String> _statuses;
+  late final List<String> _tabLabels;
 
   @override
   void initState() {
     super.initState();
+    final bool isLksdm = widget.user.isAdminLksdm;
+    final bool isPusat = widget.user.isAdminPusat;
+
+    if (isLksdm) {
+      _statuses = ['semua', 'menunggu_lksdm', 'ditangani_lksdm', 'dialihkan_ke_pusat', 'selesai'];
+      _tabLabels = ['Semua', 'Antrean LKSDM', 'Ditangani', 'Eskalasi Pusat', 'Selesai'];
+    } else if (isPusat) {
+      _statuses = ['semua', 'dialihkan_ke_pusat', 'ditangani_lksdm', 'selesai'];
+      _tabLabels = ['Semua', 'Antrean Pusat', 'Aktif', 'Selesai'];
+    } else {
+      _statuses = ['semua', 'menunggu_lksdm', 'ditangani_lksdm', 'dialihkan_ke_pusat', 'selesai'];
+      _tabLabels = ['Semua', 'Menunggu', 'Diproses', 'Eskalasi Pusat', 'Selesai'];
+    }
+
     int initialIndex = 0;
     if (widget.initialStatusFilter != null) {
-      final idx = _statuses.indexOf(widget.initialStatusFilter!);
+      final filter = widget.initialStatusFilter!;
+      int idx = _statuses.indexOf(filter);
+      if (idx == -1) {
+        if (filter == 'menunggu_disposisi') idx = _statuses.indexOf('menunggu_lksdm');
+        if (filter == 'sedang_diproses') idx = _statuses.indexOf('ditangani_lksdm');
+        if (filter == 'eskalasi_pusat') idx = _statuses.indexOf('dialihkan_ke_pusat');
+      }
       if (idx != -1) initialIndex = idx;
     }
     _tabController = TabController(length: _statuses.length, vsync: this, initialIndex: initialIndex);

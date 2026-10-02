@@ -1,207 +1,152 @@
 import '../models/category_model.dart';
 
-/// Katalog Data Master 15 Tim & Kode Tugas Fungsi (Tusi) BOSDM BRIN
+/// Katalog Master 14 Tim Pusat BOSDM BRIN dan Tugas Fungsi (Jobdesk) Resmi
 class TusiCatalogData {
-  static const List<String> allTeams = [
-    'Tim Ortala',
-    'Tim Sekretariat RB',
-    'Tim Perencanaan dan Pengembangan Karier',
-    'Tim Penilaian Kompetensi',
-    'Tim Perencanaan dan Pengembangan Kompetensi',
-    'Tim Mutasi Umum dan Kesejahteraan',
-    'Tim Mutasi dan Pengelolaan JF 1',
-    'Tim Mutasi dan Pengelolaan JF 2',
-    'Tim Mutasi dan Pengelolaan JF 3',
-    'Tim Sekretariat Majelis Profesor Riset',
-    'Tim Manajemen Kinerja',
-    'Tim Internalisasi BerAKHLAK dan Pembinaan Disiplin ASN',
-    'Tim Pengelolaan Data dan Informasi SDM',
-    'Tim Program Pembinaan dan Penugasan Ulang',
-    'Tim LKSDM',
+  static const List<String> centralTeams = [
+    'Fungsi Organisasi dan Tatalaksana',
+    'Fungsi Perencanaan dan Pengembangan Karir SDM',
+    'Fungsi Mutasi Umum dan Kesejahteraan',
+    'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional I',
+    'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional II',
+    'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional III',
+    'Fungsi Perencanaan dan Pengembangan Kompetensi SDM',
+    'Fungsi Penilaian Kompetensi',
+    'Fungsi Manajemen Kinerja dan Penghargaan ASN',
+    'Fungsi Pembinaan dan Penegakkan Disiplin ASN',
+    'Fungsi Pengelolaan data dan informasi SDM',
+    'Fungsi Kesekretariat Majelis Profesor',
+    'Fungsi Kesekretariatan RB',
+    'Fungsi Pembinaan Karir SDM Pembinaan Ulang',
   ];
+
+  static const List<String> allTeams = centralTeams;
 
   static const List<CategoryModel> allTugasFungsi = [
-    // 1. Tim Ortala
-    CategoryModel(id: 1, teamName: 'Tim Ortala', kode: 'BRIN-04.03.01.01', nama: 'Evaluasi Organisasi'),
-    CategoryModel(id: 2, teamName: 'Tim Ortala', kode: 'BRIN-04.03.01.02', nama: 'Penataan Organisasi'),
-    CategoryModel(id: 3, teamName: 'Tim Ortala', kode: 'BRIN-04.03.01.03', nama: 'Penyusunan Analisis Jabatan'),
-    CategoryModel(id: 4, teamName: 'Tim Ortala', kode: 'BRIN-04.03.01.04', nama: 'Penyusunan Evaluasi Jabatan'),
-    CategoryModel(id: 5, teamName: 'Tim Ortala', kode: 'BRIN-04.03.01.05', nama: 'Penyusunan Peta Jabatan'),
-    CategoryModel(id: 6, teamName: 'Tim Ortala', kode: 'BRIN-04.03.01.06', nama: 'Sistem Kerja'),
-    CategoryModel(id: 7, teamName: 'Tim Ortala', kode: 'BRIN-04.03.02.01', nama: 'Pemetaan Proses Bisnis'),
-    CategoryModel(id: 8, teamName: 'Tim Ortala', kode: 'BRIN-04.03.02.01.04', nama: 'Penyusunan SOP'),
-    CategoryModel(id: 9, teamName: 'Tim Ortala', kode: 'BRIN-04.03.02.01.05', nama: 'Evaluasi SOP'),
-    CategoryModel(id: 10, teamName: 'Tim Ortala', kode: 'BRIN-04.03.02.02', nama: 'Pengelolaan Layanan SDM Kawasan'),
+    // 1. Fungsi Organisasi dan Tatalaksana
+    CategoryModel(id: 1, teamName: 'Fungsi Organisasi dan Tatalaksana', kode: 'ORTALA-01', nama: 'Evaluasi Organisasi'),
+    CategoryModel(id: 2, teamName: 'Fungsi Organisasi dan Tatalaksana', kode: 'ORTALA-02', nama: 'Penataan Organisasi'),
+    CategoryModel(id: 3, teamName: 'Fungsi Organisasi dan Tatalaksana', kode: 'ORTALA-03', nama: 'Analisis Jabatan (Anjab)'),
+    CategoryModel(id: 4, teamName: 'Fungsi Organisasi dan Tatalaksana', kode: 'ORTALA-04', nama: 'Evaluasi Jabatan (Evjab)'),
+    CategoryModel(id: 5, teamName: 'Fungsi Organisasi dan Tatalaksana', kode: 'ORTALA-05', nama: 'Penyusunan Peta Jabatan'),
+    CategoryModel(id: 6, teamName: 'Fungsi Organisasi dan Tatalaksana', kode: 'ORTALA-06', nama: 'Penyusunan Pola Karir'),
+    CategoryModel(id: 7, teamName: 'Fungsi Organisasi dan Tatalaksana', kode: 'ORTALA-07', nama: 'Penyusunan & Evaluasi Pedoman Sistem Kerja'),
+    CategoryModel(id: 8, teamName: 'Fungsi Organisasi dan Tatalaksana', kode: 'ORTALA-08', nama: 'Penyusunan & Evaluasi Proses Bisnis'),
+    CategoryModel(id: 9, teamName: 'Fungsi Organisasi dan Tatalaksana', kode: 'ORTALA-09', nama: 'Penyusunan & Evaluasi SOP'),
+    CategoryModel(id: 10, teamName: 'Fungsi Organisasi dan Tatalaksana', kode: 'ORTALA-10', nama: 'Input & Penyesuaian Proses Bisnis SIA SPBE'),
 
-    // 2. Tim Sekretariat RB
-    CategoryModel(id: 11, teamName: 'Tim Sekretariat RB', kode: 'BRIN-04.03.03', nama: 'Pelaksanaan Reformasi Birokrasi'),
-    CategoryModel(id: 12, teamName: 'Tim Sekretariat RB', kode: 'BRIN-04.03.03.01', nama: 'Pelaksanaan Reformasi Birokrasi Sub-Unit'),
-    CategoryModel(id: 13, teamName: 'Tim Sekretariat RB', kode: 'BRIN-04.03.03.02', nama: 'Zona Integritas'),
+    // 2. Fungsi Perencanaan dan Pengembangan Karir SDM
+    CategoryModel(id: 11, teamName: 'Fungsi Perencanaan dan Pengembangan Karir SDM', kode: 'BANGKAR-01', nama: 'Analisis Beban Kerja (ABK)'),
+    CategoryModel(id: 12, teamName: 'Fungsi Perencanaan dan Pengembangan Karir SDM', kode: 'BANGKAR-02', nama: 'Perencanaan SDM ASN'),
+    CategoryModel(id: 13, teamName: 'Fungsi Perencanaan dan Pengembangan Karir SDM', kode: 'BANGKAR-03', nama: 'Pengadaan ASN (CPNS, PPPK, Open Call)'),
+    CategoryModel(id: 14, teamName: 'Fungsi Perencanaan dan Pengembangan Karir SDM', kode: 'BANGKAR-04', nama: 'Seleksi Terbuka JPT dan Organisasi Riset'),
+    CategoryModel(id: 15, teamName: 'Fungsi Perencanaan dan Pengembangan Karir SDM', kode: 'BANGKAR-05', nama: 'Penempatan CASN (Mutasi Internal, Aktif Tubel, CLTN)'),
+    CategoryModel(id: 16, teamName: 'Fungsi Perencanaan dan Pengembangan Karir SDM', kode: 'BANGKAR-06', nama: 'Pengembangan Karier (Mutasi, Rotasi, Promosi, Konversi Jabatan)'),
+    CategoryModel(id: 17, teamName: 'Fungsi Perencanaan dan Pengembangan Karir SDM', kode: 'BANGKAR-07', nama: 'Pembuatan SK Penempatan Mutasi Internal'),
 
-    // 3. Tim Perencanaan dan Pengembangan Karier
-    CategoryModel(id: 14, teamName: 'Tim Perencanaan dan Pengembangan Karier', kode: 'BRIN-04.03.04', nama: 'Perencanaan dan Pengembangan Karier SDM'),
-    CategoryModel(id: 15, teamName: 'Tim Perencanaan dan Pengembangan Karier', kode: 'BRIN-04.03.04.01', nama: 'Penyusunan Analisis Beban Kerja'),
-    CategoryModel(id: 16, teamName: 'Tim Perencanaan dan Pengembangan Karier', kode: 'BRIN-04.03.04.02', nama: 'Perencanaan ASN'),
-    CategoryModel(id: 17, teamName: 'Tim Perencanaan dan Pengembangan Karier', kode: 'BRIN-04.03.04.03', nama: 'Pengadaan SDM'),
-    CategoryModel(id: 18, teamName: 'Tim Perencanaan dan Pengembangan Karier', kode: 'BRIN-04.03.04.04', nama: 'Penempatan CASN'),
-    CategoryModel(id: 19, teamName: 'Tim Perencanaan dan Pengembangan Karier', kode: 'BRIN-04.03.04.05', nama: 'Penataan SDM'),
-    CategoryModel(id: 20, teamName: 'Tim Perencanaan dan Pengembangan Karier', kode: 'BRIN-04.03.04.06', nama: 'Pengembangan Karier'),
-    CategoryModel(id: 21, teamName: 'Tim Perencanaan dan Pengembangan Karier', kode: 'BRIN-04.03.04.07', nama: 'Pelaksanaan Sidang Tim Penilai Kinerja Pegawai (Baperjakat)'),
-    CategoryModel(id: 22, teamName: 'Tim Perencanaan dan Pengembangan Karier', kode: 'BRIN-04.03.04.08', nama: 'Lokasi Kerja Eksternal Periset BRIN'),
+    // 3. Fungsi Mutasi Umum dan Kesejahteraan
+    CategoryModel(id: 18, teamName: 'Fungsi Mutasi Umum dan Kesejahteraan', kode: 'MUTASI-01', nama: 'Pengaktifan Kembali Penugasan Luar BRIN'),
+    CategoryModel(id: 19, teamName: 'Fungsi Mutasi Umum dan Kesejahteraan', kode: 'MUTASI-02', nama: 'Penerbitan SK PNS'),
+    CategoryModel(id: 20, teamName: 'Fungsi Mutasi Umum dan Kesejahteraan', kode: 'MUTASI-03', nama: 'Pelantikan dan Sumpah Jabatan'),
+    CategoryModel(id: 21, teamName: 'Fungsi Mutasi Umum dan Kesejahteraan', kode: 'MUTASI-04', nama: 'Mutasi Eksternal / Penugasan ke Instansi Luar'),
+    CategoryModel(id: 22, teamName: 'Fungsi Mutasi Umum dan Kesejahteraan', kode: 'MUTASI-05', nama: 'Pemberhentian SDM'),
+    CategoryModel(id: 23, teamName: 'Fungsi Mutasi Umum dan Kesejahteraan', kode: 'MUTASI-06', nama: 'Kenaikan Pangkat'),
+    CategoryModel(id: 24, teamName: 'Fungsi Mutasi Umum dan Kesejahteraan', kode: 'MUTASI-07', nama: 'Peninjauan Masa Kerja (PMK)'),
+    CategoryModel(id: 25, teamName: 'Fungsi Mutasi Umum dan Kesejahteraan', kode: 'MUTASI-08', nama: 'Penetapan Tewas & Kecelakaan Kerja / PAK'),
+    CategoryModel(id: 26, teamName: 'Fungsi Mutasi Umum dan Kesejahteraan', kode: 'MUTASI-09', nama: 'Pengurusan Jamkestama / Jasindo'),
 
-    // 4. Tim Penilaian Kompetensi
-    CategoryModel(id: 23, teamName: 'Tim Penilaian Kompetensi', kode: 'BRIN-04.03.05', nama: 'Penilaian dan Pengembangan SDM'),
-    CategoryModel(id: 24, teamName: 'Tim Penilaian Kompetensi', kode: 'BRIN-04.03.05.01', nama: 'Standarisasi Jabatan'),
-    CategoryModel(id: 25, teamName: 'Tim Penilaian Kompetensi', kode: 'BRIN-04.03.05.02', nama: 'Penilaian Kompetensi'),
-    CategoryModel(id: 26, teamName: 'Tim Penilaian Kompetensi', kode: 'BRIN-04.03.05.06', nama: 'Manajemen Talenta ASN BRIN'),
+    // 4. Fungsi Mutasi dan Pengelolaan Jabatan Fungsional I
+    CategoryModel(id: 27, teamName: 'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional I', kode: 'JF1-01', nama: 'Penilaian Usulan HKM Peneliti'),
+    CategoryModel(id: 28, teamName: 'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional I', kode: 'JF1-02', nama: 'Kenaikan Jenjang & Perpindahan Jabatan Peneliti'),
+    CategoryModel(id: 29, teamName: 'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional I', kode: 'JF1-03', nama: 'Pengusulan Kenaikan Jenjang Peneliti Ahli Utama'),
+    CategoryModel(id: 30, teamName: 'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional I', kode: 'JF1-04', nama: 'Fasilitasi Uji Kompetensi JF Peneliti'),
+    CategoryModel(id: 31, teamName: 'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional I', kode: 'JF1-05', nama: 'Pemberhentian & Pengaktifan Kembali JF Peneliti'),
 
-    // 5. Tim Perencanaan dan Pengembangan Kompetensi
-    CategoryModel(id: 27, teamName: 'Tim Perencanaan dan Pengembangan Kompetensi', kode: 'BRIN-04.03.05.03', nama: 'Penyusunan Rencana Kebutuhan & Pengembangan Kompetensi'),
-    CategoryModel(id: 28, teamName: 'Tim Perencanaan dan Pengembangan Kompetensi', kode: 'BRIN-04.03.05.04', nama: 'Pelaksanaan Pengembangan Kompetensi'),
-    CategoryModel(id: 29, teamName: 'Tim Perencanaan dan Pengembangan Kompetensi', kode: 'BRIN-04.03.05.05', nama: 'Evaluasi Pengembangan Kompetensi'),
-    CategoryModel(id: 30, teamName: 'Tim Perencanaan dan Pengembangan Kompetensi', kode: 'BRIN-04.03.05.08', nama: 'Ujian Penyesuaian Kenaikan Pangkat (UPKP)'),
-    CategoryModel(id: 31, teamName: 'Tim Perencanaan dan Pengembangan Kompetensi', kode: 'BRIN-04.03.05.09', nama: 'Pencantuman Gelar Akademik'),
+    // 5. Fungsi Mutasi dan Pengelolaan Jabatan Fungsional II
+    CategoryModel(id: 32, teamName: 'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional II', kode: 'JF2-01', nama: 'Penilaian Usulan HKM & Penyertaan Diklat'),
+    CategoryModel(id: 33, teamName: 'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional II', kode: 'JF2-02', nama: 'Kenaikan Jenjang & Perpindahan Jabatan Ahli Utama'),
+    CategoryModel(id: 34, teamName: 'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional II', kode: 'JF2-03', nama: 'Fasilitasi Uji Kompetensi JF II'),
+    CategoryModel(id: 35, teamName: 'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional II', kode: 'JF2-04', nama: 'Pemberhentian & Pengaktifan Kembali JF II'),
 
-    // 6. Tim Mutasi Umum dan Kesejahteraan
-    CategoryModel(id: 32, teamName: 'Tim Mutasi Umum dan Kesejahteraan', kode: 'BRIN-04.03.06', nama: 'Pengelolaan Mutasi SDM'),
-    CategoryModel(id: 33, teamName: 'Tim Mutasi Umum dan Kesejahteraan', kode: 'BRIN-04.03.06.01.01', nama: 'Pengaktifan Kembali'),
-    CategoryModel(id: 34, teamName: 'Tim Mutasi Umum dan Kesejahteraan', kode: 'BRIN-04.03.06.01.02', nama: 'Penerbitan SK PNS'),
-    CategoryModel(id: 35, teamName: 'Tim Mutasi Umum dan Kesejahteraan', kode: 'BRIN-04.03.06.01.03', nama: 'Pelantikan & Sumpah Jabatan'),
-    CategoryModel(id: 36, teamName: 'Tim Mutasi Umum dan Kesejahteraan', kode: 'BRIN-04.03.06.01.04', nama: 'Mutasi Pegawai'),
-    CategoryModel(id: 37, teamName: 'Tim Mutasi Umum dan Kesejahteraan', kode: 'BRIN-04.03.06.01.05', nama: 'Pemberhentian SDM'),
-    CategoryModel(id: 38, teamName: 'Tim Mutasi Umum dan Kesejahteraan', kode: 'BRIN-04.03.06.01.06', nama: 'Kenaikan Pangkat'),
-    CategoryModel(id: 39, teamName: 'Tim Mutasi Umum dan Kesejahteraan', kode: 'BRIN-04.03.06.01.07', nama: 'Peninjauan Masa Kerja'),
-    CategoryModel(id: 40, teamName: 'Tim Mutasi Umum dan Kesejahteraan', kode: 'BRIN-04.03.06.01.08', nama: 'Penugasan ke Instansi Luar'),
-    CategoryModel(id: 41, teamName: 'Tim Mutasi Umum dan Kesejahteraan', kode: 'BRIN-04.03.06.01.09', nama: 'Penetapan Tewas'),
-    CategoryModel(id: 42, teamName: 'Tim Mutasi Umum dan Kesejahteraan', kode: 'BRIN-04.03.06.01.10', nama: 'Jamkestama/Jamkesmen'),
-    CategoryModel(id: 43, teamName: 'Tim Mutasi Umum dan Kesejahteraan', kode: 'BRIN-04.03.06.01.11', nama: 'Penetapan Kecelakaan Kerja & Penyakit Akibat Kerja'),
+    // 6. Fungsi Mutasi dan Pengelolaan Jabatan Fungsional III
+    CategoryModel(id: 36, teamName: 'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional III', kode: 'JF3-01', nama: 'Fasilitasi Uji Kompetensi JF III'),
+    CategoryModel(id: 37, teamName: 'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional III', kode: 'JF3-02', nama: 'Pengangkatan dan Pemberhentian JF III'),
+    CategoryModel(id: 38, teamName: 'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional III', kode: 'JF3-03', nama: 'Pengusulan Kenaikan Jenjang & Pangkat JF III'),
 
-    // 7. Tim Mutasi dan Pengelolaan JF 1
-    CategoryModel(id: 44, teamName: 'Tim Mutasi dan Pengelolaan JF 1', kode: 'BRIN-04.03.06.02.01.01', nama: 'Penilaian Usulan HKM'),
-    CategoryModel(id: 45, teamName: 'Tim Mutasi dan Pengelolaan JF 1', kode: 'BRIN-04.03.06.02.01.02', nama: 'Fasilitasi Uji Kompetensi (Kenaikan Jenjang Jabatan)'),
-    CategoryModel(id: 46, teamName: 'Tim Mutasi dan Pengelolaan JF 1', kode: 'BRIN-04.03.06.02.01.03', nama: 'Fasilitasi Uji Kompetensi (Perpindahan Jabatan)'),
-    CategoryModel(id: 47, teamName: 'Tim Mutasi dan Pengelolaan JF 1', kode: 'BRIN-04.03.06.02.01.04', nama: 'Pemberhentian JF Peneliti'),
-    CategoryModel(id: 48, teamName: 'Tim Mutasi dan Pengelolaan JF 1', kode: 'BRIN-04.03.06.02.01.05', nama: 'Pengangkatan Kembali'),
+    // 7. Fungsi Perencanaan dan Pengembangan Kompetensi SDM
+    CategoryModel(id: 39, teamName: 'Fungsi Perencanaan dan Pengembangan Kompetensi SDM', kode: 'BANGKOM-01', nama: 'Penyusunan Kamus & Rencana Pengembangan Kompetensi'),
+    CategoryModel(id: 40, teamName: 'Fungsi Perencanaan dan Pengembangan Kompetensi SDM', kode: 'BANGKOM-02', nama: 'Pelaksanaan Pengembangan Kompetensi'),
+    CategoryModel(id: 41, teamName: 'Fungsi Perencanaan dan Pengembangan Kompetensi SDM', kode: 'BANGKOM-03', nama: 'Pengelolaan & Evaluasi Tugas Belajar (Tubel)'),
 
-    // 8. Tim Mutasi dan Pengelolaan JF 2
-    CategoryModel(id: 49, teamName: 'Tim Mutasi dan Pengelolaan JF 2', kode: 'BRIN-04.03.06.02.02.02.01', nama: 'Penyusunan PAK'),
-    CategoryModel(id: 50, teamName: 'Tim Mutasi dan Pengelolaan JF 2', kode: 'BRIN-04.03.06.02.02.02.02', nama: 'Uji Kompetensi'),
-    CategoryModel(id: 51, teamName: 'Tim Mutasi dan Pengelolaan JF 2', kode: 'BRIN-04.03.06.02.02.02.03', nama: 'Pemberhentian JF'),
-    CategoryModel(id: 52, teamName: 'Tim Mutasi dan Pengelolaan JF 2', kode: 'BRIN-04.03.06.02.02.02.04', nama: 'Pengangkatan Kembali JF'),
-    CategoryModel(id: 53, teamName: 'Tim Mutasi dan Pengelolaan JF 2', kode: 'BRIN-04.03.06.02.02.02.05', nama: 'Kenaikan Pangkat karena Peningkatan Pendidikan'),
+    // 8. Fungsi Penilaian Kompetensi
+    CategoryModel(id: 42, teamName: 'Fungsi Penilaian Kompetensi', kode: 'NILAIKOM-01', nama: 'Pelaksanaan Penilaian Kompetensi (Assessment)'),
+    CategoryModel(id: 43, teamName: 'Fungsi Penilaian Kompetensi', kode: 'NILAIKOM-02', nama: 'Pelaksanaan Manajemen Talenta ASN'),
+    CategoryModel(id: 44, teamName: 'Fungsi Penilaian Kompetensi', kode: 'NILAIKOM-03', nama: 'Standar Kompetensi JPT & Pejabat Administrator'),
+    CategoryModel(id: 45, teamName: 'Fungsi Penilaian Kompetensi', kode: 'NILAIKOM-04', nama: 'Bimbingan dan Konseling SDM'),
 
-    // 9. Tim Mutasi dan Pengelolaan JF 3
-    CategoryModel(id: 54, teamName: 'Tim Mutasi dan Pengelolaan JF 3', kode: 'BRIN-04.03.06.02.03.01', nama: 'Penyusunan PAK'),
-    CategoryModel(id: 55, teamName: 'Tim Mutasi dan Pengelolaan JF 3', kode: 'BRIN-04.03.06.02.03.02', nama: 'Uji Kompetensi'),
-    CategoryModel(id: 56, teamName: 'Tim Mutasi dan Pengelolaan JF 3', kode: 'BRIN-04.03.06.02.03.03', nama: 'Pemberhentian JF'),
-    CategoryModel(id: 57, teamName: 'Tim Mutasi dan Pengelolaan JF 3', kode: 'BRIN-04.03.06.02.03.04', nama: 'Pengangkatan Kembali JF'),
-    CategoryModel(id: 58, teamName: 'Tim Mutasi dan Pengelolaan JF 3', kode: 'BRIN-04.03.06.02.03.05', nama: 'Kenaikan Pangkat karena Peningkatan Pendidikan'),
+    // 9. Fungsi Manajemen Kinerja dan Penghargaan ASN
+    CategoryModel(id: 46, teamName: 'Fungsi Manajemen Kinerja dan Penghargaan ASN', kode: 'KINERJA-01', nama: 'Perencanaan & Pemantauan Kinerja ASN'),
+    CategoryModel(id: 47, teamName: 'Fungsi Manajemen Kinerja dan Penghargaan ASN', kode: 'KINERJA-02', nama: 'Penilaian Kinerja & SK Tunjangan Kinerja (Tukin)'),
+    CategoryModel(id: 48, teamName: 'Fungsi Manajemen Kinerja dan Penghargaan ASN', kode: 'KINERJA-03', nama: 'Pemberian Penghargaan (SLKS, Wirakarya, ASN Berprestasi)'),
+    CategoryModel(id: 49, teamName: 'Fungsi Manajemen Kinerja dan Penghargaan ASN', kode: 'KINERJA-04', nama: 'Manajemen Resiko & Evaluasi Kinerja Periodik'),
 
-    // 10. Tim Sekretariat Majelis Profesor Riset
-    CategoryModel(id: 59, teamName: 'Tim Sekretariat Majelis Profesor Riset', kode: 'BRIN-04.03.06.03', nama: 'Penilaian Naskah Orasi Profesor Riset'),
+    // 10. Fungsi Pembinaan dan Penegakkan Disiplin ASN
+    CategoryModel(id: 50, teamName: 'Fungsi Pembinaan dan Penegakkan Disiplin ASN', kode: 'DISIPLIN-01', nama: 'Pengelolaan Cuti di Luar Tanggungan Negara (CLTN)'),
+    CategoryModel(id: 51, teamName: 'Fungsi Pembinaan dan Penegakkan Disiplin ASN', kode: 'DISIPLIN-02', nama: 'Pembinaan & Evaluasi Disiplin Pegawai'),
+    CategoryModel(id: 52, teamName: 'Fungsi Pembinaan dan Penegakkan Disiplin ASN', kode: 'DISIPLIN-03', nama: 'Penanganan Proses Perceraian & Izin Pasangan'),
+    CategoryModel(id: 53, teamName: 'Fungsi Pembinaan dan Penegakkan Disiplin ASN', kode: 'DISIPLIN-04', nama: 'Penegakan Kode Etik & Kasus Kepegawaian (PTUN, KASN, BPK)'),
 
-    // 11. Tim Manajemen Kinerja
-    CategoryModel(id: 60, teamName: 'Tim Manajemen Kinerja', kode: 'BRIN-04.03.07.01', nama: 'Perencanaan Kinerja'),
-    CategoryModel(id: 61, teamName: 'Tim Manajemen Kinerja', kode: 'BRIN-04.03.07.02', nama: 'Pemantauan Kinerja'),
-    CategoryModel(id: 62, teamName: 'Tim Manajemen Kinerja', kode: 'BRIN-04.03.07.03', nama: 'Penilaian dan Evaluasi Kinerja'),
-    CategoryModel(id: 63, teamName: 'Tim Manajemen Kinerja', kode: 'BRIN-04.03.07.04', nama: 'Tindak Lanjut Kinerja'),
-    CategoryModel(id: 64, teamName: 'Tim Manajemen Kinerja', kode: 'BRIN-04.03.07.05', nama: 'Penghargaan'),
-    CategoryModel(id: 65, teamName: 'Tim Manajemen Kinerja', kode: 'BRIN-04.03.07.06', nama: 'Manajemen Resiko'),
-    CategoryModel(id: 66, teamName: 'Tim Manajemen Kinerja', kode: 'BRIN-04.03.07.07', nama: 'Evaluasi Periodik'),
-    CategoryModel(id: 67, teamName: 'Tim Manajemen Kinerja', kode: 'BRIN-04.03.07.08', nama: 'Pendokumentasian Hasil Kerja pada SIMARIN'),
+    // 11. Fungsi Pengelolaan data dan informasi SDM
+    CategoryModel(id: 54, teamName: 'Fungsi Pengelolaan data dan informasi SDM', kode: 'DATA-01', nama: 'Pengelolaan Tata Naskah & Pelayanan Informasi SDM'),
+    CategoryModel(id: 55, teamName: 'Fungsi Pengelolaan data dan informasi SDM', kode: 'DATA-02', nama: 'Perbaikan Data Kehadiran & Updating Data SIMPEG'),
+    CategoryModel(id: 56, teamName: 'Fungsi Pengelolaan data dan informasi SDM', kode: 'DATA-03', nama: 'Penerbitan Karis/Karsu & Sinkronisasi SIASN / IDIS'),
+    CategoryModel(id: 57, teamName: 'Fungsi Pengelolaan data dan informasi SDM', kode: 'DATA-04', nama: 'Pemberian Role Akses Pegawai & Data Tapera'),
 
-    // 12. Tim Internalisasi BerAKHLAK dan Pembinaan Disiplin ASN
-    CategoryModel(id: 68, teamName: 'Tim Internalisasi BerAKHLAK dan Pembinaan Disiplin ASN', kode: 'BRIN-04.03.08.01', nama: 'CLTN (Cuti di Luar Tanggungan Negara)'),
-    CategoryModel(id: 69, teamName: 'Tim Internalisasi BerAKHLAK dan Pembinaan Disiplin ASN', kode: 'BRIN-04.03.08.02', nama: 'Pembinaan Disiplin'),
-    CategoryModel(id: 70, teamName: 'Tim Internalisasi BerAKHLAK dan Pembinaan Disiplin ASN', kode: 'BRIN-04.03.08.03', nama: 'Perceraian'),
-    CategoryModel(id: 71, teamName: 'Tim Internalisasi BerAKHLAK dan Pembinaan Disiplin ASN', kode: 'BRIN-04.03.08.04', nama: 'Monitoring dan Evaluasi Pemberian Cuti ASN'),
-    CategoryModel(id: 72, teamName: 'Tim Internalisasi BerAKHLAK dan Pembinaan Disiplin ASN', kode: 'BRIN-04.03.08.05', nama: 'Pemberhentian Sementara PNS (Tersangka Dugaan Pidana)'),
-    CategoryModel(id: 73, teamName: 'Tim Internalisasi BerAKHLAK dan Pembinaan Disiplin ASN', kode: 'BRIN-04.03.08.06', nama: 'Permohonan PNS Pria Beristri Lebih dari Satu'),
-    CategoryModel(id: 74, teamName: 'Tim Internalisasi BerAKHLAK dan Pembinaan Disiplin ASN', kode: 'BRIN-04.03.08.07', nama: 'Aktif Kembali setelah Menjalani Hukuman Pidana'),
-    CategoryModel(id: 75, teamName: 'Tim Internalisasi BerAKHLAK dan Pembinaan Disiplin ASN', kode: 'BRIN-04.03.08.08', nama: 'Pemberhentian PNS Lain-Lain'),
-    CategoryModel(id: 76, teamName: 'Tim Internalisasi BerAKHLAK dan Pembinaan Disiplin ASN', kode: 'BRIN-04.03.08.09', nama: 'Pemberhentian karena Terbukti Menggunakan Ijazah Palsu'),
-    CategoryModel(id: 77, teamName: 'Tim Internalisasi BerAKHLAK dan Pembinaan Disiplin ASN', kode: 'BRIN-04.03.08.14', nama: 'Penanganan Aduan/Laporan Dugaan Pelanggaran Disiplin & Kode Etik'),
+    // 12. Fungsi Kesekretariat Majelis Profesor
+    CategoryModel(id: 58, teamName: 'Fungsi Kesekretariat Majelis Profesor', kode: 'PROF-01', nama: 'Penyelenggaraan Orasi Profesor Riset'),
+    CategoryModel(id: 59, teamName: 'Fungsi Kesekretariat Majelis Profesor', kode: 'PROF-02', nama: 'Sidang Penilaian & Layout Naskah Orasi'),
 
-    // 13. Tim Pengelolaan Data dan Informasi SDM
-    CategoryModel(id: 78, teamName: 'Tim Pengelolaan Data dan Informasi SDM', kode: 'BRIN-04.03.09.01', nama: 'Pemutakhiran Dokumen'),
-    CategoryModel(id: 79, teamName: 'Tim Pengelolaan Data dan Informasi SDM', kode: 'BRIN-04.03.09.02', nama: 'Permintaan Data dan Informasi SDM'),
-    CategoryModel(id: 80, teamName: 'Tim Pengelolaan Data dan Informasi SDM', kode: 'BRIN-04.03.09.03', nama: 'Penerbitan Karis/Karsu Virtual'),
-    CategoryModel(id: 81, teamName: 'Tim Pengelolaan Data dan Informasi SDM', kode: 'BRIN-04.03.09.04', nama: 'Pencetakan Ulang ID Card Baru/Karena Hilang/Rusak'),
-    CategoryModel(id: 82, teamName: 'Tim Pengelolaan Data dan Informasi SDM', kode: 'BRIN-04.03.09.05', nama: 'Perbaikan Identitas (Nama, Tanggal Lahir) PNS'),
-    CategoryModel(id: 83, teamName: 'Tim Pengelolaan Data dan Informasi SDM', kode: 'BRIN-04.03.09.06', nama: 'Pelaksanaan Updating Data Pegawai'),
-    CategoryModel(id: 84, teamName: 'Tim Pengelolaan Data dan Informasi SDM', kode: 'BRIN-04.03.09.07', nama: 'Pemberian Role Akses Pegawai'),
-    CategoryModel(id: 85, teamName: 'Tim Pengelolaan Data dan Informasi SDM', kode: 'BRIN-04.03.09.08', nama: 'Pemutakhiran Status Pekerjaan pada Tapera'),
-    CategoryModel(id: 86, teamName: 'Tim Pengelolaan Data dan Informasi SDM', kode: 'BRIN-04.03.09.09', nama: 'Penyampaian Output Layanan melalui Perubahan Faktor Gaji SIMPEG'),
-    CategoryModel(id: 87, teamName: 'Tim Pengelolaan Data dan Informasi SDM', kode: 'BRIN-04.03.09.10', nama: 'Pengelolaan Cuti ASN'),
-    CategoryModel(id: 88, teamName: 'Tim Pengelolaan Data dan Informasi SDM', kode: 'BRIN-04.03.09.11', nama: 'Permohonan Pemberhentian Role Akses'),
+    // 13. Fungsi Kesekretariatan RB
+    CategoryModel(id: 60, teamName: 'Fungsi Kesekretariatan RB', kode: 'RB-01', nama: 'Penyusunan Rencana Kerja & Roadmap RB'),
+    CategoryModel(id: 61, teamName: 'Fungsi Kesekretariatan RB', kode: 'RB-02', nama: 'Monev Triwulan & Pembangunan Zona Integritas (ZI)'),
 
-    // 14. Tim Program Pembinaan dan Penugasan Ulang
-    CategoryModel(id: 89, teamName: 'Tim Program Pembinaan dan Penugasan Ulang', kode: 'BRIN-04.03.11', nama: 'Program Pembinaan dan Penugasan Ulang Pegawai'),
-
-    // 15. Tim LKSDM
-    CategoryModel(id: 90, teamName: 'Tim LKSDM', kode: 'BRIN-04.03.10.01', nama: 'Layanan Selesai di Kawasan'),
-    CategoryModel(id: 91, teamName: 'Tim LKSDM', kode: 'BRIN-04.03.10.01.01', nama: 'Layanan Otomatis Selesai di Kawasan'),
-    CategoryModel(id: 92, teamName: 'Tim LKSDM', kode: 'BRIN-04.03.10.01.01.01', nama: 'Hukuman Disiplin Pegawai Ringan'),
-    CategoryModel(id: 93, teamName: 'Tim LKSDM', kode: 'BRIN-04.03.10.01.01.02', nama: 'Fasilitasi Kenaikan Gaji Berkala (KGB)'),
-    CategoryModel(id: 94, teamName: 'Tim LKSDM', kode: 'BRIN-04.03.10.01.01.03', nama: 'Monitoring Pegawai Tubel'),
-    CategoryModel(id: 95, teamName: 'Tim LKSDM', kode: 'BRIN-04.03.10.01.01.04', nama: 'Monitoring Kehadiran Pegawai'),
-    CategoryModel(id: 96, teamName: 'Tim LKSDM', kode: 'BRIN-04.03.10.01.02.01', nama: 'Laporan Kelahiran Anak/ Perkawinan/ Perceraian'),
-    CategoryModel(id: 97, teamName: 'Tim LKSDM', kode: 'BRIN-04.03.10.01.02.02', nama: 'Laporan Pembayaran Gaji/Uang Makan Tidak Sesuai'),
-    CategoryModel(id: 98, teamName: 'Tim LKSDM', kode: 'BRIN-04.03.10.01.02.03', nama: 'Penerbitan Surat Izin Cerai/Keterangan Perceraian'),
-    CategoryModel(id: 99, teamName: 'Tim LKSDM', kode: 'BRIN-04.03.10.01.02.04', nama: 'Pelaporan Perpanjangan Tunjangan/Hak PNS'),
-    CategoryModel(id: 100, teamName: 'Tim LKSDM', kode: 'BRIN-04.03.10.01.02.05', nama: 'Tugas Belajar'),
-    CategoryModel(id: 101, teamName: 'Tim LKSDM', kode: 'BRIN-04.03.10.01.02.06', nama: 'Penerbitan Surat Pengantar SP Setneg Tugas Belajar'),
-    CategoryModel(id: 102, teamName: 'Tim LKSDM', kode: 'BRIN-04.03.10.01.02.07', nama: 'Laporan Perceraian/Meninggalnya Suami/Istri/Anak PNS'),
-    CategoryModel(id: 103, teamName: 'Tim LKSDM', kode: 'BRIN-04.03.10.01.02.08', nama: 'Laporan Penghentian Tunjangan Anak PNS'),
-    CategoryModel(id: 104, teamName: 'Tim LKSDM', kode: 'BRIN-04.03.10.01.02.09', nama: 'Pendaftaran BPJS untuk Anggota Keluarga Lainnya'),
-    CategoryModel(id: 105, teamName: 'Tim LKSDM', kode: 'BRIN-04.03.10.01.02.10', nama: 'Pendaftaran BPJS untuk PNS Baru / Anak 1-3 / Perpanjangan BPJS'),
-    CategoryModel(id: 106, teamName: 'Tim LKSDM', kode: 'BRIN-04.03.10.01.02.11', nama: 'Pengajuan Cuti Besar'),
+    // 14. Fungsi Pembinaan Karir SDM Pembinaan Ulang
+    CategoryModel(id: 62, teamName: 'Fungsi Pembinaan Karir SDM Pembinaan Ulang', kode: 'REENTRY-01', nama: 'Pembinaan Karir SDM Re-entry / Pembinaan Ulang'),
   ];
 
-  /// Cari daftar Tusi berdasarkan nama tim
   static List<CategoryModel> getTugasFungsiByTeam(String teamName) {
     return allTugasFungsi
         .where((t) => t.teamName?.toLowerCase() == teamName.toLowerCase())
         .toList();
   }
 
-  /// Identifikasi tim berdasarkan nama atau kode tugas fungsi
   static String resolveTeam(String? text) {
-    if (text == null || text.trim().isEmpty) return 'Tim Layanan SDM BOSDM';
+    if (text == null || text.trim().isEmpty) return 'Fungsi Pengelolaan data dan informasi SDM';
     final query = text.toUpperCase();
 
-    // Urutkan berdasarkan kepanjangan kode terpanjang agar kode paling spesifik terpilih lebih dulu
-    final sortedByCode = List<CategoryModel>.from(allTugasFungsi)
-      ..sort((a, b) => (b.kode?.length ?? 0).compareTo(a.kode?.length ?? 0));
-
-    for (final item in sortedByCode) {
-      if (item.kode != null && item.kode!.isNotEmpty && query.contains(item.kode!.toUpperCase())) {
-        return item.teamName ?? 'Tim Layanan SDM BOSDM';
-      }
-    }
-
     for (final item in allTugasFungsi) {
+      if (item.kode != null && query.contains(item.kode!.toUpperCase())) {
+        return item.teamName ?? 'Fungsi Pengelolaan data dan informasi SDM';
+      }
       if (item.nama.isNotEmpty && query.contains(item.nama.toUpperCase())) {
-        return item.teamName ?? 'Tim Layanan SDM BOSDM';
+        return item.teamName ?? 'Fungsi Pengelolaan data dan informasi SDM';
       }
     }
 
-    if (query.contains('ORTALA') || query.contains('ORGANISASI')) return 'Tim Ortala';
-    if (query.contains('REFORMASI BIROKRASI') || query.contains('RB')) return 'Tim Sekretariat RB';
-    if (query.contains('KARIER') || query.contains('BEBAN KERJA')) return 'Tim Perencanaan dan Pengembangan Karier';
-    if (query.contains('TALENTA') || query.contains('PENILAIAN KOMPETENSI')) return 'Tim Penilaian Kompetensi';
-    if (query.contains('KOMPETENSI') || query.contains('UPKP') || query.contains('GELAR')) return 'Tim Perencanaan dan Pengembangan Kompetensi';
-    if (query.contains('MUTASI') || query.contains('KESEJAHTERAAN') || query.contains('PANGKAT')) return 'Tim Mutasi Umum dan Kesejahteraan';
-    if (query.contains('JF 1') || query.contains('HKM') || query.contains('PENELITI')) return 'Tim Mutasi dan Pengelolaan JF 1';
-    if (query.contains('JF 2') || query.contains('PAK')) return 'Tim Mutasi dan Pengelolaan JF 2';
-    if (query.contains('JF 3')) return 'Tim Mutasi dan Pengelolaan JF 3';
-    if (query.contains('PROFESOR')) return 'Tim Sekretariat Majelis Profesor Riset';
-    if (query.contains('KINERJA') || query.contains('SIMARIN')) return 'Tim Manajemen Kinerja';
-    if (query.contains('BERAKHLAK') || query.contains('DISIPLIN') || query.contains('CUTI')) return 'Tim Internalisasi BerAKHLAK dan Pembinaan Disiplin ASN';
-    if (query.contains('DATA') || query.contains('INFORMASI') || query.contains('ID CARD')) return 'Tim Pengelolaan Data dan Informasi SDM';
-    if (query.contains('PENUGASAN ULANG')) return 'Tim Program Pembinaan dan Penugasan Ulang';
-    if (query.contains('LKSDM') || query.contains('KAWASAN')) return 'Tim LKSDM';
+    if (query.contains('ORTALA') || query.contains('ORGANISASI') || query.contains('SOP') || query.contains('ANJAB')) return 'Fungsi Organisasi dan Tatalaksana';
+    if (query.contains('PENGADAAN') || query.contains('OPEN CALL') || query.contains('JPT')) return 'Fungsi Perencanaan dan Pengembangan Karir SDM';
+    if (query.contains('MUTASI') || query.contains('SK PNS') || query.contains('SUMPAH')) return 'Fungsi Mutasi Umum dan Kesejahteraan';
+    if (query.contains('PENELITI') || query.contains('JF1')) return 'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional I';
+    if (query.contains('JF2') || query.contains('AHLI UTAMA')) return 'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional II';
+    if (query.contains('JF3') || query.contains('FUNGSIIONAL III')) return 'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional III';
+    if (query.contains('TUBEL') || query.contains('BELAJAR') || query.contains('DIKLAT')) return 'Fungsi Perencanaan dan Pengembangan Kompetensi SDM';
+    if (query.contains('ASSESSMENT') || query.contains('TALENTA')) return 'Fungsi Penilaian Kompetensi';
+    if (query.contains('TUKIN') || query.contains('KINERJA') || query.contains('SKP')) return 'Fungsi Manajemen Kinerja dan Penghargaan ASN';
+    if (query.contains('CLTN') || query.contains('DISIPLIN') || query.contains('CERAI')) return 'Fungsi Pembinaan dan Penegakkan Disiplin ASN';
+    if (query.contains('TAPERA') || query.contains('SIASN') || query.contains('SIMPEG')) return 'Fungsi Pengelolaan data dan informasi SDM';
+    if (query.contains('ORASI') || query.contains('PROFESOR')) return 'Fungsi Kesekretariat Majelis Profesor';
+    if (query.contains('RB') || query.contains('ZONA INTEGRITAS')) return 'Fungsi Kesekretariatan RB';
+    if (query.contains('REENTRY') || query.contains('PEMBINAAN ULANG')) return 'Fungsi Pembinaan Karir SDM Pembinaan Ulang';
 
-    return 'Tim Layanan SDM BOSDM';
+    return 'Fungsi Pengelolaan data dan informasi SDM';
   }
 }

@@ -8,7 +8,11 @@ class QuestionModel {
   final String judul;
   final String isi;
   final String status;
+  final String? lksdmWilayah;
+  final String? targetTimPusat;
   final String? targetTim;
+  final String? adminLksdmId;
+  final String? adminPusatId;
   final String? assignedTo;
   final String? tugasFungsiNama;
   final bool isPublic;
@@ -17,13 +21,22 @@ class QuestionModel {
   final List<AnswerModel>? answers;
   final String? createdAt;
 
+  String? get lksdmKawasan => lksdmWilayah;
+  String? get escalatedToTeam => targetTimPusat;
+
   const QuestionModel({
     this.id,
     this.ticketNumber,
     required this.judul,
     required this.isi,
     required this.status,
+    String? lksdmWilayah,
+    String? lksdmKawasan,
+    String? targetTimPusat,
+    String? escalatedToTeam,
     this.targetTim,
+    this.adminLksdmId,
+    this.adminPusatId,
     this.assignedTo,
     this.tugasFungsiNama,
     this.isPublic = true,
@@ -31,7 +44,19 @@ class QuestionModel {
     this.tugasFungsi,
     this.answers,
     this.createdAt,
-  });
+  })  : lksdmWilayah = lksdmWilayah ?? lksdmKawasan,
+        targetTimPusat = targetTimPusat ?? escalatedToTeam;
+
+  bool get isEscalated =>
+      status == 'dialihkan_ke_pusat' ||
+      status == 'eskalasi_pusat' ||
+      adminPusatId != null;
+
+  bool get isWaitingConfirmation =>
+      status == 'ditangani_lksdm' || status == 'menunggu_konfirmasi_pegawai';
+
+  String get effectiveTargetTim =>
+      targetTimPusat ?? targetTim ?? 'Layanan Kawasan SDM';
 
   factory QuestionModel.fromJson(Map<String, dynamic> json) {
     UserModel? author;
@@ -46,8 +71,11 @@ class QuestionModel {
     List<CategoryModel>? categories;
     if (json['question_tugas_fungsi'] is List) {
       categories = (json['question_tugas_fungsi'] as List).map((item) {
-        if (item is Map && item.containsKey('tugas_fungsi') && item['tugas_fungsi'] is Map) {
-          return CategoryModel.fromJson(Map<String, dynamic>.from(item['tugas_fungsi']));
+        if (item is Map &&
+            item.containsKey('tugas_fungsi') &&
+            item['tugas_fungsi'] is Map) {
+          return CategoryModel.fromJson(
+              Map<String, dynamic>.from(item['tugas_fungsi']));
         } else if (item is Map) {
           return CategoryModel.fromJson(Map<String, dynamic>.from(item));
         }
@@ -66,17 +94,31 @@ class QuestionModel {
           .toList();
     }
 
-    final int? parsedId = json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? '');
+    final int? parsedId =
+        json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? '');
     final String generatedTicketNumber = json['ticket_number']?.toString() ??
         (parsedId != null ? 'TKT-${parsedId.toString().padLeft(4, '0')}' : 'TKT-NEW');
+
+    final lksdmVal = json['lksdm_kawasan']?.toString() ??
+        json['lksdm_wilayah']?.toString() ??
+        json['lksdm']?.toString() ??
+        'Layanan Kawasan SDM 1 : Thamrin I';
+
+    final targetPusatVal = json['target_tim_pusat']?.toString() ??
+        json['escalated_to_team']?.toString() ??
+        json['target_tim']?.toString();
 
     return QuestionModel(
       id: parsedId,
       ticketNumber: generatedTicketNumber,
       judul: json['judul']?.toString() ?? '-',
       isi: json['isi']?.toString() ?? '-',
-      status: json['status']?.toString() ?? 'menunggu_disposisi',
-      targetTim: json['target_tim']?.toString() ?? json['targetTim']?.toString(),
+      status: json['status']?.toString() ?? 'menunggu_lksdm',
+      lksdmWilayah: lksdmVal,
+      targetTimPusat: targetPusatVal,
+      targetTim: json['target_tim']?.toString() ?? targetPusatVal ?? lksdmVal,
+      adminLksdmId: json['admin_lksdm_id']?.toString(),
+      adminPusatId: json['admin_pusat_id']?.toString(),
       assignedTo: json['assigned_to']?.toString() ?? json['assignedTo']?.toString(),
       tugasFungsiNama: json['tugas_fungsi_nama']?.toString(),
       isPublic: json['is_public'] == true || json['is_public'] == 1,
@@ -89,12 +131,17 @@ class QuestionModel {
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
+      if (id != null) 'id': id,
       'ticket_number': ticketNumber,
       'judul': judul,
       'isi': isi,
       'status': status,
+      'lksdm_kawasan': lksdmWilayah,
+      'lksdm_wilayah': lksdmWilayah,
+      'target_tim_pusat': targetTimPusat,
       'target_tim': targetTim,
+      'admin_lksdm_id': adminLksdmId,
+      'admin_pusat_id': adminPusatId,
       'assigned_to': assignedTo,
       'tugas_fungsi_nama': tugasFungsiNama,
       'is_public': isPublic,
@@ -111,7 +158,13 @@ class QuestionModel {
     String? judul,
     String? isi,
     String? status,
+    String? lksdmWilayah,
+    String? lksdmKawasan,
+    String? targetTimPusat,
+    String? escalatedToTeam,
     String? targetTim,
+    String? adminLksdmId,
+    String? adminPusatId,
     String? assignedTo,
     String? tugasFungsiNama,
     bool? isPublic,
@@ -126,7 +179,11 @@ class QuestionModel {
       judul: judul ?? this.judul,
       isi: isi ?? this.isi,
       status: status ?? this.status,
+      lksdmWilayah: lksdmWilayah ?? lksdmKawasan ?? this.lksdmWilayah,
+      targetTimPusat: targetTimPusat ?? escalatedToTeam ?? this.targetTimPusat,
       targetTim: targetTim ?? this.targetTim,
+      adminLksdmId: adminLksdmId ?? this.adminLksdmId,
+      adminPusatId: adminPusatId ?? this.adminPusatId,
       assignedTo: assignedTo ?? this.assignedTo,
       tugasFungsiNama: tugasFungsiNama ?? this.tugasFungsiNama,
       isPublic: isPublic ?? this.isPublic,

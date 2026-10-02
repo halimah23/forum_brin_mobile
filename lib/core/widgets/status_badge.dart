@@ -17,6 +17,13 @@ class StatusBadge extends StatelessWidget {
     IconData icon;
 
     switch (status.toLowerCase().replaceAll(' ', '_')) {
+      case 'menunggu_lksdm':
+        label = 'Menunggu LKSDM';
+        bgColor = const Color(0xFFFFF8E1);
+        textColor = const Color(0xFFE65100);
+        borderColor = const Color(0xFFFFB74D);
+        icon = Icons.hourglass_top_rounded;
+        break;
       case 'menunggu_disposisi':
       case 'menunggu_approval':
       case 'pending':
@@ -26,6 +33,13 @@ class StatusBadge extends StatelessWidget {
         borderColor = const Color(0xFFFFB74D);
         icon = Icons.hourglass_top_rounded;
         break;
+      case 'ditangani_lksdm':
+        label = 'Ditangani LKSDM';
+        bgColor = const Color(0xFFE0F2F1);
+        textColor = const Color(0xFF00695C);
+        borderColor = const Color(0xFF80CBC4);
+        icon = Icons.support_agent_rounded;
+        break;
       case 'sedang_diproses':
       case 'diproses':
       case 'in_progress':
@@ -34,6 +48,14 @@ class StatusBadge extends StatelessWidget {
         textColor = const Color(0xFF1565C0);
         borderColor = const Color(0xFF90CAF9);
         icon = Icons.engineering_outlined;
+        break;
+      case 'dialihkan_ke_pusat':
+      case 'eskalasi_pusat':
+        label = 'Dialihkan ke Pusat';
+        bgColor = const Color(0xFFFFF3E0);
+        textColor = const Color(0xFFE65100);
+        borderColor = const Color(0xFFFFCC80);
+        icon = Icons.forward_rounded;
         break;
       case 'selesai':
       case 'dijawab':

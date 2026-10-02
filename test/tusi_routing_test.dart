@@ -8,45 +8,41 @@ import 'package:forum_brin_mobile/features/questions/services/question_service.d
 
 void main() {
   group('Tusi Routing & Catalog Tests', () {
-    test('Memverifikasi 15 Tim BOSDM terdaftar lengkap', () {
-      expect(TusiCatalogData.allTeams.length, 15);
-      expect(TusiCatalogData.allTeams.contains('Tim Ortala'), isTrue);
-      expect(TusiCatalogData.allTeams.contains('Tim Perencanaan dan Pengembangan Karier'), isTrue);
-      expect(TusiCatalogData.allTeams.contains('Tim Penilaian Kompetensi'), isTrue);
-      expect(TusiCatalogData.allTeams.contains('Tim Perencanaan dan Pengembangan Kompetensi'), isTrue);
-      expect(TusiCatalogData.allTeams.contains('Tim Mutasi dan Pengelolaan JF 1'), isTrue);
-      expect(TusiCatalogData.allTeams.contains('Tim LKSDM'), isTrue);
+    test('Memverifikasi 14 Tim Pusat BOSDM terdaftar lengkap', () {
+      expect(TusiCatalogData.allTeams.length, 14);
+      expect(TusiCatalogData.allTeams.contains('Fungsi Organisasi dan Tatalaksana'), isTrue);
+      expect(TusiCatalogData.allTeams.contains('Fungsi Perencanaan dan Pengembangan Karir SDM'), isTrue);
+      expect(TusiCatalogData.allTeams.contains('Fungsi Penilaian Kompetensi'), isTrue);
+      expect(TusiCatalogData.allTeams.contains('Fungsi Perencanaan dan Pengembangan Kompetensi SDM'), isTrue);
+      expect(TusiCatalogData.allTeams.contains('Fungsi Mutasi dan Pengelolaan Jabatan Fungsional I'), isTrue);
     });
 
     test('Routing otomatis ke Tim berdasarkan kode atau nama Tusi', () {
       // 1. Ortala
-      expect(QuestionService.determineTeamName('BRIN-04.03.01.01 - Evaluasi Organisasi'), 'Tim Ortala');
-      expect(QuestionService.determineTeamName('Penyusunan Peta Jabatan'), 'Tim Ortala');
+      expect(QuestionService.determineTeamName('ORTALA-01 - Evaluasi Organisasi'), 'Fungsi Organisasi dan Tatalaksana');
+      expect(QuestionService.determineTeamName('Penyusunan Peta Jabatan'), 'Fungsi Organisasi dan Tatalaksana');
 
       // 2. RB
-      expect(QuestionService.determineTeamName('BRIN-04.03.03.02 - Zona Integritas'), 'Tim Sekretariat RB');
+      expect(QuestionService.determineTeamName('RB-02 - Zona Integritas'), 'Fungsi Kesekretariatan RB');
 
-      // 3. Karier
-      expect(QuestionService.determineTeamName('Pengembangan Karier SDM'), 'Tim Perencanaan dan Pengembangan Karier');
+      // 3. Karir
+      expect(QuestionService.determineTeamName('BANGKAR-01 - Analisis Beban Kerja (ABK)'), 'Fungsi Perencanaan dan Pengembangan Karir SDM');
 
       // 4. JF 1 & HKM
-      expect(QuestionService.determineTeamName('BRIN-04.03.06.02.01.01 - Penilaian Usulan HKM'), 'Tim Mutasi dan Pengelolaan JF 1');
+      expect(QuestionService.determineTeamName('JF1-01 - Penilaian Usulan HKM Peneliti'), 'Fungsi Mutasi dan Pengelolaan Jabatan Fungsional I');
 
       // 5. Manajemen Kinerja
-      expect(QuestionService.determineTeamName('Pendokumentasian Hasil Kerja pada SIMARIN'), 'Tim Manajemen Kinerja');
+      expect(QuestionService.determineTeamName('Penilaian Kinerja & SK Tunjangan Kinerja'), 'Fungsi Manajemen Kinerja dan Penghargaan ASN');
 
-      // 6. Disiplin & BerAKHLAK
-      expect(QuestionService.determineTeamName('BRIN-04.03.08.01 - CLTN'), 'Tim Internalisasi BerAKHLAK dan Pembinaan Disiplin ASN');
-
-      // 7. LKSDM
-      expect(QuestionService.determineTeamName('BRIN-04.03.10.01.01.02 - Fasilitasi Kenaikan Gaji Berkala (KGB)'), 'Tim LKSDM');
+      // 6. Disiplin & CLTN
+      expect(QuestionService.determineTeamName('DISIPLIN-01 - CLTN'), 'Fungsi Pembinaan dan Penegakkan Disiplin ASN');
     });
 
     test('Filter daftar Tusi per Tim', () {
-      final ortalaTusi = TusiCatalogData.getTugasFungsiByTeam('Tim Ortala');
+      final ortalaTusi = TusiCatalogData.getTugasFungsiByTeam('Fungsi Organisasi dan Tatalaksana');
       expect(ortalaTusi.isNotEmpty, isTrue);
       for (var item in ortalaTusi) {
-        expect(item.teamName, 'Tim Ortala');
+        expect(item.teamName, 'Fungsi Organisasi dan Tatalaksana');
       }
     });
   });

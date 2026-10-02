@@ -27,15 +27,20 @@ void main() {
       expect(user.token, 'mock-jwt-token');
     });
 
-    test('UserRole parser handles all 4 role variations correctly', () {
+    test('UserRole parser handles all 5 role variations correctly', () {
       expect(UserRole.fromString('super_admin'), UserRole.superAdmin);
       expect(UserRole.fromString('Super Admin'), UserRole.superAdmin);
 
       expect(UserRole.fromString('admin'), UserRole.admin);
       expect(UserRole.fromString('Admin Layanan'), UserRole.admin);
+      expect(UserRole.fromString('admin_lksdm'), UserRole.admin);
 
       expect(UserRole.fromString('ketua_tim'), UserRole.ketuaTim);
       expect(UserRole.fromString('Ketua Tim'), UserRole.ketuaTim);
+
+      expect(UserRole.fromString('eksekutif'), UserRole.eksekutif);
+      expect(UserRole.fromString('executive'), UserRole.eksekutif);
+      expect(UserRole.fromString('pimpinan'), UserRole.eksekutif);
 
       expect(UserRole.fromString('member'), UserRole.member);
       expect(UserRole.fromString('pegawai'), UserRole.member);
