@@ -1,6 +1,8 @@
 enum UserRole {
   superAdmin,
   admin,
+  adminLksdm,
+  adminPusat,
   ketuaTim,
   eksekutif,
   member;
@@ -12,6 +14,14 @@ enum UserRole {
       case 'super_admin':
       case 'superadmin':
         return UserRole.superAdmin;
+      case 'admin_lksdm':
+      case 'lksdm':
+      case 'staf_lksdm':
+        return UserRole.adminLksdm;
+      case 'admin_pusat':
+      case 'adminpusat':
+      case 'staf_pusat':
+        return UserRole.adminPusat;
       case 'admin':
       case 'admin_layanan':
       case 'admin_tim':
@@ -21,9 +31,6 @@ enum UserRole {
       case 'staf':
       case 'staff':
       case 'staf_admin':
-      case 'admin_lksdm':
-      case 'admin_pusat':
-      case 'adminpusat':
         return UserRole.admin;
       case 'ketua_tim':
       case 'ketuatim':
@@ -46,6 +53,10 @@ enum UserRole {
     switch (this) {
       case UserRole.superAdmin:
         return 'Super Admin';
+      case UserRole.adminLksdm:
+        return 'Staf Admin LKSDM';
+      case UserRole.adminPusat:
+        return 'Staf Admin Pusat';
       case UserRole.admin:
         return 'Staf Admin';
       case UserRole.ketuaTim:
@@ -61,6 +72,10 @@ enum UserRole {
     switch (this) {
       case UserRole.superAdmin:
         return 'super_admin';
+      case UserRole.adminLksdm:
+        return 'admin_lksdm';
+      case UserRole.adminPusat:
+        return 'admin_pusat';
       case UserRole.admin:
         return 'admin';
       case UserRole.ketuaTim:

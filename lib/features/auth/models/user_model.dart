@@ -30,12 +30,19 @@ class UserModel {
   bool get isPegawai => userRole == UserRole.member;
   bool get isMember => userRole == UserRole.member;
   bool get isEksekutif => userRole == UserRole.eksekutif;
+  bool get isKetuaTim => userRole == UserRole.ketuaTim;
+  bool get isSuperAdmin => userRole == UserRole.superAdmin;
+
   bool get isAdminLksdm =>
+      userRole == UserRole.adminLksdm ||
       role == 'admin_lksdm' ||
       (userRole == UserRole.admin &&
           (lksdm != null || (unit != null && unit!.toLowerCase().contains('lksdm'))));
+
   bool get isAdminPusat =>
-      role == 'admin_pusat' || (userRole == UserRole.admin && !isAdminLksdm);
+      userRole == UserRole.adminPusat ||
+      role == 'admin_pusat' ||
+      (userRole == UserRole.admin && !isAdminLksdm);
 
   String get effectiveLksdm =>
       lksdm ??
