@@ -12,7 +12,7 @@ void main() async {
     await dotenv.load(fileName: '.env');
   } catch (e) {
     debugPrint('Warning: Tidak dapat memuat .env file: $e');
-  }
+  } 
 
   final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? 'https://your-project.supabase.co';
   final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? 'your-anon-key-here';

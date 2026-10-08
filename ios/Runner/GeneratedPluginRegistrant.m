@@ -6,8 +6,8 @@
 
 #import "GeneratedPluginRegistrant.h"
 
-#if __has_include(<app_links/AppLinksPlugin.h>)
-#import <app_links/AppLinksPlugin.h>
+#if __has_include(<app_links/AppLinksIosPlugin.h>)
+#import <app_links/AppLinksIosPlugin.h>
 #else
 @import app_links;
 #endif
@@ -33,7 +33,7 @@
 @implementation GeneratedPluginRegistrant
 
 + (void)registerWithRegistry:(NSObject<FlutterPluginRegistry>*)registry {
-  [AppLinksPlugin registerWithRegistrar:[registry registrarForPlugin:@"AppLinksPlugin"]];
+  [AppLinksIosPlugin registerWithRegistrar:[registry registrarForPlugin:@"AppLinksIosPlugin"]];
   [PathProviderPlugin registerWithRegistrar:[registry registrarForPlugin:@"PathProviderPlugin"]];
   [SharedPreferencesPlugin registerWithRegistrar:[registry registrarForPlugin:@"SharedPreferencesPlugin"]];
   [URLLauncherPlugin registerWithRegistrar:[registry registrarForPlugin:@"URLLauncherPlugin"]];
