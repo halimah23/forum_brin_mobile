@@ -5,6 +5,7 @@ import '../data/tusi_catalog_data.dart';
 import '../models/answer_model.dart';
 import '../models/category_model.dart';
 import '../models/question_model.dart';
+import '../../auth/models/user_model.dart';
 
 
 class QuestionService {
@@ -101,13 +102,16 @@ class QuestionService {
         query = query.or('target_tim.ilike.%$teamFilter%,lksdm_kawasan.ilike.%$teamFilter%,target_tim_pusat.ilike.%$teamFilter%');
       }
 
-      if (statusFilter != null && statusFilter.isNotEmpty && statusFilter != 'semua') {
-        if (statusFilter == 'menunggu_lksdm') {
-          query = query.inFilter('status', ['menunggu_lksdm', 'menunggu_disposisi']);
-        } else if (statusFilter == 'ditangani_lksdm') {
-          query = query.inFilter('status', ['ditangani_lksdm', 'sedang_diproses']);
-        } else if (statusFilter == 'dialihkan_ke_pusat' || statusFilter == 'eskalasi_pusat') {
-          query = query.inFilter('status', ['dialihkan_ke_pusat', 'eskalasi_pusat']);
+      if (statusFilter != null && statusFilter.isNotEmpty && statusFilter.toLowerCase() != 'semua') {
+        final normalizedStatus = statusFilter.toLowerCase();
+        if (normalizedStatus == 'menunggu_lksdm' || normalizedStatus == 'open') {
+          query = query.inFilter('status', ['menunggu_lksdm', 'menunggu_disposisi', 'OPEN', 'open']);
+        } else if (normalizedStatus == 'ditangani_lksdm' || normalizedStatus == 'in_progress' || normalizedStatus == 'waiting_user') {
+          query = query.inFilter('status', ['ditangani_lksdm', 'sedang_diproses', 'IN_PROGRESS', 'WAITING_USER', 'in_progress', 'waiting_user']);
+        } else if (normalizedStatus == 'dialihkan_ke_pusat' || normalizedStatus == 'eskalasi_pusat' || normalizedStatus == 'escalated' || normalizedStatus == 'in_progress_center') {
+          query = query.inFilter('status', ['dialihkan_ke_pusat', 'eskalasi_pusat', 'ESCALATED', 'IN_PROGRESS_CENTER', 'escalated', 'in_progress_center']);
+        } else if (normalizedStatus == 'selesai' || normalizedStatus == 'closed' || normalizedStatus == 'resolved') {
+          query = query.inFilter('status', ['selesai', 'CLOSED', 'RESOLVED', 'closed', 'resolved']);
         } else {
           query = query.eq('status', statusFilter);
         }
@@ -123,13 +127,9 @@ class QuestionService {
           id,
           question_id,
           user_id,
-          penjawab_nama,
-          penjawab_role,
           sender_name,
           sender_role,
-          isi_jawaban,
           isi_pesan,
-          sender_role_type,
           attachment_url,
           created_at
         ''').order('created_at', ascending: true);
@@ -179,6 +179,10 @@ class QuestionService {
     );
   }
 
+  static bool _isValidUuid(String id) {
+    return RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$').hasMatch(id);
+  }
+
   /// Buat Tiket Pertanyaan Baru (Awal alur: Menunggu penanganan Staf Admin LKSDM Kawasan)
   static Future<QuestionModel> createQuestion({
     required String token,
@@ -193,14 +197,16 @@ class QuestionService {
     final currentUser = _client.auth.currentUser;
     String? userId = currentUser?.id;
 
-    if (userId == null || userId.isEmpty) {
+    if (userId == null || !_isValidUuid(userId)) {
       final savedUser = await SessionManager.getUser();
-      if (savedUser?.id != null && savedUser!.id!.contains('-')) {
+      if (savedUser?.id != null && _isValidUuid(savedUser!.id!)) {
         userId = savedUser.id;
       }
     }
     // Fallback ID pegawai jika sesi auth lokal belum memiliki ID Supabase valid
-    userId ??= '77777777-7777-7777-7777-777777777777';
+    if (userId == null || !_isValidUuid(userId)) {
+      userId = '77777777-7777-7777-7777-777777777777';
+    }
 
     // Tentukan Tusi dan Tim Terkait
     String targetTeam = selectedTeam ?? 'Tim Layanan SDM BOSDM';
@@ -270,6 +276,10 @@ class QuestionService {
       return QuestionModel.fromJson(Map<String, dynamic>.from(insertedQuestion));
     } catch (e) {
       debugPrint('Error inserting question to Supabase: $e');
+      
+      // Attempt to retrieve saved user to avoid null exception in UI
+      final savedUser = await SessionManager.getUser();
+
       // Return simulasi jika offline
       return QuestionModel(
         id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -283,7 +293,43 @@ class QuestionService {
         targetTimPusat: effectiveTargetPusat,
         isPublic: isPublic,
         createdAt: DateTime.now().toIso8601String(),
+        user: savedUser ?? const UserModel(
+          id: '77777777-7777-7777-7777-777777777777',
+          name: 'Pengguna Mode Offline',
+          email: 'offline@brin.go.id',
+          role: 'member',
+        ),
       );
+    }
+  }
+
+  static Future<void> _safeInsertAnswer(Map<String, dynamic> payload) async {
+    try {
+      await _client.from('answers').insert(payload);
+    } catch (e) {
+      final errStr = e.toString();
+      if (errStr.contains('user_id') || errStr.contains('PGRST204')) {
+        final copyPayload = Map<String, dynamic>.from(payload)..remove('user_id');
+        await _client.from('answers').insert(copyPayload);
+      } else {
+        rethrow;
+      }
+    }
+  }
+
+  static Future<void> _safeUpdateQuestion(int questionId, Map<String, dynamic> payload) async {
+    try {
+      await _client.from('questions').update(payload).eq('id', questionId);
+    } catch (e) {
+      final errStr = e.toString();
+      if (errStr.contains('updated_at') || errStr.contains('PGRST204')) {
+        final copyPayload = Map<String, dynamic>.from(payload)..remove('updated_at');
+        if (copyPayload.isNotEmpty) {
+          await _client.from('questions').update(copyPayload).eq('id', questionId);
+        }
+      } else {
+        rethrow;
+      }
     }
   }
 
@@ -292,34 +338,55 @@ class QuestionService {
     required int questionId,
     required String isiPesan,
     required String pengirimNama,
-    String pengirimRole = 'Pegawai (Pengaju)',
+    String pengirimRole = 'pegawai',
     String? senderRoleType,
     String? attachmentUrl,
   }) async {
     try {
       final currentUser = _client.auth.currentUser;
+      String? userId = currentUser?.id;
+      if (userId == null || !_isValidUuid(userId)) {
+        final savedUser = await SessionManager.getUser();
+        if (savedUser?.id != null && _isValidUuid(savedUser!.id!)) {
+          userId = savedUser.id;
+        }
+      }
+      if (userId == null || !_isValidUuid(userId)) {
+        userId = '77777777-7777-7777-7777-777777777777';
+      }
+
+      final String validSenderRole;
+      final roleToCheck = (senderRoleType ?? pengirimRole).toLowerCase();
+      if (roleToCheck.contains('pusat')) {
+        validSenderRole = 'admin_pusat';
+      } else if (roleToCheck.contains('lksdm')) {
+        validSenderRole = 'admin_lksdm';
+      } else if (roleToCheck.contains('ketua')) {
+        validSenderRole = 'ketua_tim';
+      } else if (roleToCheck.contains('sistem') || roleToCheck.contains('system')) {
+        validSenderRole = 'system';
+      } else {
+        validSenderRole = 'pegawai';
+      }
 
       // 1. Simpan pesan lanjutan ke tabel answers pada tiket yang sama
-      await _client.from('answers').insert({
+      await _safeInsertAnswer({
         'question_id': questionId,
-        if (currentUser?.id != null) 'user_id': currentUser!.id,
-        'penjawab_nama': pengirimNama,
-        'penjawab_role': pengirimRole,
+        'user_id': userId,
         'sender_name': pengirimNama,
-        'sender_role': pengirimRole,
-        'isi_jawaban': isiPesan,
+        'sender_role': validSenderRole,
         'isi_pesan': isiPesan,
-        if (senderRoleType != null) 'sender_role_type': senderRoleType,
         if (attachmentUrl != null) 'attachment_url': attachmentUrl,
       });
 
       // 2. Perbarui updated_at pertanyaan
-      await _client.from('questions').update({
+      await _safeUpdateQuestion(questionId, {
         'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', questionId);
+      });
 
       return true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Error inserting follow up message to Supabase: $e');
       return false;
     }
   }
@@ -334,11 +401,11 @@ class QuestionService {
         ? adminName
         : 'Admin $targetTeam';
     try {
-      await _client.from('questions').update({
+      await _safeUpdateQuestion(questionId, {
         'status': 'ditangani_lksdm',
         'assigned_to': assignedLabel,
         'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', questionId);
+      });
 
       return true;
     } catch (_) {
@@ -353,11 +420,11 @@ class QuestionService {
     String? catatanDisposisi,
   }) async {
     try {
-      await _client.from('questions').update({
+      await _safeUpdateQuestion(questionId, {
         'status': 'ditangani_lksdm',
         'assigned_to': namaPetugas,
         'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', questionId);
+      });
 
       return true;
     } catch (_) {
@@ -374,32 +441,39 @@ class QuestionService {
   }) async {
     try {
       final currentUser = _client.auth.currentUser;
+      String? userId = currentUser?.id;
+      if (userId == null || !_isValidUuid(userId)) {
+        final savedUser = await SessionManager.getUser();
+        if (savedUser?.id != null && _isValidUuid(savedUser!.id!)) {
+          userId = savedUser.id;
+        }
+      }
+      if (userId == null || !_isValidUuid(userId)) {
+        userId = '44444444-4444-4444-4444-444444444444';
+      }
 
       // 1. Catat event eskalasi di tabel answers sebagai system_event
       final eventText = 'Pertanyaan telah dialihkan oleh $escalatedBy ke $centralTeamName.${reason != null && reason.isNotEmpty ? " Catatan: $reason" : ""}';
 
-      await _client.from('answers').insert({
+      await _safeInsertAnswer({
         'question_id': questionId,
-        if (currentUser?.id != null) 'user_id': currentUser!.id,
-        'penjawab_nama': 'Sistem Forum',
-        'penjawab_role': 'Sistem',
+        'user_id': userId,
         'sender_name': 'Sistem Forum',
-        'sender_role': 'Sistem',
-        'sender_role_type': 'system_event',
-        'isi_jawaban': eventText,
+        'sender_role': 'system',
         'isi_pesan': eventText,
       });
 
       // 2. Perbarui status pertanyaan menjadi 'dialihkan_ke_pusat' dan set target_tim ke Tim Pusat
-      await _client.from('questions').update({
+      await _safeUpdateQuestion(questionId, {
         'status': 'dialihkan_ke_pusat',
         'target_tim': centralTeamName,
         'target_tim_pusat': centralTeamName,
         'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', questionId);
+      });
 
       return true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Error escalating ticket to central: $e');
       return true; // Return true for mock/offline resilience
     }
   }
@@ -412,34 +486,122 @@ class QuestionService {
   }) async {
     try {
       final currentUser = _client.auth.currentUser;
+      String? userId = currentUser?.id;
+      if (userId == null || !_isValidUuid(userId)) {
+        final savedUser = await SessionManager.getUser();
+        if (savedUser?.id != null && _isValidUuid(savedUser!.id!)) {
+          userId = savedUser.id;
+        }
+      }
+      if (userId == null || !_isValidUuid(userId)) {
+        userId = '77777777-7777-7777-7777-777777777777';
+      }
+
       final newStatus = isResolved ? 'selesai' : 'dialihkan_ke_pusat';
 
       final systemMessage = isResolved
           ? 'Pegawai mengonfirmasi bahwa pertanyaan sudah TERJAWAB dengan tuntas.'
           : 'Pegawai mengonfirmasi bahwa kendala belum tuntas. Pertanyaan dialihkan ke Staf Admin Pusat dalam bubble chat 3 user.';
 
-      await _client.from('answers').insert({
+      await _safeInsertAnswer({
         'question_id': questionId,
-        if (currentUser?.id != null) 'user_id': currentUser!.id,
-        'penjawab_nama': 'Pegawai',
-        'penjawab_role': 'Pegawai (Pengaju)',
+        'user_id': userId,
         'sender_name': 'Pegawai',
-        'sender_role': 'Pegawai (Pengaju)',
-        'sender_role_type': isResolved ? 'pegawai' : 'system_event',
-        'isi_jawaban': systemMessage,
+        'sender_role': isResolved ? 'pegawai' : 'system',
         'isi_pesan': systemMessage,
       });
 
-      await _client.from('questions').update({
+      await _safeUpdateQuestion(questionId, {
         'status': newStatus,
         'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', questionId);
+      });
 
+      return true;
+    } catch (e) {
+      debugPrint('Error confirming answer resolution: $e');
+      return true;
+    }
+  }
+
+  /// Toggle status Pin / Up Pertanyaan oleh Superadmin agar menjadi Trending FAQ / Isu Utama
+  static Future<bool> togglePinQuestion({
+    required int questionId,
+    required bool isPinned,
+  }) async {
+    try {
+      await _safeUpdateQuestion(questionId, {
+        'is_pinned': isPinned,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
       return true;
     } catch (_) {
       return true;
     }
   }
+
+  /// Cek apakah Pegawai sudah memiliki tiket berstatus aktif pada Tusi yang sama
+  static Future<QuestionModel?> getActiveTicketByTusi({
+    required String userId,
+    required String tusiNama,
+  }) async {
+    try {
+      final response = await _client.from('questions').select('''
+        id,
+        ticket_number,
+        judul,
+        isi,
+        status,
+        target_tim,
+        tugas_fungsi_nama,
+        is_public,
+        created_at
+      ''')
+      .eq('user_id', userId)
+      .ilike('tugas_fungsi_nama', '%$tusiNama%')
+      .neq('status', 'selesai')
+      .order('created_at', ascending: false)
+      .limit(1);
+
+      if (response.isNotEmpty) {
+        return QuestionModel.fromJson(Map<String, dynamic>.from(response.first));
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Ambil tiket aktif terbaru milik pengguna (status != CLOSED / selesai) untuk deteksi F-03
+  static Future<QuestionModel?> getUserActiveTicket({
+    required String userId,
+    String? lksdmKawasan,
+  }) async {
+    try {
+      var query = _client.from('questions').select('''
+        id,
+        ticket_number,
+        judul,
+        isi,
+        status,
+        target_tim,
+        lksdm_kawasan,
+        tugas_fungsi_nama,
+        is_public,
+        created_at
+      ''').eq('user_id', userId);
+
+      query = query.neq('status', 'selesai').neq('status', 'CLOSED');
+
+      if (lksdmKawasan != null && lksdmKawasan.isNotEmpty) {
+        query = query.ilike('lksdm_kawasan', '%$lksdmKawasan%');
+      }
+
+      final response = await query.order('created_at', ascending: false).limit(1);
+      if (response.isNotEmpty) {
+        return QuestionModel.fromJson(Map<String, dynamic>.from(response.first));
+      }
+    } catch (_) {}
+    return null;
+  }
+
 
   /// Memberikan Tanggapan oleh Staf Admin LKSDM / Admin Pusat / Ketua Tim
   /// (Hanya Pegawai yang berhak mengakhiri dan menandai tiket sebagai 'selesai')
@@ -455,35 +617,52 @@ class QuestionService {
   }) async {
     try {
       final currentUser = _client.auth.currentUser;
+      String? userId = currentUser?.id;
+      if (userId == null || !_isValidUuid(userId)) {
+        final savedUser = await SessionManager.getUser();
+        if (savedUser?.id != null && _isValidUuid(savedUser!.id!)) {
+          userId = savedUser.id;
+        }
+      }
+
+      final String validSenderRole;
+      final roleToCheck = (senderRoleType ?? penjawabRole).toLowerCase();
+      if (roleToCheck.contains('pusat')) {
+        validSenderRole = 'admin_pusat';
+      } else if (roleToCheck.contains('lksdm')) {
+        validSenderRole = 'admin_lksdm';
+      } else if (roleToCheck.contains('ketua')) {
+        validSenderRole = 'ketua_tim';
+      } else if (roleToCheck.contains('sistem') || roleToCheck.contains('system')) {
+        validSenderRole = 'system';
+      } else {
+        validSenderRole = 'pegawai';
+      }
 
       // 1. Simpan jawaban ke tabel answers
-      await _client.from('answers').insert({
+      await _safeInsertAnswer({
         'question_id': questionId,
-        if (currentUser?.id != null) 'user_id': currentUser!.id,
-        'penjawab_nama': penjawabNama,
-        'penjawab_role': penjawabRole,
+        if (userId != null && _isValidUuid(userId)) 'user_id': userId,
         'sender_name': penjawabNama,
-        'sender_role': penjawabRole,
-        if (senderRoleType != null) 'sender_role_type': senderRoleType,
-        'isi_jawaban': isiJawaban,
+        'sender_role': validSenderRole,
         'isi_pesan': isiJawaban,
         if (attachmentUrl != null) 'attachment_url': attachmentUrl,
       });
 
       // 2. Update status pertanyaan:
-      // Status tidak diubah ke selesai oleh admin, hanya Pegawai yang berhak menutup tiket
       final nextStatus = (currentStatus == 'dialihkan_ke_pusat' || currentStatus == 'eskalasi_pusat')
           ? 'dialihkan_ke_pusat'
           : 'ditangani_lksdm';
 
-      await _client.from('questions').update({
+      await _safeUpdateQuestion(questionId, {
         'status': nextStatus,
         'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', questionId);
+      });
 
       return true;
-    } catch (_) {
-      return true;
+    } catch (e) {
+      debugPrint('Error answering ticket: $e');
+      return false;
     }
   }
 

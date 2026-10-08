@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_radius.dart';
+import '../../../core/constants/app_typography.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../models/question_model.dart';
 
@@ -16,173 +18,170 @@ class QuestionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String namaUser = question.user?.name ?? 'Pegawai';
+    final String initial = namaUser.isNotEmpty ? namaUser[0].toUpperCase() : 'P';
     final String? namaTim = question.targetTim ??
         ((question.tugasFungsi != null && question.tugasFungsi!.isNotEmpty)
             ? question.tugasFungsi!.first.teamName ?? question.tugasFungsi!.first.nama
             : null);
 
-    return Card(
+    final int answerCount = question.answers?.length ?? 0;
+
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border, width: 1),
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const CircleAvatar(
-                    backgroundColor: AppColors.lightRedBackground,
-                    child: Icon(
-                      Icons.person,
-                      color: AppColors.primaryRed,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          namaUser,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        if (question.ticketNumber != null)
-                          Text(
-                            question.ticketNumber!,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey.shade600,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      StatusBadge(status: question.status),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: question.isPublic ? const Color(0xFFE8F5E9) : const Color(0xFFF3E5F5),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: question.isPublic ? const Color(0xFFA5D6A7) : const Color(0xFFCE93D8),
-                            width: 0.6,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              question.isPublic ? Icons.public : Icons.lock_outline,
-                              size: 10,
-                              color: question.isPublic ? const Color(0xFF2E7D32) : const Color(0xFF7B1FA2),
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              question.isPublic ? 'Publik' : 'Privat',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                color: question.isPublic ? const Color(0xFF2E7D32) : const Color(0xFF7B1FA2),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              if (namaTim != null && namaTim.isNotEmpty && namaTim != '-')
-                Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.lightBlueBackground,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    'Tujuan: $namaTim',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.primaryBlue,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              Text(
-                question.judul,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                question.isi,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Divider(height: 1),
-              const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.chat_bubble_outline,
-                        size: 16,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        (question.answers != null && question.answers!.isNotEmpty)
-                            ? '${question.answers!.length} Jawaban Resmi'
-                            : 'Lihat Detail Tiket',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: AppColors.primaryRed,
+                      child: Text(
+                        initial,
                         style: const TextStyle(
-                          color: AppColors.primaryRed,
-                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
                       ),
-                    ],
-                  ),
-                  if (question.assignedTo != null && question.assignedTo!.isNotEmpty)
-                    Text(
-                      'Petugas: ${question.assignedTo}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.teal.shade800,
-                        fontWeight: FontWeight.w500,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            namaUser,
+                            style: AppTypography.labelMedium,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (question.ticketNumber != null)
+                            Text(
+                              question.ticketNumber!,
+                              style: AppTypography.caption,
+                            ),
+                        ],
                       ),
                     ),
-                ],
-              ),
-            ],
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        StatusBadge(status: question.status),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.slate100,
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                            border: Border.all(color: AppColors.slate300, width: 1),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                question.isPublic ? Icons.public : Icons.lock_outline,
+                                size: 10,
+                                color: AppColors.slate700,
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                question.isPublic ? 'Publik' : 'Privat',
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.slate700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                if (namaTim != null && namaTim.isNotEmpty && namaTim != '-')
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.slate100,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      border: Border.all(color: AppColors.slate300, width: 1),
+                    ),
+                    child: Text(
+                      'Tujuan: $namaTim',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.primaryBlue,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 10.5,
+                      ),
+                    ),
+                  ),
+                Text(
+                  question.judul,
+                  style: AppTypography.heading3.copyWith(fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  question.isi,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.bodySmall,
+                ),
+                const SizedBox(height: 10),
+                const Divider(height: 1, color: AppColors.border),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.chat_bubble_outline_rounded,
+                          size: 13,
+                          color: AppColors.slate500,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          answerCount > 0
+                              ? '$answerCount Tanggapan'
+                              : 'Belum ada tanggapan',
+                          style: AppTypography.caption.copyWith(
+                            color: answerCount > 0 ? AppColors.slate700 : AppColors.slate500,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (question.assignedTo != null && question.assignedTo!.isNotEmpty)
+                      Text(
+                        'Petugas: ${question.assignedTo}',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.slate600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 }
+

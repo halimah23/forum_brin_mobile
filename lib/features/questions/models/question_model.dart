@@ -1,6 +1,7 @@
 import '../../auth/models/user_model.dart';
 import 'answer_model.dart';
 import 'category_model.dart';
+import 'ticket_status.dart';
 
 class QuestionModel {
   final int? id;
@@ -16,6 +17,7 @@ class QuestionModel {
   final String? assignedTo;
   final String? tugasFungsiNama;
   final bool isPublic;
+  final bool isPinned;
   final UserModel? user;
   final List<CategoryModel>? tugasFungsi;
   final List<AnswerModel>? answers;
@@ -23,6 +25,10 @@ class QuestionModel {
 
   String? get lksdmKawasan => lksdmWilayah;
   String? get escalatedToTeam => targetTimPusat;
+
+  TicketStatus get ticketStatus => TicketStatus.fromString(status);
+  bool get isClosed => ticketStatus.isClosed;
+  bool get isActive => ticketStatus.isActive;
 
   const QuestionModel({
     this.id,
@@ -40,6 +46,7 @@ class QuestionModel {
     this.assignedTo,
     this.tugasFungsiNama,
     this.isPublic = true,
+    this.isPinned = false,
     this.user,
     this.tugasFungsi,
     this.answers,
@@ -122,6 +129,7 @@ class QuestionModel {
       assignedTo: json['assigned_to']?.toString() ?? json['assignedTo']?.toString(),
       tugasFungsiNama: json['tugas_fungsi_nama']?.toString(),
       isPublic: json['is_public'] == true || json['is_public'] == 1,
+      isPinned: json['is_pinned'] == true || json['is_pinned'] == 1,
       user: author,
       tugasFungsi: categories,
       answers: answersList,
@@ -145,6 +153,7 @@ class QuestionModel {
       'assigned_to': assignedTo,
       'tugas_fungsi_nama': tugasFungsiNama,
       'is_public': isPublic,
+      'is_pinned': isPinned,
       'user': user?.toJson(),
       'tugas_fungsi': tugasFungsi?.map((c) => c.toJson()).toList(),
       'answers': answers?.map((a) => a.toJson()).toList(),
@@ -168,6 +177,7 @@ class QuestionModel {
     String? assignedTo,
     String? tugasFungsiNama,
     bool? isPublic,
+    bool? isPinned,
     UserModel? user,
     List<CategoryModel>? tugasFungsi,
     List<AnswerModel>? answers,
@@ -187,6 +197,7 @@ class QuestionModel {
       assignedTo: assignedTo ?? this.assignedTo,
       tugasFungsiNama: tugasFungsiNama ?? this.tugasFungsiNama,
       isPublic: isPublic ?? this.isPublic,
+      isPinned: isPinned ?? this.isPinned,
       user: user ?? this.user,
       tugasFungsi: tugasFungsi ?? this.tugasFungsi,
       answers: answers ?? this.answers,

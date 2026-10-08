@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../auth/cubits/auth_cubit.dart';
 import '../../auth/models/user_model.dart';
-import '../../auth/screens/login_screen.dart';
-import '../../questions/screens/question_list_screen.dart';
-import '../widgets/bottom_action_menu.dart';
 import '../widgets/trending_chart_widget.dart';
-import '../widgets/user_info_card.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   final UserModel user;
@@ -17,40 +12,6 @@ class AdminDashboardScreen extends StatelessWidget {
     super.key,
     required this.user,
   });
-
-  void _handleLogout(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Konfirmasi Logout'),
-        content: const Text('Apakah Anda yakin ingin keluar dari akun Admin Tim?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryBlue,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true && context.mounted) {
-      await context.read<AuthCubit>().logout();
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
-        );
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,18 +43,18 @@ class AdminDashboardScreen extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: primaryColor.withAlpha(20),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: primaryColor.withAlpha(80), width: 0.5),
+                      color: AppColors.slate100,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      border: Border.all(color: AppColors.slate300, width: 1),
                     ),
                     child: Text(
                       isAdminLksdm ? 'STAF ADMIN LKSDM ($lksdmName)' : 'STAF ADMIN PUSAT ($teamName)',
-                      style: TextStyle(
-                        fontSize: 10,
+                      style: const TextStyle(
+                        fontSize: 9,
                         fontWeight: FontWeight.bold,
-                        color: primaryColor,
+                        color: AppColors.slate800,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -103,78 +64,6 @@ class AdminDashboardScreen extends StatelessWidget {
             ),
           ],
         ),
-        actions: [
-          PopupMenuButton<String>(
-            tooltip: 'Profil Staf Admin',
-            onSelected: (value) {
-              if (value == 'logout') {
-                _handleLogout(context);
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem<String>(
-                value: 'profile',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.shield_outlined,
-                      color: primaryColor,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            user.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            isAdminLksdm ? 'Staf Admin $lksdmName' : 'Staf Admin $teamName',
-                            style: const TextStyle(fontSize: 11, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem<String>(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.logout,
-                      color: Colors.red,
-                    ),
-                    SizedBox(width: 12),
-                    Text(
-                      'Logout',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            child: Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: CircleAvatar(
-                radius: 20,
-                backgroundColor: primaryColor.withAlpha(25),
-                child: Icon(
-                  Icons.admin_panel_settings,
-                  color: primaryColor,
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         child: Center(
@@ -206,18 +95,13 @@ class AdminDashboardScreen extends StatelessWidget {
 
                   const SizedBox(height: 18),
 
-                  // Admin Profile Card
-                  UserInfoCard(user: user),
-
-                  const SizedBox(height: 20),
-
                   // JOBDESK SCOPE CARD DARI CSV
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: primaryColor.withAlpha(15),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: primaryColor.withAlpha(50)),
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      border: Border.all(color: AppColors.border, width: 1),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,80 +140,6 @@ class AdminDashboardScreen extends StatelessWidget {
             ),
           ),
         ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: BottomActionMenu(
-        items: [
-          BottomMenuItem(
-            label: 'Antrean',
-            icon: Icons.mark_email_unread_rounded,
-            color: primaryColor,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => QuestionListScreen(
-                    user: user,
-                    initialTeamFilter: isAdminLksdm ? lksdmName : teamName,
-                    initialStatusFilter: isAdminLksdm ? 'menunggu_lksdm' : 'dialihkan_ke_pusat',
-                    title: isAdminLksdm ? 'Antrean ($lksdmName)' : 'Antrean ($teamName)',
-                  ),
-                ),
-              );
-            },
-          ),
-          BottomMenuItem(
-            label: 'Aktif',
-            icon: Icons.chat_bubble_rounded,
-            color: Colors.amber.shade900,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => QuestionListScreen(
-                    user: user,
-                    initialTeamFilter: isAdminLksdm ? lksdmName : teamName,
-                    initialStatusFilter: 'ditangani_lksdm',
-                    title: 'Percakapan Aktif ($teamName)',
-                  ),
-                ),
-              );
-            },
-          ),
-          BottomMenuItem(
-            label: 'Selesai',
-            icon: Icons.task_alt_rounded,
-            color: Colors.green.shade700,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => QuestionListScreen(
-                    user: user,
-                    initialTeamFilter: isAdminLksdm ? lksdmName : teamName,
-                    initialStatusFilter: 'selesai',
-                    title: 'Tiket Selesai ($teamName)',
-                  ),
-                ),
-              );
-            },
-          ),
-          BottomMenuItem(
-            label: 'Forum',
-            icon: Icons.forum_rounded,
-            color: AppColors.primaryBlue,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => QuestionListScreen(
-                    user: user,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
       ),
     );
   }

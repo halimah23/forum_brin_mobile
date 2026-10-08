@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_radius.dart';
+import '../../../core/constants/app_typography.dart';
 import '../../questions/data/trending_issues_data.dart';
 
 class TrendingChartWidget extends StatelessWidget {
@@ -7,52 +10,50 @@ class TrendingChartWidget extends StatelessWidget {
 
   const TrendingChartWidget({
     super.key,
-    this.title = 'Topik Pertanyaan Paling Banyak Ditanyakan',
-    this.subtitle = 'Grafik frekuensi isu kepegawaian yang sering dikonsultasikan',
+    this.title = 'Topik Konsultasi Terpopuler',
+    this.subtitle = 'Isu kepegawaian paling sering ditanyakan oleh pegawai',
   });
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFFC62828);
     const issues = TrendingIssuesData.defaultTrendingIssues;
-    final maxCount = issues.map((e) => e.count).reduce((a, b) => a > b ? a : b);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(5),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.bar_chart_rounded, color: primaryColor, size: 22),
-              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.slate100,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: const Icon(
+                  Icons.local_fire_department_rounded,
+                  color: AppColors.primaryRed,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Colors.black87,
-                      ),
+                      style: AppTypography.heading3,
                     ),
                     Text(
                       subtitle,
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      style: AppTypography.caption,
                     ),
                   ],
                 ),
@@ -60,61 +61,67 @@ class TrendingChartWidget extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          ...issues.map((item) {
-            final percentage = item.count / maxCount;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          const Divider(height: 1, color: AppColors.border),
+          const SizedBox(height: 12),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: issues.length,
+            separatorBuilder: (context, index) => const Divider(height: 16, color: AppColors.border),
+            itemBuilder: (context, index) {
+              final item = issues[index];
+              final rankStr = (index + 1).toString().padLeft(2, '0');
+
+              return Row(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          item.title,
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                  Container(
+                    width: 28,
+                    height: 28,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: index == 0 ? AppColors.primaryRed : AppColors.slate100,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    child: Text(
+                      rankStr,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: index == 0 ? Colors.white : AppColors.slate700,
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${item.count} Tanya',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: primaryColor),
-                      ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 6),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: Stack(
-                      children: [
-                        Container(
-                          height: 8,
-                          color: Colors.grey.shade200,
-                        ),
-                        FractionallySizedBox(
-                          widthFactor: percentage,
-                          child: Container(
-                            height: 8,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  primaryColor.withAlpha(180),
-                                  primaryColor,
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                          ),
-                        ),
-                      ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      style: AppTypography.bodySmall.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.slate100,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      border: Border.all(color: AppColors.slate300, width: 1),
+                    ),
+                    child: Text(
+                      '${item.count} Tiket',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.slate800,
+                      ),
                     ),
                   ),
                 ],
-              ),
-            );
-          }),
+              );
+            },
+          ),
         ],
       ),
     );

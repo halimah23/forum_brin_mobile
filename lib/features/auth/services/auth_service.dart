@@ -9,7 +9,7 @@ class AuthService {
   /// Daftar Akun Demo Resmi untuk 5 Role Pengguna
   static final Map<String, UserModel> demoUsers = {
     'pegawai@brin.go.id': const UserModel(
-      id: 'demo-user-member-001',
+      id: '77777777-7777-7777-7777-777777777777',
       name: 'Ahmad Syahputra, M.Si.',
       email: 'pegawai@brin.go.id',
       role: 'member',
@@ -19,7 +19,7 @@ class AuthService {
       token: 'demo-token-member',
     ),
     'admin.lksdm1@brin.go.id': const UserModel(
-      id: 'demo-user-admin-lksdm-002',
+      id: '44444444-4444-4444-4444-444444444444',
       name: 'Budi Handoko, S.Kom.',
       email: 'admin.lksdm1@brin.go.id',
       role: 'admin',
@@ -29,7 +29,7 @@ class AuthService {
       token: 'demo-token-admin-lksdm',
     ),
     'admin.pusat@brin.go.id': const UserModel(
-      id: 'demo-user-admin-pusat-003',
+      id: '55555555-5555-5555-5555-555555555555',
       name: 'Rina Melati, S.AP.',
       email: 'admin.pusat@brin.go.id',
       role: 'admin',
@@ -39,7 +39,7 @@ class AuthService {
       token: 'demo-token-admin-pusat',
     ),
     'ketuatim@brin.go.id': const UserModel(
-      id: 'demo-user-ketuatim-004',
+      id: '33333333-3333-3333-3333-333333333333',
       name: 'Dr. Irwan Setiawan, M.Sc.',
       email: 'ketuatim@brin.go.id',
       role: 'ketua_tim',
@@ -49,7 +49,7 @@ class AuthService {
       token: 'demo-token-ketuatim',
     ),
     'eksekutif@brin.go.id': const UserModel(
-      id: 'demo-user-eksekutif-005',
+      id: '66666666-6666-6666-6666-666666666666',
       name: 'Prof. Dr. Hendra Wijaya',
       email: 'eksekutif@brin.go.id',
       role: 'eksekutif',
@@ -59,7 +59,7 @@ class AuthService {
       token: 'demo-token-eksekutif',
     ),
     'superadmin@brin.go.id': const UserModel(
-      id: 'demo-user-superadmin-006',
+      id: '11111111-1111-1111-1111-111111111111',
       name: 'Administrator Utama',
       email: 'superadmin@brin.go.id',
       role: 'super_admin',

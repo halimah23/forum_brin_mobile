@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../auth/cubits/auth_cubit.dart';
+import '../../../core/constants/app_radius.dart';
+import '../../../core/constants/app_typography.dart';
 import '../../auth/models/user_model.dart';
-import '../../auth/screens/login_screen.dart';
-import '../../questions/screens/question_list_screen.dart';
-import '../widgets/bottom_action_menu.dart';
+import '../../questions/models/question_model.dart';
+import '../../questions/services/question_service.dart';
 import '../widgets/trending_chart_widget.dart';
-import '../widgets/user_info_card.dart';
 
-class EksekutifDashboardScreen extends StatelessWidget {
+class EksekutifDashboardScreen extends StatefulWidget {
   final UserModel user;
 
   const EksekutifDashboardScreen({
@@ -18,43 +16,42 @@ class EksekutifDashboardScreen extends StatelessWidget {
     required this.user,
   });
 
-  void _handleLogout(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Konfirmasi Logout'),
-        content: const Text('Apakah Anda yakin ingin keluar dari Panel Eksekutif?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.indigo.shade800,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
+  @override
+  State<EksekutifDashboardScreen> createState() => _EksekutifDashboardScreenState();
+}
 
-    if (confirm == true && context.mounted) {
-      await context.read<AuthCubit>().logout();
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
-        );
-      }
+class _EksekutifDashboardScreenState extends State<EksekutifDashboardScreen> {
+  List<QuestionModel> allQuestions = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMetrics();
+  }
+
+  Future<void> _loadMetrics() async {
+    setState(() => isLoading = true);
+    final questions = await QuestionService.getQuestions();
+    if (mounted) {
+      setState(() {
+        allQuestions = questions;
+        isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     const primaryIndigo = Color(0xFF283593);
+
+    final totalCount = allQuestions.length;
+    final escalatedCount = allQuestions.where((q) => q.isEscalated).length;
+    final lksdmCount = totalCount - escalatedCount;
+    final closedCount = allQuestions.where((q) => q.isClosed).length;
+
+    final lksdmRatio = totalCount > 0 ? ((lksdmCount / totalCount) * 100).toStringAsFixed(1) : '0';
+    final escalatedRatio = totalCount > 0 ? ((escalatedCount / totalCount) * 100).toStringAsFixed(1) : '0';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -79,18 +76,18 @@ class EksekutifDashboardScreen extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.indigo.shade50,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: primaryIndigo, width: 0.5),
+                      color: AppColors.slate100,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      border: Border.all(color: AppColors.slate300, width: 1),
                     ),
                     child: const Text(
                       'PANEL EKSEKUTIF (MONITORING)',
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 9,
                         fontWeight: FontWeight.bold,
-                        color: primaryIndigo,
+                        color: AppColors.slate800,
                       ),
                     ),
                   ),
@@ -99,221 +96,119 @@ class EksekutifDashboardScreen extends StatelessWidget {
             ),
           ],
         ),
-        actions: [
-          PopupMenuButton<String>(
-            tooltip: 'Profil Eksekutif',
-            onSelected: (value) {
-              if (value == 'logout') {
-                _handleLogout(context);
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem<String>(
-                value: 'profile',
-                child: Row(
+      ),
+      body: RefreshIndicator(
+        onRefresh: _loadMetrics,
+        color: primaryIndigo,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Icons.equalizer,
-                      color: primaryIndigo,
+                    Text(
+                      'Selamat datang Pimpinan,',
+                      style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.user.name,
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // STATISTIK RINGKAS EKSEKUTIF (KPI REAL-TIME)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade200),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(4),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            user.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                            overflow: TextOverflow.ellipsis,
+                          const Row(
+                            children: [
+                              Icon(Icons.analytics_outlined, color: primaryIndigo),
+                              SizedBox(width: 8),
+                              Text(
+                                'Ringkasan KPI Layanan Kepegawaian',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                            ],
                           ),
-                          const Text(
-                            'Eksekutif / Pimpinan',
-                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                          const SizedBox(height: 14),
+                          if (isLoading)
+                            const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
+                          else
+                            Row(
+                              children: [
+                                _buildStatCard('Total Tiket', '$totalCount', Colors.blue),
+                                const SizedBox(width: 8),
+                                _buildStatCard('Penanganan LKSDM', '$lksdmRatio%', Colors.teal),
+                                const SizedBox(width: 8),
+                                _buildStatCard('Rasio Eskalasi', '$escalatedRatio%', Colors.amber.shade900),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // KARTU PENYELESAIAN TIKET
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.task_alt_rounded, color: Color(0xFF16A34A), size: 24),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Tingkat Penyelesaian Layanan', style: AppTypography.labelMedium),
+                                const SizedBox(height: 2),
+                                Text('$closedCount dari $totalCount tiket telah tuntas diselesaikan oleh pegawai.', style: AppTypography.caption),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
+
+                    const SizedBox(height: 24),
+
+                    // CHART TOPIK PERTANYAAN PALING BANYAK DITANYAKAN
+                    const Text('Tren Topik Layanan Kepegawaian', style: AppTypography.heading3),
+                    const SizedBox(height: 10),
+                    const TrendingChartWidget(),
+
+                    const SizedBox(height: 20),
                   ],
                 ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem<String>(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.logout,
-                      color: Colors.red,
-                    ),
-                    SizedBox(width: 12),
-                    Text(
-                      'Logout',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            child: const Padding(
-              padding: EdgeInsets.only(right: 12),
-              child: CircleAvatar(
-                radius: 20,
-                backgroundColor: Color(0xFFE8EAF6),
-                child: Icon(
-                  Icons.insights,
-                  color: primaryIndigo,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 480,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Selamat datang Pimpinan,',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user.name,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  UserInfoCard(user: user),
-
-                  const SizedBox(height: 20),
-
-                  // STATISTIK RINGKAS EKSEKUTIF
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade200),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(4),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(Icons.analytics_outlined, color: primaryIndigo),
-                            SizedBox(width: 8),
-                            Text(
-                              'Ringkasan Aktivitas Forum Kepegawaian',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            _buildStatCard('Total Pertanyaan', '142', Colors.blue),
-                            const SizedBox(width: 10),
-                            _buildStatCard('Selesai di LKSDM', '98', Colors.teal),
-                            const SizedBox(width: 10),
-                            _buildStatCard('Eskalasi Pusat', '44', Colors.amber.shade900),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // CHART TOPIK PERTANYAAN PALING BANYAK DITANYAKAN
-                  const TrendingChartWidget(),
-
-                  const SizedBox(height: 20),
-                ],
               ),
             ),
           ),
         ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: BottomActionMenu(
-        items: [
-          BottomMenuItem(
-            label: 'Pantau',
-            icon: Icons.forum_outlined,
-            color: primaryIndigo,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => QuestionListScreen(
-                    user: user,
-                    isPublicOnly: true,
-                    title: 'Seluruh Obrolan Publik Forum',
-                  ),
-                ),
-              );
-            },
-          ),
-          BottomMenuItem(
-            label: 'Terjawab',
-            icon: Icons.task_alt_rounded,
-            color: Colors.teal.shade700,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => QuestionListScreen(
-                    user: user,
-                    initialStatusFilter: 'selesai',
-                    title: 'Jawaban Terjawab (Staf & Ketua Tim)',
-                  ),
-                ),
-              );
-            },
-          ),
-          BottomMenuItem(
-            label: 'Proses',
-            icon: Icons.chat_bubble_rounded,
-            color: Colors.amber.shade900,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => QuestionListScreen(
-                    user: user,
-                    initialStatusFilter: 'sedang_diproses',
-                    title: 'Obrolan Aktif Sedang Diproses',
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
       ),
     );
   }
@@ -323,15 +218,15 @@ class EksekutifDashboardScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: color.withAlpha(20),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withAlpha(80)),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.border, width: 1),
         ),
         child: Column(
           children: [
             Text(
               count,
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
             ),
             const SizedBox(height: 2),
             Text(

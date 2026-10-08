@@ -33,7 +33,7 @@ void main() {
 
       expect(UserRole.fromString('admin'), UserRole.admin);
       expect(UserRole.fromString('Admin Layanan'), UserRole.admin);
-      expect(UserRole.fromString('admin_lksdm'), UserRole.admin);
+      expect(UserRole.fromString('admin_lksdm'), UserRole.adminLksdm);
 
       expect(UserRole.fromString('ketua_tim'), UserRole.ketuaTim);
       expect(UserRole.fromString('Ketua Tim'), UserRole.ketuaTim);

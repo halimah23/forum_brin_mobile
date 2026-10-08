@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:iconoir_flutter/iconoir_flutter.dart' show ChatPlusIn;
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/widgets/custom_fab.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/models/user_role.dart';
 import '../cubits/question_list_cubit.dart';
@@ -257,9 +259,9 @@ class _QuestionListViewState extends State<QuestionListView> with SingleTickerPr
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.primaryRed,
-        foregroundColor: Colors.white,
+      floatingActionButton: CustomFab(
+        label: 'Buat Tiket',
+        icon: const ChatPlusIn(color: Colors.white, width: 20, height: 20),
         onPressed: () async {
           await Navigator.push(
             context,
@@ -277,8 +279,6 @@ class _QuestionListViewState extends State<QuestionListView> with SingleTickerPr
                 isPublicOnly: widget.isPublicOnly,
               );
         },
-        icon: const Icon(Icons.add_comment_outlined),
-        label: const Text('Buat Tiket', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
     );
   }
