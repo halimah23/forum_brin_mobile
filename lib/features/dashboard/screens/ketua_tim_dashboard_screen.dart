@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../auth/cubits/auth_cubit.dart';
+import '../../../core/constants/app_radius.dart';
+import '../../../core/constants/app_typography.dart';
 import '../../auth/models/user_model.dart';
-import '../../auth/screens/login_screen.dart';
-import '../../questions/screens/ask_question_screen.dart';
-import '../../questions/screens/question_list_screen.dart';
-import '../widgets/bottom_action_menu.dart';
+import '../../questions/models/question_model.dart';
+import '../../questions/screens/question_detail_screen.dart';
+import '../../questions/services/question_service.dart';
+import '../../questions/widgets/question_card.dart';
 import '../widgets/trending_chart_widget.dart';
-import '../widgets/user_info_card.dart';
 
-class KetuaTimDashboardScreen extends StatelessWidget {
+class KetuaTimDashboardScreen extends StatefulWidget {
   final UserModel user;
 
   const KetuaTimDashboardScreen({
@@ -19,44 +18,42 @@ class KetuaTimDashboardScreen extends StatelessWidget {
     required this.user,
   });
 
-  void _handleLogout(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Konfirmasi Logout'),
-        content: const Text('Apakah Anda yakin ingin keluar dari akun Ketua Tim?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal.shade800,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
+  @override
+  State<KetuaTimDashboardScreen> createState() => _KetuaTimDashboardScreenState();
+}
 
-    if (confirm == true && context.mounted) {
-      await context.read<AuthCubit>().logout();
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
-        );
-      }
+class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
+  List<QuestionModel> teamQuestions = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => isLoading = true);
+    final teamName = widget.user.tim ?? 'Tim Layanan SDM BOSDM';
+    final list = await QuestionService.getQuestions(teamFilter: teamName);
+    if (mounted) {
+      setState(() {
+        teamQuestions = list;
+        isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final primaryTeal = Colors.teal.shade800;
-    final teamName = user.tim ?? 'Tim Layanan SDM BOSDM';
+    final teamName = widget.user.tim ?? 'Tim Layanan SDM BOSDM';
+
+    final totalCount = teamQuestions.length;
+    final pendingCount = teamQuestions.where((q) => q.ticketStatus.dbKey == 'OPEN').length;
+    final inProgressCount = teamQuestions.where((q) => q.isActive && q.ticketStatus.dbKey != 'OPEN').length;
+    final closedCount = teamQuestions.where((q) => q.isClosed).length;
+    final pendingList = teamQuestions.where((q) => q.ticketStatus.dbKey == 'OPEN').toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -81,18 +78,18 @@ class KetuaTimDashboardScreen extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.teal.shade50,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: primaryTeal, width: 0.5),
+                      color: AppColors.slate100,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      border: Border.all(color: AppColors.slate300, width: 1),
                     ),
                     child: Text(
                       'PANEL KETUA TIM ($teamName)',
-                      style: TextStyle(
-                        fontSize: 10,
+                      style: const TextStyle(
+                        fontSize: 9,
                         fontWeight: FontWeight.bold,
-                        color: primaryTeal,
+                        color: AppColors.slate800,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -102,211 +99,163 @@ class KetuaTimDashboardScreen extends StatelessWidget {
             ),
           ],
         ),
-        actions: [
-          PopupMenuButton<String>(
-            tooltip: 'Profil Ketua Tim',
-            onSelected: (value) {
-              if (value == 'logout') {
-                _handleLogout(context);
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem<String>(
-                value: 'profile',
-                child: Row(
+      ),
+      body: RefreshIndicator(
+        onRefresh: _loadData,
+        color: primaryTeal,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.supervised_user_circle,
-                      color: primaryTeal,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            user.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            user.tim ?? 'Ketua Tim',
-                            style: const TextStyle(fontSize: 11, color: Colors.grey),
-                          ),
-                        ],
+                    // Greeting
+                    Text(
+                      'Selamat datang Ketua Tim,',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.grey.shade600,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem<String>(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.logout,
-                      color: Colors.red,
-                    ),
-                    SizedBox(width: 12),
+                    const SizedBox(height: 4),
                     Text(
-                      'Logout',
-                      style: TextStyle(
-                        color: Colors.red,
+                      widget.user.name,
+                      style: const TextStyle(
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+
+                    const SizedBox(height: 18),
+
+                    // 4 Real-time KPI Cards
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: 1.6,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: [
+                        _kpiTile('Total Tiket Tim', '$totalCount', AppColors.primaryBlue, Icons.inbox_rounded),
+                        _kpiTile('Perlu Disposisi', '$pendingCount', const Color(0xFFD97706), Icons.hourglass_top_rounded),
+                        _kpiTile('Sedang Diproses', '$inProgressCount', const Color(0xFF0D9488), Icons.engineering_rounded),
+                        _kpiTile('Tiket Selesai', '$closedCount', const Color(0xFF16A34A), Icons.check_circle_rounded),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Antrean Perlu Disposisi
+                    const Text(
+                      'Antrean Perlu Disposisi',
+                      style: AppTypography.heading3,
+                    ),
+                    const SizedBox(height: 10),
+
+                    if (isLoading)
+                      const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+                    else if (pendingList.isEmpty)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.check_circle_outline_rounded, color: Color(0xFF16A34A)),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Semua tiket tim telah didisposisi/ditangani.',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: pendingList.length,
+                        itemBuilder: (context, index) {
+                          final q = pendingList[index];
+                          return QuestionCard(
+                            question: q,
+                            onTap: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => QuestionDetailScreen(
+                                    question: q,
+                                    currentUser: widget.user,
+                                  ),
+                                ),
+                              );
+                              _loadData();
+                            },
+                          );
+                        },
+                      ),
+
+                    const SizedBox(height: 24),
+
+                    // Trending Chart Widget
+                    const Text(
+                      'Topik Pertanyaan Populer Tim',
+                      style: AppTypography.heading3,
+                    ),
+                    const SizedBox(height: 10),
+                    const TrendingChartWidget(),
+
+                    const SizedBox(height: 20),
                   ],
                 ),
-              ),
-            ],
-            child: Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: CircleAvatar(
-                radius: 20,
-                backgroundColor: Colors.teal.shade50,
-                child: Icon(
-                  Icons.assignment_ind,
-                  color: primaryTeal,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 480,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Greeting
-                  Text(
-                    'Selamat datang,',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user.name,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  // User Info Card
-                  UserInfoCard(user: user),
-
-                  const SizedBox(height: 24),
-
-                  // Trending Chart Widget
-                  const TrendingChartWidget(),
-
-                  const SizedBox(height: 20),
-                ],
               ),
             ),
           ),
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: BottomActionMenu(
-        items: [
-          BottomMenuItem(
-            label: 'Disposisi',
-            icon: Icons.mark_email_unread_outlined,
-            color: primaryTeal,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => QuestionListScreen(
-                    user: user,
-                    initialTeamFilter: user.tim,
-                    initialStatusFilter: 'menunggu_disposisi',
-                    isPublicOnly: true,
-                    title: 'Antrean Masuk Publik ($teamName)',
-                  ),
+    );
+  }
+
+  Widget _kpiTile(String title, String value, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(fontSize: 11, color: AppColors.slate600),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              );
-            },
+              ),
+            ],
           ),
-          BottomMenuItem(
-            label: 'Proses',
-            icon: Icons.engineering_outlined,
-            color: Colors.blue.shade700,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => QuestionListScreen(
-                    user: user,
-                    initialTeamFilter: user.tim,
-                    initialStatusFilter: 'sedang_diproses',
-                    title: 'Sedang Ditangani ($teamName)',
-                  ),
-                ),
-              );
-            },
-          ),
-          BottomMenuItem(
-            label: 'Selesai',
-            icon: Icons.task_alt_outlined,
-            color: Colors.green.shade700,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => QuestionListScreen(
-                    user: user,
-                    initialTeamFilter: user.tim,
-                    initialStatusFilter: 'selesai',
-                    title: 'Tiket Selesai ($teamName)',
-                  ),
-                ),
-              );
-            },
-          ),
-          BottomMenuItem(
-            label: 'Forum',
-            icon: Icons.forum_outlined,
-            color: AppColors.primaryRed,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => QuestionListScreen(
-                    user: user,
-                  ),
-                ),
-              );
-            },
-          ),
-          BottomMenuItem(
-            label: 'Tanya',
-            icon: Icons.add_comment_rounded,
-            color: Colors.purple,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AskQuestionScreen(
-                    token: user.token ?? '',
-                  ),
-                ),
-              );
-            },
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
           ),
         ],
       ),

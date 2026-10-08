@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
-import '../../auth/cubits/auth_cubit.dart';
+import '../../../core/constants/app_radius.dart';
+import '../../../core/constants/app_typography.dart';
+import '../../../core/widgets/custom_button.dart';
 import '../../auth/models/user_model.dart';
-import '../../auth/screens/login_screen.dart';
+import '../../questions/models/question_model.dart';
 import '../../questions/screens/ask_question_screen.dart';
-import '../../questions/screens/my_questions_screen.dart';
-import '../../questions/screens/question_list_screen.dart';
-import '../widgets/bottom_action_menu.dart';
+import '../../questions/screens/question_detail_screen.dart';
+import '../../questions/services/question_service.dart';
+import '../../questions/widgets/question_card.dart';
 import '../widgets/trending_chart_widget.dart';
-import '../widgets/user_info_card.dart';
 
-class MemberDashboardScreen extends StatelessWidget {
+class MemberDashboardScreen extends StatefulWidget {
   final UserModel user;
 
   const MemberDashboardScreen({
@@ -20,254 +20,258 @@ class MemberDashboardScreen extends StatelessWidget {
     required this.user,
   });
 
-  void _handleLogout(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Konfirmasi Logout'),
-        content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryRed,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
+  @override
+  State<MemberDashboardScreen> createState() => _MemberDashboardScreenState();
+}
 
-    if (confirm == true && context.mounted) {
-      await context.read<AuthCubit>().logout();
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
-        );
-      }
+class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
+  List<QuestionModel> myQuestions = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMyQuestions();
+  }
+
+  Future<void> _loadMyQuestions() async {
+    setState(() => isLoading = true);
+    final questions = await QuestionService.getMyQuestions(token: widget.user.token);
+    if (mounted) {
+      setState(() {
+        myQuestions = questions;
+        isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final activeTickets = myQuestions.where((q) => q.isActive).toList();
+    final closedTickets = myQuestions.where((q) => q.isClosed).toList();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0.5,
         title: Row(
           children: [
             Image.asset(
               AppConstants.logoAssetPath,
-              height: 36,
+              height: 32,
             ),
             const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    AppConstants.appTitle,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: AppColors.primaryRed,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: AppColors.lightRedBackground,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: AppColors.primaryRed.withAlpha(80), width: 0.5),
-                    ),
-                    child: const Text(
-                      'PANEL PEGAWAI / MEMBER',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryRed,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          PopupMenuButton<String>(
-            tooltip: 'Profil Pegawai',
-            onSelected: (value) {
-              if (value == 'logout') {
-                _handleLogout(context);
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem<String>(
-                value: 'profile',
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.person_outline,
-                      color: AppColors.primaryBlue,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            user.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            user.email,
-                            style: const TextStyle(fontSize: 11, color: Colors.grey),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem<String>(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.logout,
-                      color: Colors.red,
-                    ),
-                    SizedBox(width: 12),
-                    Text(
-                      'Logout',
-                      style: TextStyle(
-                        color: AppColors.primaryRed,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            child: const Padding(
-              padding: EdgeInsets.only(right: 12),
-              child: CircleAvatar(
-                radius: 20,
-                backgroundColor: AppColors.lightBlueBackground,
-                child: Icon(
-                  Icons.person,
+            const Expanded(
+              child: Text(
+                AppConstants.appTitle,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
                   color: AppColors.primaryRed,
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 100),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 430,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
+      body: RefreshIndicator(
+        onRefresh: _loadMyQuestions,
+        color: AppColors.primaryRed,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Greeting
-                  Text(
-                    'Selamat datang,',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.grey.shade600,
-                    ),
+                  // 1. Greeting Header
+                  const Text(
+                    'Selamat datang kembali,',
+                    style: AppTypography.bodySmall,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
-                    user.name,
-                    style: const TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    widget.user.name,
+                    style: AppTypography.heading1,
                   ),
 
                   const SizedBox(height: 20),
 
-                  // User Information
-                  UserInfoCard(user: user),
+                  // 2. Summary KPI Cards (Aktif vs Selesai)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: Border.all(color: AppColors.border, width: 1),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.mark_chat_unread_outlined, color: Color(0xFF0284C7), size: 18),
+                                  SizedBox(width: 6),
+                                  Text('Tiket Aktif', style: TextStyle(fontSize: 12, color: AppColors.slate600)),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${activeTickets.length}',
+                                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.slate900),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: Border.all(color: AppColors.border, width: 1),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.check_circle_outline_rounded, color: Color(0xFF16A34A), size: 18),
+                                  SizedBox(width: 6),
+                                  Text('Tiket Selesai', style: TextStyle(fontSize: 12, color: AppColors.slate600)),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${closedTickets.length}',
+                                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.slate900),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // 3. CTA Ajukan Pertanyaan Baru
+                  CustomButton(
+                    text: 'Ajukan Pertanyaan Baru',
+                    icon: const Icon(Icons.add_comment_rounded),
+                    onPressed: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AskQuestionScreen(token: widget.user.token ?? ''),
+                        ),
+                      );
+                      _loadMyQuestions();
+                    },
+                  ),
 
                   const SizedBox(height: 24),
 
-                  // CHART TOPIK PERTANYAAN PALING BANYAK DITANYAKAN
+                  // 4. Section Tiket Aktif Berjalan
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Tiket Aktif Berjalan',
+                        style: AppTypography.heading3,
+                      ),
+                      if (activeTickets.isNotEmpty)
+                        Text(
+                          '${activeTickets.length} Tiket',
+                          style: AppTypography.caption.copyWith(color: AppColors.slate500),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  if (isLoading)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: CircularProgressIndicator(color: AppColors.primaryRed),
+                      ),
+                    )
+                  else if (activeTickets.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: AppColors.border, width: 1),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.task_alt_rounded, size: 36, color: Color(0xFF16A34A)),
+                          SizedBox(height: 8),
+                          Text(
+                            'Tidak ada tiket aktif yang berjalan.',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.slate800),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Pertanyaan yang Anda ajukan akan diproses oleh Staf Admin LKSDM Kawasan.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 11, color: AppColors.slate500),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: activeTickets.length,
+                      itemBuilder: (context, index) {
+                        final q = activeTickets[index];
+                        return QuestionCard(
+                          question: q,
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => QuestionDetailScreen(
+                                  question: q,
+                                  currentUser: widget.user,
+                                ),
+                              ),
+                            );
+                            _loadMyQuestions();
+                          },
+                        );
+                      },
+                    ),
+
+                  const SizedBox(height: 24),
+
+                  // 5. Section Pertanyaan Populer / FAQ
+                  const Text(
+                    'Pertanyaan Populer / FAQ',
+                    style: AppTypography.heading3,
+                  ),
+                  const SizedBox(height: 12),
                   const TrendingChartWidget(),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
           ),
         ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: BottomActionMenu(
-        items: [
-          BottomMenuItem(
-            label: 'Tanya Baru',
-            icon: Icons.add_comment_rounded,
-            color: AppColors.primaryRed,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AskQuestionScreen(
-                    token: user.token ?? '',
-                  ),
-                ),
-              );
-            },
-          ),
-          BottomMenuItem(
-            label: 'Forum LKSDM',
-            icon: Icons.forum_rounded,
-            color: AppColors.primaryBlue,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => QuestionListScreen(
-                    user: user,
-                  ),
-                ),
-              );
-            },
-          ),
-          BottomMenuItem(
-            label: 'Pertanyaan Saya',
-            icon: Icons.collections_bookmark_rounded,
-            color: Colors.teal.shade700,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => MyQuestionsScreen(
-                    user: user,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
       ),
     );
   }
