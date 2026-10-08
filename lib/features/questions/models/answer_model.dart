@@ -61,6 +61,26 @@ class AnswerModel {
       penjawabRole.toLowerCase().contains('ketua');
 
   factory AnswerModel.fromJson(Map<String, dynamic> json) {
+    final rawRole = json['sender_role']?.toString() ??
+        json['sender_role_type']?.toString() ??
+        json['penjawab_role']?.toString() ??
+        'pegawai';
+
+    String formattedRole;
+    if (rawRole == 'admin_lksdm') {
+      formattedRole = 'Staf Admin LKSDM';
+    } else if (rawRole == 'admin_pusat') {
+      formattedRole = 'Staf Admin Pusat';
+    } else if (rawRole == 'ketua_tim') {
+      formattedRole = 'Ketua Tim';
+    } else if (rawRole == 'system' || rawRole == 'system_event') {
+      formattedRole = 'Sistem';
+    } else if (rawRole == 'pegawai') {
+      formattedRole = 'Pegawai';
+    } else {
+      formattedRole = rawRole;
+    }
+
     return AnswerModel(
       id: json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? ''),
       questionId: json['question_id'] is int
@@ -69,12 +89,9 @@ class AnswerModel {
       userId: json['user_id']?.toString(),
       penjawabNama: json['sender_name']?.toString() ??
           json['penjawab_nama']?.toString() ??
-          'Staf Admin',
-      penjawabRole: json['sender_role']?.toString() ??
-          json['penjawab_role']?.toString() ??
-          'Staf Admin LKSDM',
-      senderRoleType: json['sender_role']?.toString() ??
-          json['sender_role_type']?.toString(),
+          'Pengguna',
+      penjawabRole: formattedRole,
+      senderRoleType: rawRole,
       isiJawaban: json['isi_pesan']?.toString() ??
           json['isi_jawaban']?.toString() ??
           '-',
@@ -84,19 +101,27 @@ class AnswerModel {
   }
 
   Map<String, dynamic> toJson() {
+    String dbRole = senderRoleType ?? 'pegawai';
+    final roleLow = penjawabRole.toLowerCase();
+    if (roleLow.contains('lksdm')) {
+      dbRole = 'admin_lksdm';
+    } else if (roleLow.contains('pusat')) {
+      dbRole = 'admin_pusat';
+    } else if (roleLow.contains('ketua')) {
+      dbRole = 'ketua_tim';
+    } else if (roleLow.contains('sistem') || roleLow.contains('system')) {
+      dbRole = 'system';
+    }
+
     return {
       if (id != null) 'id': id,
       'question_id': questionId,
       if (userId != null) 'user_id': userId,
       'sender_name': penjawabNama,
-      'sender_role': senderRoleType ?? penjawabRole,
-      'penjawab_nama': penjawabNama,
-      'penjawab_role': penjawabRole,
-      if (senderRoleType != null) 'sender_role_type': senderRoleType,
+      'sender_role': dbRole,
       'isi_pesan': isiJawaban,
-      'isi_jawaban': isiJawaban,
       if (attachmentUrl != null) 'attachment_url': attachmentUrl,
-      'created_at': createdAt,
+      if (createdAt != null) 'created_at': createdAt,
     };
   }
 }
