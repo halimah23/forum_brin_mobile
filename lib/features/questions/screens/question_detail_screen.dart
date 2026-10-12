@@ -38,6 +38,37 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
   void initState() {
     super.initState();
     question = widget.question;
+    _loadFreshDetails();
+    _scrollToBottom(isInstant: true);
+  }
+
+  void _scrollToBottom({bool isInstant = false}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        if (isInstant) {
+          _scrollController.jumpTo(maxScroll);
+        } else {
+          _scrollController.animateTo(
+            maxScroll,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+          );
+        }
+      }
+    });
+  }
+
+  Future<void> _loadFreshDetails() async {
+    final qId = question.id;
+    if (qId == null) return;
+    final fresh = await QuestionService.getQuestionDetail(qId);
+    if (fresh != null && mounted) {
+      setState(() {
+        question = fresh;
+      });
+      _scrollToBottom(isInstant: true);
+    }
   }
 
   @override
@@ -112,6 +143,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
           backgroundColor: Colors.green,
         ),
       );
+      _loadFreshDetails();
     }
   }
 
@@ -284,6 +316,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
             backgroundColor: Colors.amber.shade900,
           ),
         );
+        _loadFreshDetails();
       }
     }
   }
@@ -315,6 +348,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
     } else if (user?.userRole == UserRole.ketuaTim) {
       senderRoleType = 'ketua_tim';
       roleBadgeName = 'Ketua Tim';
+    } else if (user?.userRole == UserRole.superAdmin) {
+      senderRoleType = 'super_admin';
+      roleBadgeName = 'Super Admin';
     } else {
       senderRoleType = 'pegawai';
       roleBadgeName = 'Pegawai';
@@ -344,30 +380,22 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
         );
 
         final updatedAnswers = List<AnswerModel>.from(question.answers ?? [])..add(newAnswer);
+        final nextStatus = (senderRoleType != 'pegawai')
+            ? (question.isEscalated ? 'dialihkan_ke_pusat' : 'ditangani_lksdm')
+            : question.status;
+
         setState(() {
           question = question.copyWith(
+            status: nextStatus,
             answers: updatedAnswers,
           );
           isSendingReply = false;
         });
 
-        // Scroll ke bawah
-        Future.delayed(const Duration(milliseconds: 200), () {
-          if (_scrollController.hasClients) {
-            _scrollController.animateTo(
-              _scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-            );
-          }
-        });
+        // Auto-scroll ke chat paling baru
+        _scrollToBottom(isInstant: false);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pertanyaan lanjutan berhasil dikirimkan ke tim terkait.'),
-            backgroundColor: Colors.blue,
-          ),
-        );
+        _loadFreshDetails();
       } else {
         setState(() => isSendingReply = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -492,177 +520,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
             backgroundColor: Colors.teal.shade800,
           ),
         );
-      }
-    }
-  }
-
-  void _handleAnswer() async {
-    final answerController = TextEditingController();
-    final user = widget.currentUser;
-    final isPrivat = !question.isPublic;
-    final String roleName;
-    final String senderRoleType;
-    if (user?.isAdminPusat == true) {
-      roleName = 'Staf Admin Pusat';
-      senderRoleType = 'admin_pusat';
-    } else if (user?.isAdminLksdm == true) {
-      roleName = 'Staf Admin LKSDM';
-      senderRoleType = 'admin_lksdm';
-    } else if (isPrivat) {
-      roleName = 'Ketua Tim (Penanganan Langsung)';
-      senderRoleType = 'ketua_tim';
-    } else if (user?.userRole == UserRole.ketuaTim) {
-      roleName = 'Ketua Tim';
-      senderRoleType = 'ketua_tim';
-    } else {
-      roleName = 'Admin Layanan';
-      senderRoleType = 'admin';
-    }
-    final teamName = user?.tim ?? question.targetTim ?? 'Tim BOSDM';
-
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.slate100,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-              ),
-              child: const Icon(
-                Icons.chat_bubble_outline_rounded,
-                color: AppColors.slate800,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              isPrivat
-                  ? 'Tanggapan Konsultasi Privat'
-                  : (user?.isAdminLksdm == true
-                      ? 'Tanggapan Staf LKSDM'
-                      : (user?.isAdminPusat == true
-                          ? 'Tanggapan Admin Pusat'
-                          : 'Beri Jawaban Resmi')),
-              style: AppTypography.heading3,
-            ),
-          ],
-        ),
-        content: SizedBox(
-          width: 400,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isPrivat
-                    ? 'Tuliskan tanggapan langsung dari Ketua $teamName untuk tiket privat #${question.ticketNumber ?? question.id}:'
-                    : 'Tuliskan penjelasan dan solusi untuk tiket #${question.ticketNumber ?? question.id}:',
-                style: AppTypography.bodySmall,
-              ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: answerController,
-                maxLines: 5,
-                style: AppTypography.bodyMedium,
-                decoration: InputDecoration(
-                  hintText: isPrivat
-                      ? 'Tuliskan arahan dan solusi personal bagi pegawai...'
-                      : 'Tuliskan penjelasan dan arahan resmi sesuai SOP...',
-                  hintStyle: AppTypography.caption,
-                  filled: true,
-                  fillColor: AppColors.surface,
-                  contentPadding: const EdgeInsets.all(12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: const BorderSide(color: AppColors.border),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: const BorderSide(color: AppColors.border),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    borderSide: const BorderSide(color: AppColors.slate800, width: 1.5),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal', style: TextStyle(color: AppColors.slate600)),
-          ),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryRed,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-            ),
-            onPressed: () {
-              if (answerController.text.trim().isNotEmpty) {
-                Navigator.pop(ctx, answerController.text.trim());
-              }
-            },
-            icon: const Icon(Icons.send_rounded, size: 16),
-            label: const Text('Kirim Tanggapan'),
-          ),
-        ],
-      ),
-    );
-
-    if (result != null && result.isNotEmpty && mounted) {
-      setState(() => isProcessing = true);
-      final success = await QuestionService.answerAndResolveTicket(
-        questionId: question.id ?? 0,
-        penjawabNama: user?.name ?? teamName,
-        penjawabRole: '$roleName ($teamName)',
-        senderRoleType: senderRoleType,
-        isiJawaban: result,
-        currentStatus: question.status,
-      );
-
-      if (mounted) {
-        final newAnswer = AnswerModel(
-          questionId: question.id ?? 0,
-          penjawabNama: user?.name ?? teamName,
-          penjawabRole: '$roleName ($teamName)',
-          senderName: user?.name ?? teamName,
-          senderRole: '$roleName ($teamName)',
-          senderRoleType: senderRoleType,
-          isiJawaban: result,
-          isiPesan: result,
-          createdAt: DateTime.now().toIso8601String(),
-        );
-
-        final updatedAnswers = List<AnswerModel>.from(question.answers ?? [])..add(newAnswer);
-        final nextStatus = (question.ticketStatus == TicketStatus.escalated || question.ticketStatus == TicketStatus.inProgressCenter)
-            ? 'ESCALATED'
-            : 'IN_PROGRESS';
-
-        setState(() {
-          isProcessing = false;
-          if (success) {
-            question = question.copyWith(
-              status: nextStatus,
-              answers: updatedAnswers,
-            );
-          }
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tanggapan berhasil dikirim ke Pegawai. Menunggu konfirmasi penyelesaian dari Pegawai.'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        _loadFreshDetails();
       }
     }
   }
@@ -682,25 +540,31 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
 
     final answers = question.answers ?? [];
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF2F4F8),
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              question.ticketNumber != null ? 'Tiket ${question.ticketNumber}' : 'Detail Pertanyaan',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
-            ),
-            Text(
-              namaTimTerkait,
-              style: const TextStyle(fontSize: 11, color: Colors.white70),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-        backgroundColor: AppColors.primaryRed,
-        foregroundColor: Colors.white,
+    return PopScope(
+      canPop: true,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF2F4F8),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context, true),
+          ),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                question.ticketNumber != null ? 'Tiket ${question.ticketNumber}' : 'Detail Pertanyaan',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+              ),
+              Text(
+                namaTimTerkait,
+                style: const TextStyle(fontSize: 11, color: Colors.white70),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.primaryRed,
+          foregroundColor: Colors.white,
         actions: [
           if (widget.currentUser?.userRole == UserRole.superAdmin || widget.currentUser?.isSuperAdmin == true)
             IconButton(
@@ -753,302 +617,18 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
             children: [
               // CHAT THREAD LIST
               Expanded(
-                child: ListView(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    // KARTU INFORMASI TIKET
-                    // KARTU PEMBUKA TOPIK PERTANYAAN
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        border: Border.all(color: AppColors.border, width: 1),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x0A000000),
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    question.ticketNumber ?? '#TIKET',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryRed),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.slate100,
-                                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                                      border: Border.all(color: AppColors.slate300, width: 1),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          question.isPublic ? Icons.public : Icons.lock_outline,
-                                          size: 10,
-                                          color: AppColors.slate700,
-                                        ),
-                                        const SizedBox(width: 3),
-                                        Text(
-                                          question.isPublic ? 'Publik' : 'Privat',
-                                          style: const TextStyle(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.slate700,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              StatusBadge(status: question.status),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 14,
-                                backgroundColor: AppColors.primaryRed,
-                                child: Text(
-                                  namaUser.isNotEmpty ? namaUser[0].toUpperCase() : 'P',
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  namaUser,
-                                  style: AppTypography.labelMedium,
-                                ),
-                              ),
-                              if (question.createdAt != null)
-                                Text(
-                                  question.createdAt!.split('T').first,
-                                  style: AppTypography.caption,
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            question.judul,
-                            style: AppTypography.heading3.copyWith(fontSize: 15),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            question.isi,
-                            style: AppTypography.bodySmall.copyWith(fontSize: 13, height: 1.45),
-                          ),
-                          if (tusiText.isNotEmpty || (question.assignedTo != null && question.assignedTo!.isNotEmpty)) ...[
-                            const SizedBox(height: 10),
-                            const Divider(height: 1, color: AppColors.border),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                if (tusiText.isNotEmpty)
-                                  Expanded(
-                                    child: Text(
-                                      'Topik: $tusiText',
-                                      style: AppTypography.caption.copyWith(color: AppColors.slate600),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                if (question.assignedTo != null && question.assignedTo!.isNotEmpty)
-                                  Text(
-                                    'Petugas: ${question.assignedTo}',
-                                    style: AppTypography.caption.copyWith(color: AppColors.slate700, fontWeight: FontWeight.w600),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-
-                    // DAFTAR PERCAKAPAN LANJUTAN & JAWABAN RESMI
-                    ...answers.map((ans) {
-                      if (ans.isSystemEvent) {
-                        // SYSTEM EVENT BUBBLE (Tengah)
-                        return Container(
-                          margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 24),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.slate100,
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                            border: Border.all(color: AppColors.slate300, width: 1),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.info_outline_rounded, size: 13, color: AppColors.slate700),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  ans.isiJawaban,
-                                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.slate800),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      final bool isOfficial = ans.isOfficial;
-
-                      if (isOfficial) {
-                        // TANGGAPAN RESMI STAF ADMIN / KETUA TIM (Sisi Kiri - White Card)
-                        final isLksdm = ans.isAdminLksdm;
-                        final isPusat = ans.isAdminPusat;
-
-                        final headerBg = isPusat
-                            ? Colors.amber.shade900
-                            : (isLksdm ? Colors.teal.shade800 : Colors.purple.shade800);
-
-                        return Align(
-                          alignment: Alignment.centerLeft,
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 12, right: 40),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(16),
-                                topRight: Radius.circular(16),
-                                bottomRight: Radius.circular(16),
-                                bottomLeft: Radius.circular(4),
-                              ),
-                              border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x0A000000),
-                                  blurRadius: 4,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(Icons.verified, size: 15, color: headerBg),
-                                    const SizedBox(width: 5),
-                                    Expanded(
-                                      child: Text(
-                                        ans.penjawabNama,
-                                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: headerBg),
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.slate100,
-                                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                                        border: Border.all(color: AppColors.slate300, width: 1),
-                                      ),
-                                      child: Text(
-                                        isPusat ? 'TIM PUSAT' : (isLksdm ? 'STAF LKSDM' : 'KETUA TIM'),
-                                        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.slate800),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Text(
-                                  ans.penjawabRole,
-                                  style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600),
-                                ),
-                                const SizedBox(height: 6),
-                                const Divider(height: 1, color: AppColors.border),
-                                const SizedBox(height: 6),
-                                Text(
-                                  ans.isiJawaban,
-                                  style: const TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
-                                ),
-                                if (ans.createdAt != null) ...[
-                                  const SizedBox(height: 4),
-                                  Align(
-                                    alignment: Alignment.bottomRight,
-                                    child: Text(
-                                      ans.createdAt!.split('T').first,
-                                      style: TextStyle(fontSize: 9.5, color: Colors.grey.shade500),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        );
-                      } else {
-                        // PERTANYAAN SUSULAN DARI MEMBER (Sisi Kanan - WhatsApp Light Green Bubble)
-                        return Align(
-                          alignment: Alignment.centerRight,
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 12, left: 40),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFDCF8C6),
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(16),
-                                topRight: Radius.circular(16),
-                                bottomLeft: Radius.circular(16),
-                                bottomRight: Radius.circular(4),
-                              ),
-                              border: Border.all(color: const Color(0xFFC5E1A5), width: 0.8),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  ans.penjawabNama,
-                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  ans.isiJawaban,
-                                  style: const TextStyle(fontSize: 13, height: 1.35, color: Colors.black87),
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    if (ans.createdAt != null)
-                                      Text(
-                                        ans.createdAt!.split('T').first,
-                                        style: const TextStyle(fontSize: 9.5, color: Color(0xFF558B2F)),
-                                      ),
-                                    const SizedBox(width: 4),
-                                    const Icon(Icons.done_all, size: 13, color: Color(0xFF2E7D32)),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }
-                    }),
-
-                    // KARTU KONFIRMASI KEPUASAN PEGAWAI (FEEDBACK LOOP - HANYA UNTUK PEGAWAI)
-                    if (isAuthorPegawai && answers.isNotEmpty && !question.isClosed) ...[
-                      const SizedBox(height: 12),
+                child: RefreshIndicator(
+                  onRefresh: _loadFreshDetails,
+                  color: AppColors.primaryRed,
+                  child: ListView(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      // KARTU INFORMASI TIKET
+                      // KARTU PEMBUKA TOPIK PERTANYAAN
                       Container(
+                        margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -1066,151 +646,440 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Icon(Icons.help_outline_rounded, color: AppColors.slate700, size: 18),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Konfirmasi Penyelesaian',
-                                  style: AppTypography.labelMedium.copyWith(fontSize: 13),
+                                Row(
+                                  children: [
+                                    Text(
+                                      question.ticketNumber ?? '#TIKET',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryRed),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.slate100,
+                                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                                        border: Border.all(color: AppColors.slate300, width: 1),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            question.isPublic ? Icons.public : Icons.lock_outline,
+                                            size: 10,
+                                            color: AppColors.slate700,
+                                          ),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            question.isPublic ? 'Publik' : 'Privat',
+                                            style: const TextStyle(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.slate700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
+                                StatusBadge(status: question.status),
                               ],
                             ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'Apakah solusi dan penjelasan di atas telah menjawab pertanyaan Anda?',
-                              style: AppTypography.bodySmall,
-                            ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 10),
                             Row(
                               children: [
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF16A34A),
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 10),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(AppRadius.md),
-                                      ),
-                                    ),
-                                    onPressed: isProcessing ? null : () => _handleConfirmResolution(true),
-                                    label: const Text('Ya, Sudah Terjawab', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                CircleAvatar(
+                                  radius: 14,
+                                  backgroundColor: AppColors.primaryRed,
+                                  child: Text(
+                                    namaUser.isNotEmpty ? namaUser[0].toUpperCase() : 'P',
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
-                                  child: OutlinedButton.icon(
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppColors.slate800,
-                                      side: const BorderSide(color: AppColors.slate300),
-                                      padding: const EdgeInsets.symmetric(vertical: 10),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(AppRadius.md),
+                                  child: Text(
+                                    namaUser,
+                                    style: AppTypography.labelMedium,
+                                  ),
+                                ),
+                                if (question.createdAt != null)
+                                  Text(
+                                    question.createdAt!.split('T').first,
+                                    style: AppTypography.caption,
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              question.judul,
+                              style: AppTypography.heading3.copyWith(fontSize: 15),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              question.isi,
+                              style: AppTypography.bodySmall.copyWith(fontSize: 13, height: 1.45),
+                            ),
+                            if (tusiText.isNotEmpty || (question.assignedTo != null && question.assignedTo!.isNotEmpty)) ...[
+                              const SizedBox(height: 10),
+                              const Divider(height: 1, color: AppColors.border),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  if (tusiText.isNotEmpty)
+                                    Expanded(
+                                      child: Text(
+                                        'Topik: $tusiText',
+                                        style: AppTypography.caption.copyWith(color: AppColors.slate600),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                    onPressed: isProcessing ? null : () => _handleConfirmResolution(false), 
-                                    label: const Text('Belum / Butuh Eskalasi', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600)),
+                                  if (question.assignedTo != null && question.assignedTo!.isNotEmpty)
+                                    Text(
+                                      'Petugas: ${question.assignedTo}',
+                                      style: AppTypography.caption.copyWith(color: AppColors.slate700, fontWeight: FontWeight.w600),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+
+                      // DAFTAR PERCAKAPAN LANJUTAN & JAWABAN RESMI
+                      ...answers.map((ans) {
+                        if (ans.isSystemEvent) {
+                          // SYSTEM EVENT BUBBLE (Tengah)
+                          return Container(
+                            margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 24),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.slate100,
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              border: Border.all(color: AppColors.slate300, width: 1),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.info_outline_rounded, size: 13, color: AppColors.slate700),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    ans.isiJawaban,
+                                    style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.slate800),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ),
                               ],
                             ),
-                            _buildTimelineStepper(),
-                          ],
-                        ),
-                      ),
-                    ],
+                          );
+                        }
 
-                    // EVENT PILL INFO STATUS UNTUK ADMIN/STAF (JIKA BUKAN PEGAWAI PENGAJU)
-                    if (!isAuthorPegawai && answers.isNotEmpty && !question.isClosed) ...[
-                      const SizedBox(height: 10),
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 24),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.slate100,
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                          border: Border.all(color: AppColors.slate300, width: 1),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.lock_clock_outlined, size: 13, color: AppColors.slate700),
-                            SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                'Menunggu konfirmasi penyelesaian dari Pegawai (pemilik pertanyaan).',
-                                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.slate800),
-                                textAlign: TextAlign.center,
+                        final bool isOfficial = ans.isOfficial;
+
+                        if (isOfficial) {
+                          // TANGGAPAN RESMI STAF ADMIN / KETUA TIM (Sisi Kiri - White Card)
+                          final isLksdm = ans.isAdminLksdm;
+                          final isPusat = ans.isAdminPusat;
+
+                          final headerBg = isPusat
+                              ? Colors.amber.shade900
+                              : (isLksdm ? Colors.teal.shade800 : Colors.purple.shade800);
+
+                          return Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 12, right: 40),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(16),
+                                  topRight: Radius.circular(16),
+                                  bottomRight: Radius.circular(16),
+                                  bottomLeft: Radius.circular(4),
+                                ),
+                                border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x0A000000),
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(Icons.verified, size: 15, color: headerBg),
+                                      const SizedBox(width: 5),
+                                      Expanded(
+                                        child: Text(
+                                          ans.penjawabNama,
+                                          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: headerBg),
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.slate100,
+                                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                                          border: Border.all(color: AppColors.slate300, width: 1),
+                                        ),
+                                        child: Text(
+                                          isPusat ? 'TIM PUSAT' : (isLksdm ? 'STAF LKSDM' : 'KETUA TIM'),
+                                          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.slate800),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Text(
+                                    ans.penjawabRole,
+                                    style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  const Divider(height: 1, color: AppColors.border),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    ans.isiJawaban,
+                                    style: const TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
+                                  ),
+                                  if (ans.createdAt != null) ...[
+                                    const SizedBox(height: 4),
+                                    Align(
+                                      alignment: Alignment.bottomRight,
+                                      child: Text(
+                                        ans.createdAt!.split('T').first,
+                                        style: TextStyle(fontSize: 9.5, color: Colors.grey.shade500),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    // EVENT PILL TIKET SELESAI
-                    if (question.isClosed) ...[
-                      const SizedBox(height: 10),
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 24),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.slate100,
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                          border: Border.all(color: AppColors.slate300, width: 1),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.check_circle_outline_rounded, size: 13, color: Color(0xFF16A34A)),
-                            SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                'Tiket pertanyaan ini telah diakhiri dan dinyatakan Selesai.',
-                                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.slate800),
-                                textAlign: TextAlign.center,
+                          );
+                        } else {
+                          // PERTANYAAN SUSULAN DARI MEMBER (Sisi Kanan - WhatsApp Light Green Bubble)
+                          return Align(
+                            alignment: Alignment.centerRight,
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 12, left: 40),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDCF8C6),
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(16),
+                                  topRight: Radius.circular(16),
+                                  bottomLeft: Radius.circular(16),
+                                  bottomRight: Radius.circular(4),
+                                ),
+                                border: Border.all(color: const Color(0xFFC5E1A5), width: 0.8),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    ans.penjawabNama,
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    ans.isiJawaban,
+                                    style: const TextStyle(fontSize: 13, height: 1.35, color: Colors.black87),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      if (ans.createdAt != null)
+                                        Text(
+                                          ans.createdAt!.split('T').first,
+                                          style: const TextStyle(fontSize: 9.5, color: Color(0xFF558B2F)),
+                                        ),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.done_all, size: 13, color: Color(0xFF2E7D32)),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ],
+                          );
+                        }
+                      }),
 
-                    // EVENT PILL MENUNGGU DISPOSISI (Hanya jika belum selesai dan belum ada jawaban)
-                    if (answers.isEmpty && !question.isClosed) ...[
-                      const SizedBox(height: 10),
-                      Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 24),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.slate100,
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                          border: Border.all(color: AppColors.slate300, width: 1),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.hourglass_top_rounded, size: 13, color: AppColors.slate700),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                'Pertanyaan sedang menunggu disposisi & tanggapan resmi dari Tim $namaTimTerkait.',
-                                style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.slate800),
-                                textAlign: TextAlign.center,
+                      // KARTU KONFIRMASI KEPUASAN PEGAWAI (FEEDBACK LOOP - HANYA UNTUK PEGAWAI)
+                      if (isAuthorPegawai && answers.isNotEmpty && !question.isClosed) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: Border.all(color: AppColors.border, width: 1),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x0A000000),
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.help_outline_rounded, color: AppColors.slate700, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Konfirmasi Penyelesaian',
+                                    style: AppTypography.labelMedium.copyWith(fontSize: 13),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Apakah solusi dan penjelasan di atas telah menjawab pertanyaan Anda?',
+                                style: AppTypography.bodySmall,
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF16A34A),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(AppRadius.md),
+                                        ),
+                                      ),
+                                      onPressed: isProcessing ? null : () => _handleConfirmResolution(true),
+                                      label: const Text('Ya, Sudah Terjawab', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: AppColors.slate800,
+                                        side: const BorderSide(color: AppColors.slate300),
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(AppRadius.md),
+                                        ),
+                                      ),
+                                      onPressed: isProcessing ? null : () => _handleConfirmResolution(false), 
+                                      label: const Text('Belum / Butuh Eskalasi', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              _buildTimelineStepper(),
+                            ],
+                          ),
                         ),
-                      ),
+                      ],
+
+                      // EVENT PILL INFO STATUS UNTUK ADMIN/STAF (JIKA BUKAN PEGAWAI PENGAJU)
+                      if (!isAuthorPegawai && answers.isNotEmpty && !question.isClosed) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 24),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.slate100,
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                            border: Border.all(color: AppColors.slate300, width: 1),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.lock_clock_outlined, size: 13, color: AppColors.slate700),
+                              SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Menunggu konfirmasi penyelesaian dari Pegawai (pemilik pertanyaan).',
+                                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.slate800),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // EVENT PILL TIKET SELESAI
+                      if (question.isClosed) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 24),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.slate100,
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                            border: Border.all(color: AppColors.slate300, width: 1),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check_circle_outline_rounded, size: 13, color: Color(0xFF16A34A)),
+                              SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Tiket pertanyaan ini telah diakhiri dan dinyatakan Selesai.',
+                                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.slate800),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // EVENT PILL MENUNGGU DISPOSISI (Hanya jika belum selesai dan belum ada jawaban)
+                      if (answers.isEmpty && !question.isClosed) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 24),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.slate100,
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                            border: Border.all(color: AppColors.slate300, width: 1),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.hourglass_top_rounded, size: 13, color: AppColors.slate700),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Pertanyaan sedang menunggu disposisi & tanggapan resmi dari Tim $namaTimTerkait.',
+                                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.slate800),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
 
-              // TOOLBAR AKSI KETUA TIM & ADMIN TIM & ADMIN LKSDM
-              if (canAnswerQuestion || canDelegateToAdmin || canEscalateToCentral)
+              // TOOLBAR AKSI DISPOSISI & ESKALASI (HANYA DITAMPILKAN JIKA ADA AKSI YANG TERSEDIA)
+              if ((canDelegateToAdmin && question.ticketStatus == TicketStatus.open) || canEscalateToCentral)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   color: Colors.white,
                   child: Row(
                     children: [
@@ -1228,10 +1097,10 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                             label: const Text('Disposisi Ke Admin', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        if (canEscalateToCentral) const SizedBox(width: 8),
                       ],
                       // Tombol Alihkan ke Admin Pusat
-                      if (canEscalateToCentral) ...[
+                      if (canEscalateToCentral)
                         Expanded(
                           child: OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
@@ -1242,34 +1111,6 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                             onPressed: isProcessing ? null : _promptEscalationToCentral,
                             icon: const Icon(Icons.alt_route_rounded, size: 16),
                             label: const Text('Alihkan ke Pusat', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      // Tombol Jawab Tiket
-                      if (canAnswerQuestion)
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryRed,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                            ),
-                            onPressed: isProcessing ? null : _handleAnswer,
-                            icon: const Icon(
-                              Icons.reply_rounded,
-                              size: 16,
-                            ),
-                            label: Text(
-                              !question.isPublic
-                                  ? 'Jawab Langsung'
-                                  : (widget.currentUser?.isAdminLksdm == true
-                                      ? 'Tanggapi (LKSDM)'
-                                      : (widget.currentUser?.isAdminPusat == true
-                                          ? 'Tanggapi (Pusat)'
-                                          : 'Kirim Tanggapan')),
-                              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
-                            ),
                           ),
                         ),
                     ],
@@ -1354,8 +1195,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildTimelineStepper() {
     final status = question.ticketStatus;
