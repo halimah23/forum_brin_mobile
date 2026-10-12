@@ -121,18 +121,12 @@ class QuestionService {
       final List<Map<String, dynamic>> questionList =
           List<Map<String, dynamic>>.from(response);
 
-      // 2. Ambil jawaban dari tabel answers
+      // 2. Ambil jawaban dari tabel answers secara aman (tanpa hardcode nama kolom)
       try {
-        final answersResponse = await _client.from('answers').select('''
-          id,
-          question_id,
-          user_id,
-          sender_name,
-          sender_role,
-          isi_pesan,
-          attachment_url,
-          created_at
-        ''').order('created_at', ascending: true);
+        final answersResponse = await _client
+            .from('answers')
+            .select()
+            .order('created_at', ascending: true);
 
         final Map<int, List<Map<String, dynamic>>> answersGrouped = {};
         for (var item in answersResponse) {
@@ -150,7 +144,9 @@ class QuestionService {
             qMap['answers'] = answersGrouped[qId];
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('Error grouping answers in getQuestions: $e');
+      }
 
       return questionList
           .map((item) => QuestionModel.fromJson(item))
@@ -163,6 +159,51 @@ class QuestionService {
         userIdFilter: userIdFilter,
         isPublicOnly: isPublicOnly,
       );
+    }
+  }
+
+  /// Ambil detail 1 pertanyaan beserta seluruh percakapan/jawaban terbarunya secara live
+  static Future<QuestionModel?> getQuestionDetail(int questionId) async {
+    try {
+      final qResponse = await _client.from('questions').select('''
+        id,
+        ticket_number,
+        judul,
+        isi,
+        status,
+        target_tim,
+        assigned_to,
+        tugas_fungsi_nama,
+        lksdm_kawasan,
+        target_tim_pusat,
+        admin_lksdm_id,
+        admin_pusat_id,
+        is_public,
+        created_at,
+        profiles:user_id (id, name, email, role, unit, tim, jabatan),
+        question_tugas_fungsi (
+          tugas_fungsi (id, kode, nama, team_nama)
+        )
+      ''').eq('id', questionId).single();
+
+      final qMap = Map<String, dynamic>.from(qResponse);
+
+      // Ambil answers langsung untuk ID pertanyaan ini
+      try {
+        final answersResponse = await _client
+            .from('answers')
+            .select()
+            .eq('question_id', questionId)
+            .order('created_at', ascending: true);
+        qMap['answers'] = List<Map<String, dynamic>>.from(answersResponse);
+      } catch (e) {
+        debugPrint('Error fetching answers for question $questionId: $e');
+      }
+
+      return QuestionModel.fromJson(qMap);
+    } catch (e) {
+      debugPrint('Error fetching question detail $questionId: $e');
+      return null;
     }
   }
 
@@ -304,36 +345,77 @@ class QuestionService {
   }
 
   static Future<void> _safeInsertAnswer(Map<String, dynamic> payload) async {
-    try {
-      await _client.from('answers').insert(payload);
-    } catch (e) {
-      final errStr = e.toString();
-      if (errStr.contains('user_id') || errStr.contains('PGRST204')) {
-        final copyPayload = Map<String, dynamic>.from(payload)..remove('user_id');
-        await _client.from('answers').insert(copyPayload);
-      } else {
-        rethrow;
+    // Populate both legacy (penjawab_*, isi_jawaban) and modern (sender_*, isi_pesan) column aliases
+    final Map<String, dynamic> candidate = Map<String, dynamic>.from(payload);
+
+    final name = candidate['sender_name'] ?? candidate['penjawab_nama'] ?? 'Pengguna';
+    final role = candidate['sender_role'] ?? candidate['penjawab_role'] ?? 'pegawai';
+    final msg = candidate['isi_pesan'] ?? candidate['isi_jawaban'] ?? '-';
+
+    candidate['penjawab_nama'] = name;
+    candidate['sender_name'] = name;
+    candidate['penjawab_role'] = role;
+    candidate['sender_role'] = role;
+    candidate['isi_jawaban'] = msg;
+    candidate['isi_pesan'] = msg;
+
+    // Retry insertion, stripping any column that does not exist in schema
+    Map<String, dynamic> toInsert = Map<String, dynamic>.from(candidate);
+    for (int retry = 0; retry < 6; retry++) {
+      try {
+        await _client.from('answers').insert(toInsert);
+        return;
+      } catch (e) {
+        final errStr = e.toString();
+        debugPrint('Postgrest answer insert attempt $retry failed: $errStr');
+        if (errStr.contains('PGRST204') || errStr.contains('Could not find the')) {
+          final match = RegExp(r"Could not find the '([^']+)' column").firstMatch(errStr);
+          if (match != null) {
+            final col = match.group(1);
+            if (col != null && toInsert.containsKey(col)) {
+              toInsert.remove(col);
+              continue;
+            }
+          }
+          if (toInsert.containsKey('user_id')) {
+            toInsert.remove('user_id');
+            continue;
+          }
+          if (toInsert.containsKey('sender_role_type')) {
+            toInsert.remove('sender_role_type');
+            continue;
+          }
+          if (toInsert.containsKey('attachment_url')) {
+            toInsert.remove('attachment_url');
+            continue;
+          }
+        }
+        if (retry == 5) rethrow;
       }
     }
   }
 
   static Future<void> _safeUpdateQuestion(int questionId, Map<String, dynamic> payload) async {
-    try {
-      await _client.from('questions').update(payload).eq('id', questionId);
-    } catch (e) {
-      final errStr = e.toString();
-      if (errStr.contains('updated_at') || errStr.contains('PGRST204')) {
-        final copyPayload = Map<String, dynamic>.from(payload)..remove('updated_at');
-        if (copyPayload.isNotEmpty) {
-          await _client.from('questions').update(copyPayload).eq('id', questionId);
+    Map<String, dynamic> toUpdate = Map<String, dynamic>.from(payload);
+    for (int retry = 0; retry < 4; retry++) {
+      try {
+        await _client.from('questions').update(toUpdate).eq('id', questionId);
+        return;
+      } catch (e) {
+        final errStr = e.toString();
+        if (errStr.contains('updated_at') || errStr.contains('PGRST204')) {
+          toUpdate.remove('updated_at');
+          if (toUpdate.isEmpty) return;
+          continue;
         }
-      } else {
-        rethrow;
+        if (retry == 3) {
+          debugPrint('Error updating question $questionId: $e');
+        }
       }
     }
   }
 
-  /// Kirim Pesan Balasan / Percakapan Lanjutan oleh Pengguna (Pegawai/Admin LKSDM/Admin Pusat)
+  /// Kirim Pesan Balasan / Percakapan Lanjutan oleh Pengguna (Pegawai/Admin LKSDM/Admin Pusat/Ketua Tim)
   static Future<bool> sendFollowUpMessage({
     required int questionId,
     required String isiPesan,
@@ -369,20 +451,31 @@ class QuestionService {
         validSenderRole = 'pegawai';
       }
 
-      // 1. Simpan pesan lanjutan ke tabel answers pada tiket yang sama
+      // 1. Simpan pesan ke tabel answers
       await _safeInsertAnswer({
         'question_id': questionId,
         'user_id': userId,
         'sender_name': pengirimNama,
+        'penjawab_nama': pengirimNama,
         'sender_role': validSenderRole,
+        'penjawab_role': pengirimRole,
+        'sender_role_type': validSenderRole,
         'isi_pesan': isiPesan,
+        'isi_jawaban': isiPesan,
         if (attachmentUrl != null) 'attachment_url': attachmentUrl,
       });
 
-      // 2. Perbarui updated_at pertanyaan
-      await _safeUpdateQuestion(questionId, {
+      // 2. Perbarui status pertanyaan: jika direspon oleh Ketua Tim / Admin LKSDM, ubah jadi 'ditangani_lksdm' (IN_PROGRESS)
+      final updateData = <String, dynamic>{
         'updated_at': DateTime.now().toIso8601String(),
-      });
+      };
+      if (validSenderRole == 'admin_lksdm' || validSenderRole == 'ketua_tim') {
+        updateData['status'] = 'ditangani_lksdm';
+      } else if (validSenderRole == 'admin_pusat') {
+        updateData['status'] = 'dialihkan_ke_pusat';
+      }
+
+      await _safeUpdateQuestion(questionId, updateData);
 
       return true;
     } catch (e) {
