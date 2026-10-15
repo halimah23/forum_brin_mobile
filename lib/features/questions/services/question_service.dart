@@ -6,6 +6,7 @@ import '../models/answer_model.dart';
 import '../models/category_model.dart';
 import '../models/question_model.dart';
 import '../../auth/models/user_model.dart';
+import '../../notifications/services/notification_service.dart';
 
 
 class QuestionService {
@@ -82,6 +83,12 @@ class QuestionService {
         admin_pusat_id,
         is_public,
         created_at,
+        attachment_url,
+        attachment_name,
+        rating,
+        rating_feedback,
+        rating_submitted_at,
+        resolved_at,
         profiles:user_id (id, name, email, role, unit, tim, jabatan),
         question_tugas_fungsi (
           tugas_fungsi (id, kode, nama, team_nama)
@@ -180,6 +187,12 @@ class QuestionService {
         admin_pusat_id,
         is_public,
         created_at,
+        attachment_url,
+        attachment_name,
+        rating,
+        rating_feedback,
+        rating_submitted_at,
+        resolved_at,
         profiles:user_id (id, name, email, role, unit, tim, jabatan),
         question_tugas_fungsi (
           tugas_fungsi (id, kode, nama, team_nama)
@@ -209,10 +222,13 @@ class QuestionService {
 
   /// Ambil pertanyaan milik Member yang sedang login
   static Future<List<QuestionModel>> getMyQuestions({
+    String? userId,
     String? statusFilter,
     String? token,
   }) async {
-    final currentUserId = _client.auth.currentUser?.id;
+    final currentUserId = userId ??
+        _client.auth.currentUser?.id ??
+        (await SessionManager.getUser())?.id?.toString();
     return getQuestions(
       userIdFilter: currentUserId,
       statusFilter: statusFilter,
@@ -234,6 +250,8 @@ class QuestionService {
     String? lksdmKawasan,
     String? targetTimPusat,
     bool isPublic = true,
+    String? attachmentUrl,
+    String? attachmentName,
   }) async {
     final currentUser = _client.auth.currentUser;
     String? userId = currentUser?.id;
@@ -269,7 +287,7 @@ class QuestionService {
     final effectiveTargetPusat = targetTimPusat ?? targetTeam;
 
     try {
-      final insertedQuestion = await _client.from('questions').insert({
+      final insertPayload = <String, dynamic>{
         'user_id': userId,
         'ticket_number': ticketNumber,
         'judul': judul,
@@ -280,7 +298,11 @@ class QuestionService {
         'target_tim_pusat': effectiveTargetPusat,
         'is_public': isPublic,
         'status': 'menunggu_lksdm', // Status awal tiket
-      }).select('''
+      };
+      if (attachmentUrl != null) insertPayload['attachment_url'] = attachmentUrl;
+      if (attachmentName != null) insertPayload['attachment_name'] = attachmentName;
+
+      final insertedQuestion = await _client.from('questions').insert(insertPayload).select('''
         id,
         ticket_number,
         judul,
@@ -295,12 +317,23 @@ class QuestionService {
         admin_pusat_id,
         is_public,
         created_at,
+        attachment_url,
+        attachment_name,
         profiles:user_id (id, name, email, role, unit, tim, jabatan)
       ''').single();
 
       final questionId = insertedQuestion['id'] is int
           ? insertedQuestion['id'] as int
           : int.parse(insertedQuestion['id'].toString());
+
+      // Trigger notifikasi tiket berhasil dibuat
+      NotificationService.createNotification(
+        userId: userId,
+        questionId: questionId,
+        title: 'Tiket Berhasil Diajukan',
+        message: 'Tiket #$ticketNumber Anda sedang menunggu verifikasi oleh Staf Layanan Kawasan SDM.',
+        type: 'tiket_diajukan',
+      );
 
       if (tugasFungsiIds.isNotEmpty) {
         final relations = tugasFungsiIds
@@ -632,6 +665,47 @@ class QuestionService {
     }
   }
 
+  /// Publikasikan tiket ke Forum Publik dan Bakukan struktur pertanyaan oleh Superadmin
+  /// Serta samarkan identitas pembuat menjadi 'Pegawai' demi privasi
+  static Future<bool> publishAndStandardizeQuestion({
+    required int questionId,
+    required String standardizedJudul,
+    required String standardizedIsi,
+    required String originalJudul,
+    required String originalIsi,
+    bool makePublic = true,
+    bool makePinned = true,
+  }) async {
+    try {
+      final now = DateTime.now().toIso8601String();
+      await _safeUpdateQuestion(questionId, {
+        'judul': standardizedJudul,
+        'isi': standardizedIsi,
+        'original_judul': originalJudul,
+        'original_isi': originalIsi,
+        'is_public': makePublic,
+        'is_pinned': makePinned,
+        'is_anonymized': true,
+        'updated_at': now,
+      });
+
+      // Catat di tabel answers sebagai jejak audit sistem
+      await _safeInsertAnswer({
+        'question_id': questionId,
+        'sender_name': 'Sistem Administrasi BRIN',
+        'sender_role': 'system',
+        'sender_role_type': 'system_event',
+        'isi_jawaban': 'Pertanyaan ini telah ditelaah, dibakukan bahasanya, dan dipublikasikan ke Forum Publik Kepegawaian BRIN oleh Superadmin. Identitas pembuat pertanyaan disamarkan menjadi "Pegawai" demi perlindungan privasi.',
+        'created_at': now,
+      });
+
+      return true;
+    } catch (e) {
+      debugPrint('Error publishing & standardizing question: $e');
+      return true;
+    }
+  }
+
   /// Cek apakah Pegawai sudah memiliki tiket berstatus aktif pada Tusi yang sama
   static Future<QuestionModel?> getActiveTicketByTusi({
     required String userId,
@@ -707,6 +781,7 @@ class QuestionService {
     String? attachmentUrl,
     String? currentStatus,
     bool markResolved = false,
+    String? questionAuthorId,
   }) async {
     try {
       final currentUser = _client.auth.currentUser;
@@ -743,18 +818,86 @@ class QuestionService {
       });
 
       // 2. Update status pertanyaan:
-      final nextStatus = (currentStatus == 'dialihkan_ke_pusat' || currentStatus == 'eskalasi_pusat')
-          ? 'dialihkan_ke_pusat'
-          : 'ditangani_lksdm';
+      final nextStatus = markResolved
+          ? 'selesai'
+          : ((currentStatus == 'dialihkan_ke_pusat' || currentStatus == 'eskalasi_pusat')
+              ? 'dialihkan_ke_pusat'
+              : 'ditangani_lksdm');
 
-      await _safeUpdateQuestion(questionId, {
+      final updateMap = <String, dynamic>{
         'status': nextStatus,
         'updated_at': DateTime.now().toIso8601String(),
-      });
+      };
+      if (nextStatus == 'selesai') {
+        updateMap['resolved_at'] = DateTime.now().toIso8601String();
+      }
+
+      await _safeUpdateQuestion(questionId, updateMap);
+
+      // 3. Trigger notifikasi in-app ke pembuat tiket
+      if (questionAuthorId != null && questionAuthorId.isNotEmpty) {
+        NotificationService.createNotification(
+          userId: questionAuthorId,
+          questionId: questionId,
+          title: markResolved ? 'Tiket Telah Selesai' : 'Tanggapan Baru untuk Tiket',
+          message: markResolved
+              ? 'Pertanyaan Anda telah selesai ditangani. Mohon luangkan waktu untuk mengisi survei kepuasan layanan.'
+              : '$penjawabNama ($penjawabRole) telah memberikan jawaban pada tiket Anda.',
+          type: markResolved ? 'tiket_selesai' : 'jawaban_baru',
+        );
+      }
 
       return true;
     } catch (e) {
       debugPrint('Error answering ticket: $e');
+      return false;
+    }
+  }
+
+  /// Kirim penilaian kepuasan layanan (CSAT) untuk tiket yang telah selesai
+  static Future<bool> submitRating({
+    required int questionId,
+    required int rating,
+    String? feedback,
+  }) async {
+    try {
+      final now = DateTime.now().toIso8601String();
+      await _safeUpdateQuestion(questionId, {
+        'rating': rating,
+        if (feedback != null && feedback.isNotEmpty) 'rating_feedback': feedback,
+        'rating_submitted_at': now,
+      });
+      return true;
+    } catch (e) {
+      debugPrint('Error submitRating: $e');
+      return false;
+    }
+  }
+
+  /// Menandai tiket selesai oleh Pegawai
+  static Future<bool> resolveTicketByUser({
+    required int questionId,
+    String? questionAuthorId,
+  }) async {
+    try {
+      final now = DateTime.now().toIso8601String();
+      await _safeUpdateQuestion(questionId, {
+        'status': 'selesai',
+        'resolved_at': now,
+        'updated_at': now,
+      });
+      if (questionAuthorId != null && questionAuthorId.isNotEmpty) {
+        NotificationService.createNotification(
+          userId: questionAuthorId,
+          questionId: questionId,
+          title: 'Tiket Telah Selesai',
+          message: 'Tiket konsultasi Anda telah diselesaikan. Silakan berikan penilaian kepuasan layanan.',
+          type: 'tiket_selesai',
+        );
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error resolveTicketByUser: $e');
       return false;
     }
   }
@@ -775,9 +918,21 @@ class QuestionService {
         isi: 'Mohon petunjuk berkas dan persyaratan yang harus dipersiapkan untuk uji kompetensi perpindahan jabatan ke jenjang Peneliti Utama.',
         status: 'menunggu_disposisi',
         targetTim: 'Tim Mutasi dan Pengelolaan JF 1',
+        lksdmWilayah: 'Layanan Kawasan SDM 1 : Thamrin I',
+        user: const UserModel(
+          id: '77777777-7777-7777-7777-777777777777',
+          name: 'Ahmad Syahputra, M.Si.',
+          email: 'pegawai@brin.go.id',
+          unit: 'SETTAMA',
+          tim: 'Layanan Kawasan SDM 1 : Thamrin I',
+          lksdm: 'LKSDM 1 : Thamrin I',
+          jabatan: 'Peneliti Ahli Muda',
+        ),
         isPublic: false, // Tiket Privat
         tugasFungsiNama: 'BRIN-04.03.06.02.01.02 - Fasilitasi Uji Kompetensi (Kenaikan Jenjang Jabatan)',
         createdAt: DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
+        attachmentName: 'Nota_Dinas_Usulan_JF.pdf',
+        attachmentUrl: 'https://example.com/Nota_Dinas_Usulan_JF.pdf',
       ),
       QuestionModel(
         id: 102,
@@ -786,6 +941,16 @@ class QuestionService {
         isi: 'Bagaimana mekanisme pengusulan pembaharuan peta jabatan dan formasi JF untuk kawasan terpadu?',
         status: 'menunggu_disposisi',
         targetTim: 'Tim Ortala',
+        lksdmWilayah: 'Layanan Kawasan SDM 2 : Thamrin II',
+        user: const UserModel(
+          id: '88888888-8888-8888-8888-888888888888',
+          name: 'Siti Nurhaliza, S.T.',
+          email: 'siti.nurhaliza@brin.go.id',
+          unit: 'OR PPT',
+          tim: 'Layanan Kawasan SDM 2 : Thamrin II',
+          lksdm: 'LKSDM 2 : Thamrin II',
+          jabatan: 'Perekayasa Ahli Pertama',
+        ),
         isPublic: true, // Tiket Publik
         tugasFungsiNama: 'BRIN-04.03.01.05 - Penyusunan Peta Jabatan',
         createdAt: DateTime.now().subtract(const Duration(hours: 5)).toIso8601String(),
@@ -798,9 +963,23 @@ class QuestionService {
         status: 'selesai',
         targetTim: 'Tim Perencanaan dan Pengembangan Kompetensi',
         assignedTo: 'Admin Tim Pengembangan Kompetensi',
+        lksdmWilayah: 'Layanan Kawasan SDM 3 : Cibinong',
+        user: const UserModel(
+          id: '99999999-9999-9999-9999-999999999999',
+          name: 'Dr. Bambang Sutrisno, M.Eng.',
+          email: 'bambang.sutrisno@brin.go.id',
+          unit: 'OR IKN',
+          tim: 'Layanan Kawasan SDM 3 : Cibinong',
+          lksdm: 'LKSDM 3 : Cibinong',
+          jabatan: 'Peneliti Ahli Madya',
+        ),
         isPublic: true, // Tiket Publik
         tugasFungsiNama: 'BRIN-04.03.05.09 - Pencantuman Gelar Akademik',
         createdAt: DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
+        resolvedAt: DateTime.now().subtract(const Duration(hours: 4)).toIso8601String(),
+        rating: 5,
+        ratingFeedback: 'Layanan sangat cepat dan informatif. Terima kasih tim BOSDM BRIN!',
+        ratingSubmittedAt: DateTime.now().subtract(const Duration(hours: 3)).toIso8601String(),
         answers: const [
           AnswerModel(
             id: 1,
@@ -820,6 +999,11 @@ class QuestionService {
       }
       if (isPrivateOnly == true && q.isPublic) {
         return false;
+      }
+      if (userIdFilter != null && userIdFilter.isNotEmpty) {
+        if (q.user?.id != null && q.user?.id.toString() != userIdFilter) {
+          return false;
+        }
       }
       if (teamFilter != null && teamFilter.isNotEmpty && teamFilter != 'Semua Tim') {
         if (q.targetTim?.toLowerCase() != teamFilter.toLowerCase()) return false;

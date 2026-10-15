@@ -104,6 +104,12 @@ class UserInfoCard extends StatelessWidget {
             label: 'Jabatan',
             value: user.jabatan ?? '-',
           ),
+          const SizedBox(height: 10),
+          _InfoTile(
+            icon: Icons.location_city_outlined,
+            label: 'Asal LKSDM',
+            value: user.effectiveLksdm,
+          ),
         ],
       ),
     );

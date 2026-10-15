@@ -7,9 +7,11 @@ import '../../../core/widgets/custom_button.dart';
 import '../../auth/models/user_model.dart';
 import '../../questions/models/question_model.dart';
 import '../../questions/screens/ask_question_screen.dart';
+import '../../questions/screens/member_tickets_screen.dart';
 import '../../questions/screens/question_detail_screen.dart';
 import '../../questions/services/question_service.dart';
 import '../../questions/widgets/question_card.dart';
+import '../../notifications/widgets/notification_bell_widget.dart';
 import '../widgets/trending_chart_widget.dart';
 
 class MemberDashboardScreen extends StatefulWidget {
@@ -36,7 +38,10 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
 
   Future<void> _loadMyQuestions() async {
     setState(() => isLoading = true);
-    final questions = await QuestionService.getMyQuestions(token: widget.user.token);
+    final questions = await QuestionService.getMyQuestions(
+      userId: widget.user.id?.toString(),
+      token: widget.user.token,
+    );
     if (mounted) {
       setState(() {
         myQuestions = questions;
@@ -75,6 +80,10 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
             ),
           ],
         ),
+        actions: [
+          NotificationBellWidget(user: widget.user),
+          const SizedBox(width: 8),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadMyQuestions,
@@ -104,58 +113,110 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                   // 2. Summary KPI Cards (Aktif vs Selesai)
                   Row(
                     children: [
+                      // Card Tiket Aktif
                       Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
+                        child: Material(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          child: InkWell(
                             borderRadius: BorderRadius.circular(AppRadius.md),
-                            border: Border.all(color: AppColors.border, width: 1),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Row(
+                            onTap: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => MemberTicketsScreen(
+                                    user: widget.user,
+                                    initialTabIndex: 0,
+                                  ),
+                                ),
+                              );
+                              _loadMyQuestions();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                border: Border.all(color: AppColors.border, width: 1),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Icon(Icons.mark_chat_unread_outlined, color: Color(0xFF0284C7), size: 18),
-                                  SizedBox(width: 6),
-                                  Text('Tiket Aktif', style: TextStyle(fontSize: 12, color: AppColors.slate600)),
+                                  const Row(
+                                    children: [
+                                      Icon(Icons.mark_chat_unread_outlined, color: Color(0xFF0284C7), size: 18),
+                                      SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          'Tiket Aktif',
+                                          style: TextStyle(fontSize: 12, color: AppColors.slate600, fontWeight: FontWeight.w600),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      Icon(Icons.chevron_right, size: 16, color: AppColors.slate400),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '${activeTickets.length}',
+                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.slate900),
+                                  ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${activeTickets.length}',
-                                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.slate900),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(width: 12),
+                      // Card Tiket Selesai
                       Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
+                        child: Material(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          child: InkWell(
                             borderRadius: BorderRadius.circular(AppRadius.md),
-                            border: Border.all(color: AppColors.border, width: 1),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Row(
+                            onTap: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => MemberTicketsScreen(
+                                    user: widget.user,
+                                    initialTabIndex: 1,
+                                  ),
+                                ),
+                              );
+                              _loadMyQuestions();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                border: Border.all(color: AppColors.border, width: 1),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Icon(Icons.check_circle_outline_rounded, color: Color(0xFF16A34A), size: 18),
-                                  SizedBox(width: 6),
-                                  Text('Tiket Selesai', style: TextStyle(fontSize: 12, color: AppColors.slate600)),
+                                  const Row(
+                                    children: [
+                                      Icon(Icons.check_circle_outline_rounded, color: Color(0xFF16A34A), size: 18),
+                                      SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          'Tiket Selesai',
+                                          style: TextStyle(fontSize: 12, color: AppColors.slate600, fontWeight: FontWeight.w600),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      Icon(Icons.chevron_right, size: 16, color: AppColors.slate400),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '${closedTickets.length}',
+                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.slate900),
+                                  ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                '${closedTickets.length}',
-                                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.slate900),
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                       ),
@@ -240,6 +301,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                         final q = activeTickets[index];
                         return QuestionCard(
                           question: q,
+                          currentUser: widget.user,
                           onTap: () async {
                             await Navigator.push(
                               context,

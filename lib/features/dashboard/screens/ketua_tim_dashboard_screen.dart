@@ -8,6 +8,7 @@ import '../../questions/models/question_model.dart';
 import '../../questions/screens/question_detail_screen.dart';
 import '../../questions/services/question_service.dart';
 import '../../questions/widgets/question_card.dart';
+import '../../notifications/widgets/notification_bell_widget.dart';
 import '../widgets/trending_chart_widget.dart';
 
 class KetuaTimDashboardScreen extends StatefulWidget {
@@ -99,6 +100,10 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
             ),
           ],
         ),
+        actions: [
+          NotificationBellWidget(user: widget.user, iconColor: primaryTeal),
+          const SizedBox(width: 8),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadData,
@@ -190,6 +195,7 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
                           final q = pendingList[index];
                           return QuestionCard(
                             question: q,
+                            currentUser: widget.user,
                             onTap: () async {
                               await Navigator.push(
                                 context,

@@ -1,4 +1,5 @@
 import '../../auth/models/user_model.dart';
+import '../../auth/models/user_role.dart';
 import 'answer_model.dart';
 import 'category_model.dart';
 import 'ticket_status.dart';
@@ -22,6 +23,15 @@ class QuestionModel {
   final List<CategoryModel>? tugasFungsi;
   final List<AnswerModel>? answers;
   final String? createdAt;
+  final String? originalJudul;
+  final String? originalIsi;
+  final bool isAnonymized;
+  final String? attachmentUrl;
+  final String? attachmentName;
+  final int? rating;
+  final String? ratingFeedback;
+  final String? ratingSubmittedAt;
+  final String? resolvedAt;
 
   String? get lksdmKawasan => lksdmWilayah;
   String? get escalatedToTeam => targetTimPusat;
@@ -29,6 +39,34 @@ class QuestionModel {
   TicketStatus get ticketStatus => TicketStatus.fromString(status);
   bool get isClosed => ticketStatus.isClosed;
   bool get isActive => ticketStatus.isActive;
+
+  /// Penanda apakah pertanyaan telah dibakukan dari teks aslinya
+  bool get isStandardized =>
+      (originalJudul != null && originalJudul!.isNotEmpty && originalJudul != judul) ||
+      (originalIsi != null && originalIsi!.isNotEmpty && originalIsi != isi);
+
+  /// Nama yang ditampilkan di ruang publik (disamarkan menjadi Pegawai demi privasi saat dipublikasikan)
+  String get displayAuthorName {
+    if (isAnonymized || isPublic) {
+      return 'Pegawai';
+    }
+    return user?.name ?? 'Pegawai';
+  }
+
+  /// Nama asli untuk kebutuhan inspeksi audit internal Superadmin
+  String get auditAuthorName => user?.name ?? 'Pegawai';
+
+  /// Asal LKSDM Kawasan tempat pengaju mengajukan pertanyaan atau unit kerjanya
+  String get authorAsalLksdm {
+    if (lksdmKawasan != null && lksdmKawasan!.isNotEmpty) return lksdmKawasan!;
+    if (lksdmWilayah != null && lksdmWilayah!.isNotEmpty) return lksdmWilayah!;
+    if (user?.lksdm != null && user!.lksdm!.isNotEmpty) return user!.lksdm!;
+    if (user?.effectiveLksdm != null && user!.effectiveLksdm.isNotEmpty) return user!.effectiveLksdm;
+    return 'Layanan Kawasan SDM';
+  }
+
+  /// Nama lengkap pegawai pengaju untuk peran staf/manajemen (Staf LKSDM, Staf Pusat, Ketua Tim, Eksekutif, Superadmin)
+  String get officialAuthorName => user?.name ?? 'Pegawai BRIN';
 
   const QuestionModel({
     this.id,
@@ -47,10 +85,19 @@ class QuestionModel {
     this.tugasFungsiNama,
     this.isPublic = true,
     this.isPinned = false,
+    this.isAnonymized = false,
+    this.originalJudul,
+    this.originalIsi,
     this.user,
     this.tugasFungsi,
     this.answers,
     this.createdAt,
+    this.attachmentUrl,
+    this.attachmentName,
+    this.rating,
+    this.ratingFeedback,
+    this.ratingSubmittedAt,
+    this.resolvedAt,
   })  : lksdmWilayah = lksdmWilayah ?? lksdmKawasan,
         targetTimPusat = targetTimPusat ?? escalatedToTeam;
 
@@ -64,6 +111,81 @@ class QuestionModel {
 
   String get effectiveTargetTim =>
       targetTimPusat ?? targetTim ?? 'Layanan Kawasan SDM';
+
+  DateTime? get createdDateTime =>
+      createdAt != null ? DateTime.tryParse(createdAt!) : null;
+
+  DateTime? get resolvedDateTime =>
+      resolvedAt != null ? DateTime.tryParse(resolvedAt!) : null;
+
+  /// SLA standar adalah 48 jam kerja
+  int get slaDurationHours => 48;
+
+  /// Durasi yang telah berjalan sejak tiket dibuat hingga sekarang (atau hingga selesai jika sudah closed)
+  Duration get durationWorked {
+    final start = createdDateTime ?? DateTime.now();
+    final end = (isClosed && resolvedDateTime != null)
+        ? resolvedDateTime!
+        : DateTime.now();
+    return end.isAfter(start) ? end.difference(start) : Duration.zero;
+  }
+
+  /// Sisa waktu sebelum batas SLA 48 jam terlewati
+  Duration get remainingSlaDuration {
+    final start = createdDateTime ?? DateTime.now();
+    final deadline = start.add(Duration(hours: slaDurationHours));
+    final now = DateTime.now();
+    return deadline.isAfter(now) ? deadline.difference(now) : Duration.zero;
+  }
+
+  /// Apakah tiket telah melampaui batas SLA 48 jam
+  bool get isSlaBreached {
+    return durationWorked.inHours >= slaDurationHours;
+  }
+
+  /// Mengembalikan nama tampilan penanya berdasarkan hak akses viewer (currentUser):
+  /// - Jika penanya adalah diri sendiri: Tampilkan nama asli + '(Anda)'
+  /// - Jika penanya adalah pegawai lain dan pertanyaan telah di-up / publik: Sembunyikan nama ('Pegawai BRIN')
+  /// - Jika penanya dilihat oleh Staf/Manajemen (Admin, Superadmin, Ketua Tim): Tampilkan nama asli untuk verifikasi
+  String getAuthorDisplayName(UserModel? currentUser) {
+    final String rawName = user?.name ?? 'Pegawai BRIN';
+
+    if (currentUser == null) {
+      return isPublic ? 'Pegawai BRIN' : rawName;
+    }
+
+    // 1. Jika dilihat oleh Petugas / Manajemen (Admin LKSDM, Admin Pusat, Super Admin, Ketua Tim, Eksekutif)
+    final bool isStaffOrOfficer = currentUser.isAdminLksdm ||
+        currentUser.isAdminPusat ||
+        currentUser.isSuperAdmin ||
+        currentUser.isEksekutif ||
+        currentUser.userRole == UserRole.admin ||
+        currentUser.userRole == UserRole.ketuaTim ||
+        currentUser.userRole == UserRole.superAdmin;
+
+    if (isStaffOrOfficer) {
+      return rawName;
+    }
+
+    // 2. Jika dilihat oleh Penanya Sendiri (Diri Sendiri)
+    final bool isSelf = (user?.id != null && currentUser.id != null && user!.id.toString() == currentUser.id.toString()) ||
+        (user?.name != null && currentUser.name.isNotEmpty && user!.name.trim().toLowerCase() == currentUser.name.trim().toLowerCase());
+
+    if (isSelf) {
+      return '$rawName (Anda)';
+    }
+
+    // 3. Jika penanya adalah Pegawai Lain dan pertanyaan bersifat publik / di-up superadmin
+    return 'Pegawai BRIN';
+  }
+
+  /// Inisial avatar penanya sesuai dengan nama tampilan
+  String getAuthorInitial(UserModel? currentUser) {
+    final displayName = getAuthorDisplayName(currentUser);
+    if (displayName.startsWith('Pegawai BRIN')) return 'P';
+    if (displayName.isNotEmpty) return displayName[0].toUpperCase();
+    return 'P';
+  }
 
   factory QuestionModel.fromJson(Map<String, dynamic> json) {
     UserModel? author;
@@ -115,6 +237,10 @@ class QuestionModel {
         json['escalated_to_team']?.toString() ??
         json['target_tim']?.toString();
 
+    final int? parsedRating = json['rating'] is int
+        ? json['rating']
+        : int.tryParse(json['rating']?.toString() ?? '');
+
     return QuestionModel(
       id: parsedId,
       ticketNumber: generatedTicketNumber,
@@ -130,10 +256,19 @@ class QuestionModel {
       tugasFungsiNama: json['tugas_fungsi_nama']?.toString(),
       isPublic: json['is_public'] == true || json['is_public'] == 1,
       isPinned: json['is_pinned'] == true || json['is_pinned'] == 1,
+      isAnonymized: json['is_anonymized'] == true || json['is_anonymized'] == 1,
+      originalJudul: json['original_judul']?.toString(),
+      originalIsi: json['original_isi']?.toString(),
       user: author,
       tugasFungsi: categories,
       answers: answersList,
       createdAt: json['created_at']?.toString(),
+      attachmentUrl: json['attachment_url']?.toString(),
+      attachmentName: json['attachment_name']?.toString(),
+      rating: parsedRating,
+      ratingFeedback: json['rating_feedback']?.toString(),
+      ratingSubmittedAt: json['rating_submitted_at']?.toString(),
+      resolvedAt: json['resolved_at']?.toString(),
     );
   }
 
@@ -154,10 +289,19 @@ class QuestionModel {
       'tugas_fungsi_nama': tugasFungsiNama,
       'is_public': isPublic,
       'is_pinned': isPinned,
+      'is_anonymized': isAnonymized,
+      if (originalJudul != null) 'original_judul': originalJudul,
+      if (originalIsi != null) 'original_isi': originalIsi,
       'user': user?.toJson(),
       'tugas_fungsi': tugasFungsi?.map((c) => c.toJson()).toList(),
       'answers': answers?.map((a) => a.toJson()).toList(),
       'created_at': createdAt,
+      'attachment_url': attachmentUrl,
+      'attachment_name': attachmentName,
+      'rating': rating,
+      'rating_feedback': ratingFeedback,
+      'rating_submitted_at': ratingSubmittedAt,
+      'resolved_at': resolvedAt,
     };
   }
 
@@ -178,10 +322,19 @@ class QuestionModel {
     String? tugasFungsiNama,
     bool? isPublic,
     bool? isPinned,
+    bool? isAnonymized,
+    String? originalJudul,
+    String? originalIsi,
     UserModel? user,
     List<CategoryModel>? tugasFungsi,
     List<AnswerModel>? answers,
     String? createdAt,
+    String? attachmentUrl,
+    String? attachmentName,
+    int? rating,
+    String? ratingFeedback,
+    String? ratingSubmittedAt,
+    String? resolvedAt,
   }) {
     return QuestionModel(
       id: id ?? this.id,
@@ -198,10 +351,19 @@ class QuestionModel {
       tugasFungsiNama: tugasFungsiNama ?? this.tugasFungsiNama,
       isPublic: isPublic ?? this.isPublic,
       isPinned: isPinned ?? this.isPinned,
+      isAnonymized: isAnonymized ?? this.isAnonymized,
+      originalJudul: originalJudul ?? this.originalJudul,
+      originalIsi: originalIsi ?? this.originalIsi,
       user: user ?? this.user,
       tugasFungsi: tugasFungsi ?? this.tugasFungsi,
       answers: answers ?? this.answers,
       createdAt: createdAt ?? this.createdAt,
+      attachmentUrl: attachmentUrl ?? this.attachmentUrl,
+      attachmentName: attachmentName ?? this.attachmentName,
+      rating: rating ?? this.rating,
+      ratingFeedback: ratingFeedback ?? this.ratingFeedback,
+      ratingSubmittedAt: ratingSubmittedAt ?? this.ratingSubmittedAt,
+      resolvedAt: resolvedAt ?? this.resolvedAt,
     );
   }
 }

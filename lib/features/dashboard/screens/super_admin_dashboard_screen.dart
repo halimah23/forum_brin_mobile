@@ -5,6 +5,9 @@ import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../auth/models/user_model.dart';
 import '../../questions/models/question_model.dart';
+import '../../questions/data/lksdm_catalog_data.dart';
+import '../../questions/data/tusi_catalog_data.dart';
+import '../../questions/screens/faq_screen.dart';
 import '../../questions/screens/question_detail_screen.dart';
 import '../../questions/services/question_service.dart';
 import '../../questions/widgets/question_card.dart';
@@ -131,6 +134,88 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
 
                     const SizedBox(height: 24),
 
+                    // Hub Administrasi & Monitoring Sistem
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Administrasi & Monitoring', style: AppTypography.heading3),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF512DA8).withAlpha(20),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                          child: const Text(
+                            'Superadmin Control',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF512DA8),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Grid Tombol Hak Akses Utama Superadmin
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _adminActionCard(
+                            title: 'Kelola FAQ & Tren',
+                            subtitle: 'Kurasi topik populer & FAQ',
+                            icon: Icons.quiz_outlined,
+                            iconColor: const Color(0xFF512DA8),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const FaqScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _adminActionCard(
+                            title: 'Master Data & Akses',
+                            subtitle: '14 Tim Pusat & 7 LKSDM',
+                            icon: Icons.admin_panel_settings_outlined,
+                            iconColor: const Color(0xFF0284C7),
+                            onTap: () => _showMasterDataDialog(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _adminActionCard(
+                            title: 'Monitoring Sistem',
+                            subtitle: 'Status antrean & SLA tiket',
+                            icon: Icons.monitor_heart_outlined,
+                            iconColor: const Color(0xFF16A34A),
+                            onTap: () => _showMonitoringDialog(context),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _adminActionCard(
+                            title: 'Statistik & Laporan',
+                            subtitle: 'Agregat metrik kepuasan',
+                            icon: Icons.analytics_outlined,
+                            iconColor: const Color(0xFFC2410C),
+                            onTap: () => _showStatistikDialog(context),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
                     // Audit Feed System
                     const Text('Audit Layanan Tiket Real-Time', style: AppTypography.heading3),
                     const SizedBox(height: 10),
@@ -148,6 +233,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                           final q = questions[index];
                           return QuestionCard(
                             question: q,
+                            currentUser: widget.user,
                             onTap: () async {
                               await Navigator.push(
                                 context,
@@ -211,6 +297,254 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
           Text(
             value,
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _adminActionCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: iconColor.withAlpha(25),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: Icon(icon, size: 20, color: iconColor),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.slate900),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              subtitle,
+              style: const TextStyle(fontSize: 11, color: AppColors.slate500),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showMasterDataDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+      ),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.75,
+          maxChildSize: 0.9,
+          minChildSize: 0.5,
+          builder: (_, controller) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.admin_panel_settings, color: Color(0xFF0284C7)),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Kelola Master Data & Hak Akses',
+                          style: AppTypography.heading2,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const Text(
+                    'Daftar katalog master unit kerja resmi BOSDM BRIN',
+                    style: TextStyle(fontSize: 12, color: AppColors.slate500),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: ListView(
+                      controller: controller,
+                      children: [
+                        const Text('14 Tim Layanan Pusat BOSDM:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        const SizedBox(height: 8),
+                        ...TusiCatalogData.centralTeams.map(
+                          (t) => Container(
+                            margin: const EdgeInsets.only(bottom: 6),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.slate50,
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.verified, size: 16, color: Color(0xFF0284C7)),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text(t, style: const TextStyle(fontSize: 12.5))),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text('7 Wilayah Kawasan SDM (LKSDM):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        const SizedBox(height: 8),
+                        ...LksdmCatalogData.allLksdm.map(
+                          (l) => Container(
+                            margin: const EdgeInsets.only(bottom: 6),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.slate50,
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(l.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Cakupan: ${l.coverageUnits.join(", ")}',
+                                  style: const TextStyle(fontSize: 11, color: AppColors.slate600),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showMonitoringDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.monitor_heart, color: Color(0xFF16A34A)),
+            SizedBox(width: 8),
+            Text('Monitoring Sistem', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Status Infrastruktur & Layanan:',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            _statusRow('Supabase API Gateway', 'ONLINE', Colors.green),
+            _statusRow('Sinkronisasi Tiket Real-Time', 'NORMAL', Colors.green),
+            _statusRow('Antrean LKSDM ke Pusat', 'STABIL', Colors.green),
+            _statusRow('Tingkat Kepatuhan SLA', '98.4%', Colors.blue),
+            const Divider(height: 20),
+            const Text(
+              'Superadmin memantau aliran eskalasi antar tim secara transparan tanpa batasan role unit.',
+              style: TextStyle(fontSize: 12, color: AppColors.slate600),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusRow(String label, String value, Color statusColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12.5, color: AppColors.slate700)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: statusColor.withAlpha(25),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              value,
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: statusColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showStatistikDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.analytics, color: Color(0xFFC2410C)),
+            SizedBox(width: 8),
+            Text('Statistik & Analisis', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Total Tiket Terkelola: ${questions.length}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 6),
+            Text('Tiket Aktif: ${questions.where((q) => q.isActive).length}', style: const TextStyle(fontSize: 12.5)),
+            Text('Tiket Eskalasi Pusat: ${questions.where((q) => q.isEscalated).length}', style: const TextStyle(fontSize: 12.5)),
+            Text('Tiket Selesai: ${questions.where((q) => q.isClosed).length}', style: const TextStyle(fontSize: 12.5)),
+            const SizedBox(height: 12),
+            const Text(
+              'Statistik ini diperbarui secara otomatis dari seluruh aktivitas layanan kepegawaian BRIN.',
+              style: TextStyle(fontSize: 11.5, color: AppColors.slate600),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tutup'),
           ),
         ],
       ),

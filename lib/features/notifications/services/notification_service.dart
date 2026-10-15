@@ -1,44 +1,131 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/notification_model.dart';
 
 class NotificationService {
   static SupabaseClient get _client => Supabase.instance.client;
 
-  /// Ambil notifikasi milik pengguna
-  static Future<List<NotificationModel>> getNotifications() async {
-    try {
-      final user = _client.auth.currentUser;
-      if (user != null) {
-        final response = await _client
-            .from('notifications')
-            .select()
-            .eq('user_id', user.id)
-            .order('created_at', ascending: false)
-            .limit(20);
-        return response
-            .map((item) => NotificationModel.fromJson(Map<String, dynamic>.from(item)))
-            .toList();
-      }
-    } catch (_) {}
+  // Fallback in-memory jika tabel notifications belum dibuat di Supabase
+  static final List<NotificationModel> _fallbackNotifications = [];
 
-    // Fallback data notifikasi lokal
-    return [
-      NotificationModel(
-        id: '1',
-        title: 'Tanggapan LKSDM Masuk',
-        message: 'Staf Admin LKSDM telah menanggapi tiket pertanyaan Anda TKT-202610-001.',
-        questionId: 101,
+  /// Ambil daftar seluruh notifikasi milik user
+  static Future<List<NotificationModel>> getNotifications(String userId) async {
+    try {
+      final response = await _client
+          .from('notifications')
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+
+      final List<Map<String, dynamic>> list =
+          List<Map<String, dynamic>>.from(response);
+
+      return list.map((item) => NotificationModel.fromJson(item)).toList();
+    } catch (e) {
+      debugPrint('Fallback getNotifications: $e');
+      return _fallbackNotifications
+          .where((n) => n.userId == userId)
+          .toList()
+        ..sort((a, b) => (b.createdAt ?? '').compareTo(a.createdAt ?? ''));
+    }
+  }
+
+  /// Ambil jumlah notifikasi belum dibaca (unread count)
+  static Future<int> getUnreadCount(String userId) async {
+    try {
+      final response = await _client
+          .from('notifications')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('is_read', false);
+
+      return (response as List).length;
+    } catch (_) {
+      return _fallbackNotifications
+          .where((n) => n.userId == userId && !n.isRead)
+          .length;
+    }
+  }
+
+  /// Tandai 1 notifikasi sudah dibaca
+  static Future<bool> markAsRead(int notificationId) async {
+    try {
+      await _client
+          .from('notifications')
+          .update({'is_read': true})
+          .eq('id', notificationId);
+      return true;
+    } catch (_) {
+      final idx =
+          _fallbackNotifications.indexWhere((n) => n.id == notificationId);
+      if (idx != -1) {
+        _fallbackNotifications[idx] =
+            _fallbackNotifications[idx].copyWith(isRead: true);
+      }
+      return true;
+    }
+  }
+
+  /// Tandai seluruh notifikasi user sudah dibaca
+  static Future<bool> markAllAsRead(String userId) async {
+    try {
+      await _client
+          .from('notifications')
+          .update({'is_read': true})
+          .eq('user_id', userId)
+          .eq('is_read', false);
+      return true;
+    } catch (_) {
+      for (int i = 0; i < _fallbackNotifications.length; i++) {
+        if (_fallbackNotifications[i].userId == userId) {
+          _fallbackNotifications[i] =
+              _fallbackNotifications[i].copyWith(isRead: true);
+        }
+      }
+      return true;
+    }
+  }
+
+  /// Buat notifikasi baru
+  static Future<NotificationModel?> createNotification({
+    required String userId,
+    int? questionId,
+    required String title,
+    required String message,
+    String type = 'status_update',
+  }) async {
+    final payload = {
+      'user_id': userId,
+      if (questionId != null) 'question_id': questionId,
+      'title': title,
+      'message': message,
+      'type': type,
+      'is_read': false,
+      'created_at': DateTime.now().toIso8601String(),
+    };
+
+    try {
+      final response = await _client
+          .from('notifications')
+          .insert(payload)
+          .select()
+          .single();
+
+      return NotificationModel.fromJson(response);
+    } catch (e) {
+      debugPrint('Fallback createNotification: $e');
+      final fallbackItem = NotificationModel(
+        id: DateTime.now().millisecondsSinceEpoch,
+        userId: userId,
+        questionId: questionId,
+        title: title,
+        message: message,
+        type: type,
         isRead: false,
-        createdAt: DateTime.now().subtract(const Duration(minutes: 15)).toIso8601String(),
-      ),
-      NotificationModel(
-        id: '2',
-        title: 'Status Tiket Diperbarui',
-        message: 'Tiket Anda TKT-202610-002 telah dialihkan ke Tim Pusat BOSDM.',
-        questionId: 102,
-        isRead: true,
-        createdAt: DateTime.now().subtract(const Duration(hours: 3)).toIso8601String(),
-      ),
-    ];
+        createdAt: DateTime.now().toIso8601String(),
+      );
+      _fallbackNotifications.insert(0, fallbackItem);
+      return fallbackItem;
+    }
   }
 }

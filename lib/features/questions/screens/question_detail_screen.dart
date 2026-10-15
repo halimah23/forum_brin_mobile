@@ -11,6 +11,9 @@ import '../models/answer_model.dart';
 import '../models/question_model.dart';
 import '../models/ticket_status.dart';
 import '../services/question_service.dart';
+import '../widgets/csat_rating_card.dart';
+import '../widgets/publish_and_standardize_dialog.dart';
+import '../widgets/ticket_timeline_tracker.dart';
 import 'ask_question_screen.dart';
 
 class QuestionDetailScreen extends StatefulWidget {
@@ -33,6 +36,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
   final ScrollController _scrollController = ScrollController();
   bool isProcessing = false;
   bool isSendingReply = false;
+  bool _showOriginalText = false;
 
   @override
   void initState() {
@@ -114,6 +118,23 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
     if (user == null) return false;
     if (question.user?.id != null && user.id == question.user!.id) return true;
     return user.isPegawai;
+  }
+
+  /// Penanda apakah role pengguna berhak melihat identitas penuh pegawai & asal LKSDM
+  bool get canViewAuthorFullIdentity {
+    final user = widget.currentUser;
+    if (user == null) return false;
+    return user.isAdminLksdm ||
+        user.isAdminPusat ||
+        user.isKetuaTim ||
+        user.isEksekutif ||
+        user.isSuperAdmin ||
+        user.userRole == UserRole.admin ||
+        user.userRole == UserRole.adminLksdm ||
+        user.userRole == UserRole.adminPusat ||
+        user.userRole == UserRole.ketuaTim ||
+        user.userRole == UserRole.eksekutif ||
+        user.userRole == UserRole.superAdmin;
   }
 
   void _handleConfirmResolution(bool isResolved) async {
@@ -331,6 +352,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
   }
 
   void _sendFollowUpReply() async {
+    if (widget.currentUser?.isEksekutif == true) return;
     final text = _replyController.text.trim();
     if (text.isEmpty) return;
 
@@ -525,9 +547,88 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
     }
   }
 
+  void _showAttachmentPreviewDialog(String fileName, String fileUrl) {
+    final isImg = fileName.toLowerCase().endsWith('.png') ||
+        fileName.toLowerCase().endsWith('.jpg') ||
+        fileName.toLowerCase().endsWith('.jpeg');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+        title: Row(
+          children: [
+            Icon(
+              isImg ? Icons.image_rounded : Icons.picture_as_pdf_rounded,
+              color: AppColors.primaryRed,
+              size: 22,
+            ),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Berkas Lampiran Tiket',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.slate100,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isImg ? Icons.image_outlined : Icons.description_outlined,
+                    color: AppColors.slate700,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          fileName,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Dokumen Bukti Kepegawaian',
+                          style: TextStyle(fontSize: 11, color: AppColors.slate500),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Lokasi Penyimpanan / URL:\n$fileUrl',
+              style: const TextStyle(fontSize: 11, color: AppColors.slate600),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tutup', style: TextStyle(color: AppColors.primaryRed)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final String namaUser = question.user?.name ?? 'Pegawai BRIN';
     final String namaTimTerkait = question.targetTim ??
         ((question.tugasFungsi != null && question.tugasFungsi!.isNotEmpty)
             ? question.tugasFungsi!.first.teamName ?? 'Tim Layanan BOSDM'
@@ -566,7 +667,27 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
           backgroundColor: AppColors.primaryRed,
           foregroundColor: Colors.white,
         actions: [
-          if (widget.currentUser?.userRole == UserRole.superAdmin || widget.currentUser?.isSuperAdmin == true)
+          if (widget.currentUser?.userRole == UserRole.superAdmin || widget.currentUser?.isSuperAdmin == true) ...[
+            IconButton(
+              tooltip: question.isPublic ? 'Bakukan Struktur Pertanyaan' : 'Up ke Publik & Bakukan',
+              icon: const Icon(Icons.auto_fix_high_rounded, color: Colors.amber),
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                final updated = await PublishAndStandardizeDialog.show(context, question);
+                if (!mounted) return;
+                if (updated != null) {
+                  setState(() {
+                    question = updated;
+                  });
+                  messenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Pertanyaan berhasil dibakukan & dipublikasikan ke Forum! Identitas disamarkan menjadi Pegawai.'),
+                      backgroundColor: Color(0xFF16A34A),
+                    ),
+                  );
+                }
+              },
+            ),
             IconButton(
               tooltip: question.isPinned ? 'Lepas Pin / Up Tiket' : 'Up / Pin Pertanyaan Banyak Ditanyakan',
               icon: Icon(
@@ -574,6 +695,25 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                 color: question.isPinned ? Colors.amber : Colors.white,
               ),
               onPressed: () async {
+                // Jika belum dipublikasikan ke publik, lakukan proses pembakuan & penyamaran identitas terlebih dahulu
+                if (!question.isPublic) {
+                  final messenger = ScaffoldMessenger.of(context);
+                  final updated = await PublishAndStandardizeDialog.show(context, question);
+                  if (!mounted) return;
+                  if (updated != null) {
+                    setState(() {
+                      question = updated;
+                    });
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Pertanyaan berhasil dibakukan & dipublikasikan ke Forum! Identitas disamarkan menjadi Pegawai.'),
+                        backgroundColor: Color(0xFF16A34A),
+                      ),
+                    );
+                  }
+                  return;
+                }
+
                 final newStatus = !question.isPinned;
                 final success = await QuestionService.togglePinQuestion(
                   questionId: question.id ?? 0,
@@ -596,18 +736,20 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                 }
               },
             ),
-          IconButton(
-            tooltip: 'Buat Tiket Baru (Topik Lain)',
-            icon: const Icon(Icons.add_circle_outline, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AskQuestionScreen(token: widget.currentUser?.token ?? ''),
-                ),
-              );
-            },
-          ),
+          ],
+          if (widget.currentUser?.isSuperAdmin != true && widget.currentUser?.isEksekutif != true)
+            IconButton(
+              tooltip: 'Buat Tiket Baru (Topik Lain)',
+              icon: const Icon(Icons.add_circle_outline, color: Colors.white),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AskQuestionScreen(token: widget.currentUser?.token ?? ''),
+                  ),
+                );
+              },
+            ),
         ],
       ),
       body: Center(
@@ -625,8 +767,11 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(16),
                     children: [
-                      // KARTU INFORMASI TIKET
-                      // KARTU PEMBUKA TOPIK PERTANYAAN
+                      // 1. TIKET TIMELINE TRACKER & SLA
+                      TicketTimelineTracker(question: question),
+                      const SizedBox(height: 14),
+
+                      // 2. KARTU PEMBUKA TOPIK PERTANYAAN
                       Container(
                         margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.all(14),
@@ -694,15 +839,25 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                   radius: 14,
                                   backgroundColor: AppColors.primaryRed,
                                   child: Text(
-                                    namaUser.isNotEmpty ? namaUser[0].toUpperCase() : 'P',
+                                    question.getAuthorInitial(widget.currentUser),
                                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
-                                  child: Text(
-                                    namaUser,
-                                    style: AppTypography.labelMedium,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        question.getAuthorDisplayName(widget.currentUser),
+                                        style: AppTypography.labelMedium,
+                                      ),
+                                      if ((question.isPublic || question.isAnonymized) && canViewAuthorFullIdentity && question.user?.name != null)
+                                        Text(
+                                          'Identitas Asli: ${question.user!.name} (Disamarkan di Publik)',
+                                          style: const TextStyle(fontSize: 10, color: AppColors.slate500),
+                                        ),
+                                    ],
                                   ),
                                 ),
                                 if (question.createdAt != null)
@@ -712,6 +867,146 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                   ),
                               ],
                             ),
+                            if (canViewAuthorFullIdentity) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.slate50,
+                                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                                  border: Border.all(color: AppColors.slate200),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.person_rounded, size: 14, color: AppColors.slate700),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            (question.isPublic || question.isAnonymized)
+                                                ? 'Pegawai Pengaju (Disamarkan di Publik): ${question.officialAuthorName}'
+                                                : 'Pegawai Pengaju: ${question.officialAuthorName}',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.slate800,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.location_city_rounded, size: 14, color: AppColors.slate700),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            'Asal LKSDM: ${question.authorAsalLksdm}',
+                                            style: const TextStyle(
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppColors.slate700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    if (question.user?.unit != null && question.user!.unit!.isNotEmpty) ...[
+                                      const SizedBox(height: 3),
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.business_outlined, size: 14, color: AppColors.slate500),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              'Unit Kerja: ${question.user!.unit}',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: AppColors.slate600,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                            if (question.isStandardized) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF512DA8).withAlpha(15),
+                                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                                  border: Border.all(color: const Color(0xFF512DA8).withAlpha(40)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.auto_fix_high_rounded, size: 14, color: Color(0xFF512DA8)),
+                                    const SizedBox(width: 6),
+                                    const Expanded(
+                                      child: Text(
+                                        'Telah Dibakukan oleh Superadmin',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF512DA8),
+                                        ),
+                                      ),
+                                    ),
+                                    InkWell(
+                                      onTap: () => setState(() => _showOriginalText = !_showOriginalText),
+                                      child: Text(
+                                        _showOriginalText ? 'Tutup Teks Asli' : 'Lihat Teks Asli',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF512DA8),
+                                          decoration: TextDecoration.underline,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (_showOriginalText) ...[
+                                const SizedBox(height: 6),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.slate100,
+                                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                                    border: Border.all(color: AppColors.slate300),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Versi Asli Pegawai Sebelum Dibakukan:',
+                                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: AppColors.slate700),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Judul: ${question.originalJudul ?? question.judul}',
+                                        style: const TextStyle(fontSize: 12, color: AppColors.slate800),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Isi: ${question.originalIsi ?? question.isi}',
+                                        style: const TextStyle(fontSize: 11.5, color: AppColors.slate700, height: 1.3),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
                             const SizedBox(height: 10),
                             Text(
                               question.judul,
@@ -722,6 +1017,98 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                               question.isi,
                               style: AppTypography.bodySmall.copyWith(fontSize: 13, height: 1.45),
                             ),
+                            if (widget.currentUser?.isSuperAdmin == true) ...[
+                              const SizedBox(height: 6),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton.icon(
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                  icon: const Icon(Icons.auto_fix_high_rounded, size: 14, color: Color(0xFF512DA8)),
+                                  label: Text(
+                                    question.isPublic ? 'Bakukan Ulang Struktur' : 'Up ke Publik & Bakukan',
+                                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF512DA8)),
+                                  ),
+                                  onPressed: () async {
+                                    final messenger = ScaffoldMessenger.of(context);
+                                    final updated = await PublishAndStandardizeDialog.show(context, question);
+                                    if (updated != null && mounted) {
+                                      setState(() {
+                                        question = updated;
+                                      });
+                                      messenger.showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Pertanyaan berhasil dibakukan & dipublikasikan ke Forum! Identitas disamarkan menjadi Pegawai.'),
+                                          backgroundColor: Color(0xFF16A34A),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                            if (question.attachmentUrl != null && question.attachmentUrl!.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              InkWell(
+                                onTap: () {
+                                  _showAttachmentPreviewDialog(
+                                    question.attachmentName ?? 'Lampiran Berkas Pendukung',
+                                    question.attachmentUrl!,
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(AppRadius.sm),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.slate100,
+                                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                                    border: Border.all(color: AppColors.slate300, width: 1),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.attach_file_rounded, size: 18, color: AppColors.primaryRed),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          question.attachmentName ?? 'Lampiran Berkas Pendukung',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.slate800,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(4),
+                                          border: Border.all(color: AppColors.slate300),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.visibility_outlined, size: 12, color: AppColors.slate700),
+                                            SizedBox(width: 4),
+                                            Text(
+                                              'Lihat',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.slate700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                             if (tusiText.isNotEmpty || (question.assignedTo != null && question.assignedTo!.isNotEmpty)) ...[
                               const SizedBox(height: 10),
                               const Divider(height: 1, color: AppColors.border),
@@ -884,7 +1271,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    ans.penjawabNama,
+                                    canViewAuthorFullIdentity
+                                        ? '${ans.penjawabNama} (Asal: ${question.authorAsalLksdm})'
+                                        : ans.penjawabNama,
                                     style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
                                   ),
                                   const SizedBox(height: 4),
@@ -1042,6 +1431,11 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                             ],
                           ),
                         ),
+                        const SizedBox(height: 14),
+                        CsatRatingCard(
+                          question: question,
+                          onRatingSubmitted: _loadFreshDetails,
+                        ),
                       ],
 
                       // EVENT PILL MENUNGGU DISPOSISI (Hanya jika belum selesai dan belum ada jawaban)
@@ -1117,7 +1511,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                   ),
                 ),
 
-              // INPUT BAR PERTANYAAN LANJUTAN MEMBER (UNTUK TOPIK YANG SAMA)
+              // INPUT BAR PERTANYAAN LANJUTAN MEMBER / MONITORING BANNER
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
@@ -1125,70 +1519,97 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                   border: Border(top: BorderSide(color: Colors.grey.shade200)),
                 ),
                 child: SafeArea(
-                  child: question.isClosed
+                  child: widget.currentUser?.isEksekutif == true
                       ? Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
+                            color: const Color(0xFFF8FAFC),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.grey.shade300),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
                           ),
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.lock_rounded, size: 16, color: Colors.grey),
+                              Icon(Icons.visibility_outlined, size: 16, color: Color(0xFF283593)),
                               SizedBox(width: 8),
-                              Text(
-                                'Tiket telah selesai diakhiri oleh Pegawai.',
-                                style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
+                              Expanded(
+                                child: Text(
+                                  'Mode Monitoring: Hak akses Eksekutif bersifat hanya-lihat (Read-Only).',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF1E293B),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
                         )
-                      : Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _replyController,
-                                minLines: 1,
-                                maxLines: 3,
-                                textInputAction: TextInputAction.send,
-                                onSubmitted: (_) => _sendFollowUpReply(),
-                                onTapOutside: (_) => FocusScope.of(context).unfocus(),
-                                decoration: InputDecoration(
-                                  hintText: isAuthorPegawai
-                                      ? 'Tulis pertanyaan susulan...'
-                                      : 'Tulis tanggapan untuk tiket ini...',
-                                  hintStyle: const TextStyle(fontSize: 12, color: AppColors.slate500),
-                                  filled: true,
-                                  fillColor: const Color(0xFFF1F5F9),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(AppRadius.full),
-                                    borderSide: BorderSide.none,
+                      : (question.isClosed
+                          ? Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.lock_rounded, size: 16, color: Colors.grey),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Tiket telah selesai diakhiri oleh Pegawai.',
+                                    style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: _replyController,
+                                    minLines: 1,
+                                    maxLines: 3,
+                                    textInputAction: TextInputAction.send,
+                                    onSubmitted: (_) => _sendFollowUpReply(),
+                                    onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                                    decoration: InputDecoration(
+                                      hintText: isAuthorPegawai
+                                          ? 'Tulis pertanyaan susulan...'
+                                          : 'Tulis tanggapan untuk tiket ini...',
+                                      hintStyle: const TextStyle(fontSize: 12, color: AppColors.slate500),
+                                      filled: true,
+                                      fillColor: const Color(0xFFF1F5F9),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(AppRadius.full),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              style: IconButton.styleFrom(
-                                backgroundColor: AppColors.primaryRed,
-                                foregroundColor: Colors.white,
-                                shape: const CircleBorder(),
-                                padding: const EdgeInsets.all(10),
-                              ),
-                              onPressed: isSendingReply ? null : _sendFollowUpReply,
-                              icon: isSendingReply
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                    )
-                                  : const Icon(Icons.send_rounded, size: 18),
-                            ),
-                          ],
-                        ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: AppColors.primaryRed,
+                                    foregroundColor: Colors.white,
+                                    shape: const CircleBorder(),
+                                    padding: const EdgeInsets.all(10),
+                                  ),
+                                  onPressed: isSendingReply ? null : _sendFollowUpReply,
+                                  icon: isSendingReply
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                        )
+                                      : const Icon(Icons.send_rounded, size: 18),
+                                ),
+                              ],
+                            )),
                 ),
               ),
             ],

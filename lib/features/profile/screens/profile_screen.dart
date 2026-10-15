@@ -190,12 +190,12 @@ class ProfileScreen extends StatelessWidget {
                         value: user.unit!,
                       ),
                     ],
-                    if (user.lksdm != null && user.lksdm!.isNotEmpty) ...[
+                    if (user.effectiveLksdm.isNotEmpty) ...[
                       const Divider(height: 1, color: AppColors.border),
                       _buildInfoRow(
                         icon: Icons.location_city_outlined,
-                        label: 'Kawasan LKSDM',
-                        value: user.lksdm!,
+                        label: 'Asal / Kawasan LKSDM',
+                        value: user.effectiveLksdm,
                       ),
                     ],
                     if (user.tim != null && user.tim!.isNotEmpty) ...[
@@ -348,10 +348,14 @@ class ProfileScreen extends StatelessWidget {
         description = '• Manajerial & disposisi antrean pertanyaan tim (${user.tim ?? "Tim Layanan SDM"})\n• Penunjukan penanggung jawab & penyelesaian tiket';
         break;
       case UserRole.eksekutif:
-        description = '• Akses monitoring agregasi statistik forum kepegawaian\n• Pemantauan isu populer & kecepatan respon penanganan tiket';
+        description = '• Fungsi Utama: Monitoring\n'
+            '• Hak Akses Utama:\n'
+            '  - Melihat Dashboard & Statistik Real-Time\n'
+            '  - Memantau Pertanyaan, Jawaban & Diskusi\n'
+            '  - Memantau Status Penanganan & Alur Eskalasi Tiket (Read-Only)';
         break;
       case UserRole.superAdmin:
-        description = '• Hak akses pengawasan penuh seluruh modul sistem\n• Audit trail obrolan, Bank FAQ, & manajemen akun';
+        description = '• Fungsi Utama: Administrasi & monitoring sistem\n• Mengelola master data & hak akses pengguna\n• Memonitor sistem & melihat statistik performa\n• Mengelola pertanyaan populer & Bank FAQ';
         break;
     }
 

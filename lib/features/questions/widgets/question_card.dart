@@ -3,22 +3,41 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../../core/widgets/status_badge.dart';
+import '../../auth/models/user_model.dart';
+import '../../auth/models/user_role.dart';
 import '../models/question_model.dart';
 
 class QuestionCard extends StatelessWidget {
   final QuestionModel question;
   final VoidCallback onTap;
+  final UserModel? currentUser;
 
   const QuestionCard({
     super.key,
     required this.question,
     required this.onTap,
+    this.currentUser,
   });
+
+  bool get isPrivilegedRole {
+    if (currentUser == null) return false;
+    return currentUser!.isAdminLksdm ||
+        currentUser!.isAdminPusat ||
+        currentUser!.isKetuaTim ||
+        currentUser!.isEksekutif ||
+        currentUser!.isSuperAdmin ||
+        currentUser!.userRole == UserRole.admin ||
+        currentUser!.userRole == UserRole.adminLksdm ||
+        currentUser!.userRole == UserRole.adminPusat ||
+        currentUser!.userRole == UserRole.ketuaTim ||
+        currentUser!.userRole == UserRole.eksekutif ||
+        currentUser!.userRole == UserRole.superAdmin;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final String namaUser = question.user?.name ?? 'Pegawai';
-    final String initial = namaUser.isNotEmpty ? namaUser[0].toUpperCase() : 'P';
+    final String namaUser = question.getAuthorDisplayName(currentUser);
+    final String initial = question.getAuthorInitial(currentUser);
     final String? namaTim = question.targetTim ??
         ((question.tugasFungsi != null && question.tugasFungsi!.isNotEmpty)
             ? question.tugasFungsi!.first.teamName ?? question.tugasFungsi!.first.nama
@@ -63,7 +82,7 @@ class QuestionCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            namaUser,
+                            isPrivilegedRole ? question.officialAuthorName : namaUser,
                             style: AppTypography.labelMedium,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -71,6 +90,31 @@ class QuestionCard extends StatelessWidget {
                             Text(
                               question.ticketNumber!,
                               style: AppTypography.caption,
+                            ),
+                          if (isPrivilegedRole)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.location_city_rounded,
+                                    size: 11,
+                                    color: AppColors.slate600,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      'Asal: ${question.authorAsalLksdm}',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.slate700,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                         ],
                       ),

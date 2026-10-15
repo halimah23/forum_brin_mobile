@@ -30,6 +30,8 @@ class _MemberMainTabPageState extends State<MemberMainTabPage> {
       ),
       QuestionListScreen(
         user: widget.user,
+        title: 'Forum Kepegawaian',
+        isPublicOnly: true,
       ),
       ProfileScreen(
         user: widget.user,

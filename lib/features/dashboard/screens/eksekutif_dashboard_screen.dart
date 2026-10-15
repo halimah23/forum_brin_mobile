@@ -5,6 +5,7 @@ import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../auth/models/user_model.dart';
 import '../../questions/models/question_model.dart';
+import '../../questions/models/ticket_status.dart';
 import '../../questions/services/question_service.dart';
 import '../widgets/trending_chart_widget.dart';
 
@@ -46,10 +47,13 @@ class _EksekutifDashboardScreenState extends State<EksekutifDashboardScreen> {
     const primaryIndigo = Color(0xFF283593);
 
     final totalCount = allQuestions.length;
+    final totalAnswersCount = allQuestions.fold<int>(0, (sum, q) => sum + (q.answers?.length ?? 0));
+    final waitingCount = allQuestions.where((q) => q.ticketStatus == TicketStatus.open).length;
+    final inProgressCount = allQuestions.where((q) => q.ticketStatus == TicketStatus.inProgress || q.ticketStatus == TicketStatus.waitingUser).length;
     final escalatedCount = allQuestions.where((q) => q.isEscalated).length;
-    final lksdmCount = totalCount - escalatedCount;
     final closedCount = allQuestions.where((q) => q.isClosed).length;
 
+    final lksdmCount = totalCount - escalatedCount;
     final lksdmRatio = totalCount > 0 ? ((lksdmCount / totalCount) * 100).toStringAsFixed(1) : '0';
     final escalatedRatio = totalCount > 0 ? ((escalatedCount / totalCount) * 100).toStringAsFixed(1) : '0';
 
@@ -119,6 +123,11 @@ class _EksekutifDashboardScreenState extends State<EksekutifDashboardScreen> {
                       widget.user.name,
                       style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Pemantauan real-time tiket, pertanyaan, jawaban, status, dan eskalasi kepegawaian BRIN.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    ),
 
                     const SizedBox(height: 18),
 
@@ -153,14 +162,70 @@ class _EksekutifDashboardScreenState extends State<EksekutifDashboardScreen> {
                           const SizedBox(height: 14),
                           if (isLoading)
                             const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
+                          else ...[
+                            Row(
+                              children: [
+                                _buildStatCard('Total Pertanyaan', '$totalCount', Colors.blue, Icons.help_outline_rounded),
+                                const SizedBox(width: 8),
+                                _buildStatCard('Total Jawaban/Respon', '$totalAnswersCount', const Color(0xFF7C3AED), Icons.forum_outlined),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                _buildStatCard('Penanganan LKSDM', '$lksdmRatio%', Colors.teal, Icons.support_agent_rounded),
+                                const SizedBox(width: 8),
+                                _buildStatCard('Rasio Eskalasi Pusat', '$escalatedRatio%', Colors.amber.shade900, Icons.alt_route_rounded),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // PEMANTAUAN STATUS & ESKALASI TIKET
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade200),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(4),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.monitor_heart_outlined, color: primaryIndigo),
+                              SizedBox(width: 8),
+                              Text(
+                                'Monitoring Status & Alur Eskalasi Tiket',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          if (isLoading)
+                            const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
                           else
                             Row(
                               children: [
-                                _buildStatCard('Total Tiket', '$totalCount', Colors.blue),
-                                const SizedBox(width: 8),
-                                _buildStatCard('Penanganan LKSDM', '$lksdmRatio%', Colors.teal),
-                                const SizedBox(width: 8),
-                                _buildStatCard('Rasio Eskalasi', '$escalatedRatio%', Colors.amber.shade900),
+                                _buildStatusCard('Antrean LKSDM', '$waitingCount', TicketStatus.open.color, TicketStatus.open.icon),
+                                const SizedBox(width: 6),
+                                _buildStatusCard('Diproses LKSDM', '$inProgressCount', TicketStatus.inProgress.color, TicketStatus.inProgress.icon),
+                                const SizedBox(width: 6),
+                                _buildStatusCard('Eskalasi Pusat', '$escalatedCount', TicketStatus.escalated.color, TicketStatus.escalated.icon),
+                                const SizedBox(width: 6),
+                                _buildStatusCard('Selesai (Closed)', '$closedCount', TicketStatus.closed.color, TicketStatus.closed.icon),
                               ],
                             ),
                         ],
@@ -203,6 +268,30 @@ class _EksekutifDashboardScreenState extends State<EksekutifDashboardScreen> {
                     const TrendingChartWidget(),
 
                     const SizedBox(height: 20),
+
+                    // INFORMASI HAK AKSES EKSEKUTIF
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEF2FF),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: const Color(0xFFC7D2FE)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline_rounded, color: primaryIndigo, size: 20),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Akses Eksekutif: Memantau agregasi dashboard, pertanyaan, jawaban tim, status alur, eskalasi pusat, dan statistik respon secara terpusat (Read-Only).',
+                              style: TextStyle(fontSize: 11, color: Color(0xFF1E1B4B), height: 1.4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -213,26 +302,74 @@ class _EksekutifDashboardScreenState extends State<EksekutifDashboardScreen> {
     );
   }
 
-  Widget _buildStatCard(String title, String count, Color color) {
+  Widget _buildStatCard(String title, String count, Color color, IconData icon) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: AppColors.border, width: 1),
         ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withAlpha(25),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    count,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    title,
+                    style: TextStyle(fontSize: 10.5, color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusCard(String title, String count, Color color, IconData icon) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withAlpha(15),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(color: color.withAlpha(60), width: 1),
+        ),
         child: Column(
           children: [
+            Icon(icon, color: color, size: 16),
+            const SizedBox(height: 4),
             Text(
               count,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
             ),
             const SizedBox(height: 2),
             Text(
               title,
-              style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 8.5, color: color, fontWeight: FontWeight.w600),
               textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

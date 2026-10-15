@@ -13,6 +13,7 @@ import '../cubits/ask_question_state.dart';
 import '../data/lksdm_catalog_data.dart';
 import '../models/question_model.dart';
 import '../services/question_service.dart';
+import '../widgets/attachment_picker_widget.dart';
 import 'question_detail_screen.dart';
 
 class AskQuestionScreen extends StatelessWidget {
@@ -68,6 +69,8 @@ class _AskQuestionViewState extends State<AskQuestionView> {
 
   QuestionModel? activeTicket;
   bool dismissActiveBanner = false;
+  String? attachedFileUrl;
+  String? attachedFileName;
 
   @override
   void initState() {
@@ -110,7 +113,9 @@ class _AskQuestionViewState extends State<AskQuestionView> {
             selectedTeam: lksdmClean,
             lksdmKawasan: lksdmClean,
             tugasFungsiIds: const [],
-            isPublic: true,
+            isPublic: false,
+            attachmentUrl: attachedFileUrl,
+            attachmentName: attachedFileName,
           );
     }
   }
@@ -397,6 +402,23 @@ class _AskQuestionViewState extends State<AskQuestionView> {
                                     return 'Isi pertanyaan wajib diisi';
                                   }
                                   return null;
+                                },
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              // 4. Lampiran Berkas Bukti (Opsional)
+                              const Text(
+                                '4. Lampiran Dokumen Bukti (Opsional)',
+                                style: AppTypography.labelMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              AttachmentPickerWidget(
+                                onAttachmentChanged: (url, name) {
+                                  setState(() {
+                                    attachedFileUrl = url;
+                                    attachedFileName = name;
+                                  });
                                 },
                               ),
                             ],

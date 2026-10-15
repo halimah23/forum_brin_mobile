@@ -3,6 +3,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../auth/models/user_model.dart';
+import '../../notifications/widgets/notification_bell_widget.dart';
 import '../widgets/trending_chart_widget.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
@@ -64,6 +65,10 @@ class AdminDashboardScreen extends StatelessWidget {
             ),
           ],
         ),
+        actions: [
+          NotificationBellWidget(user: user, iconColor: primaryColor),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
         child: Center(
