@@ -8,11 +8,13 @@ import '../../questions/models/question_model.dart';
 class AuditQuestionCard extends StatelessWidget {
   final QuestionModel question;
   final VoidCallback onTap;
+  final VoidCallback? onReopen;
 
   const AuditQuestionCard({
     super.key,
     required this.question,
     required this.onTap,
+    this.onReopen,
   });
 
   bool _isExceedingSla() {
@@ -289,6 +291,45 @@ class AuditQuestionCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (question.isClosed && onReopen != null) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      border: Border.all(color: Colors.amber.shade200),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.info_outline, size: 14, color: Colors.amber.shade900),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Tiket berstatus Selesai',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                            ),
+                          ],
+                        ),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber.shade900,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            visualDensity: VisualDensity.compact,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                          ),
+                          icon: const Icon(Icons.replay_rounded, size: 13),
+                          label: const Text('Buka Kembali', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                          onPressed: onReopen,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

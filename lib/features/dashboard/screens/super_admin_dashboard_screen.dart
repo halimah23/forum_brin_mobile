@@ -4,6 +4,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../auth/models/user_model.dart';
+import '../../auth/screens/user_management_screen.dart';
 import '../../questions/models/question_model.dart';
 import '../../questions/data/lksdm_catalog_data.dart';
 import '../../questions/data/tusi_catalog_data.dart';
@@ -163,6 +164,25 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                       children: [
                         Expanded(
                           child: _adminActionCard(
+                            title: 'Kelola Akun & Akses',
+                            subtitle: 'CRUD akun semua role',
+                            icon: Icons.manage_accounts_outlined,
+                            iconColor: const Color(0xFF0284C7),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => UserManagementScreen(
+                                    currentUser: widget.user,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _adminActionCard(
                             title: 'Kelola FAQ & Tren',
                             subtitle: 'Kurasi topik populer & FAQ',
                             icon: Icons.quiz_outlined,
@@ -175,16 +195,6 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                                 ),
                               );
                             },
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _adminActionCard(
-                            title: 'Master Data & Akses',
-                            subtitle: '14 Tim Pusat & 7 LKSDM',
-                            icon: Icons.admin_panel_settings_outlined,
-                            iconColor: const Color(0xFF0284C7),
-                            onTap: () => _showMasterDataDialog(context),
                           ),
                         ),
                       ],
@@ -202,6 +212,20 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                           ),
                         ),
                         const SizedBox(width: 10),
+                        Expanded(
+                          child: _adminActionCard(
+                            title: 'Katalog Master Data',
+                            subtitle: '14 Tim Pusat & 7 LKSDM',
+                            icon: Icons.admin_panel_settings_outlined,
+                            iconColor: const Color(0xFF475569),
+                            onTap: () => _showMasterDataDialog(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
                         Expanded(
                           child: _adminActionCard(
                             title: 'Statistik & Laporan',

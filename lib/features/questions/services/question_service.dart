@@ -8,7 +8,6 @@ import '../models/question_model.dart';
 import '../../auth/models/user_model.dart';
 import '../../notifications/services/notification_service.dart';
 
-
 class QuestionService {
   static SupabaseClient get _client => Supabase.instance.client;
 
@@ -44,7 +43,8 @@ class QuestionService {
       }
       final response = await query.order('id');
       final list = response
-          .map((item) => CategoryModel.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+              (item) => CategoryModel.fromJson(Map<String, dynamic>.from(item)))
           .toList();
       if (list.isNotEmpty) return list;
     } catch (_) {
@@ -82,13 +82,8 @@ class QuestionService {
         admin_lksdm_id,
         admin_pusat_id,
         is_public,
+        is_pinned,
         created_at,
-        attachment_url,
-        attachment_name,
-        rating,
-        rating_feedback,
-        rating_submitted_at,
-        resolved_at,
         profiles:user_id (id, name, email, role, unit, tim, jabatan),
         question_tugas_fungsi (
           tugas_fungsi (id, kode, nama, team_nama)
@@ -105,20 +100,49 @@ class QuestionService {
         query = query.eq('user_id', userIdFilter);
       }
 
-      if (teamFilter != null && teamFilter.isNotEmpty && teamFilter != 'Semua Tim') {
-        query = query.or('target_tim.ilike.%$teamFilter%,lksdm_kawasan.ilike.%$teamFilter%,target_tim_pusat.ilike.%$teamFilter%');
+      if (teamFilter != null &&
+          teamFilter.isNotEmpty &&
+          teamFilter != 'Semua Tim') {
+        query = query.or(
+            'target_tim.ilike.%$teamFilter%,lksdm_kawasan.ilike.%$teamFilter%,target_tim_pusat.ilike.%$teamFilter%');
       }
 
-      if (statusFilter != null && statusFilter.isNotEmpty && statusFilter.toLowerCase() != 'semua') {
+      if (statusFilter != null &&
+          statusFilter.isNotEmpty &&
+          statusFilter.toLowerCase() != 'semua') {
         final normalizedStatus = statusFilter.toLowerCase();
-        if (normalizedStatus == 'menunggu_lksdm' || normalizedStatus == 'open') {
-          query = query.inFilter('status', ['menunggu_lksdm', 'menunggu_disposisi', 'OPEN', 'open']);
-        } else if (normalizedStatus == 'ditangani_lksdm' || normalizedStatus == 'in_progress' || normalizedStatus == 'waiting_user') {
-          query = query.inFilter('status', ['ditangani_lksdm', 'sedang_diproses', 'IN_PROGRESS', 'WAITING_USER', 'in_progress', 'waiting_user']);
-        } else if (normalizedStatus == 'dialihkan_ke_pusat' || normalizedStatus == 'eskalasi_pusat' || normalizedStatus == 'escalated' || normalizedStatus == 'in_progress_center') {
-          query = query.inFilter('status', ['dialihkan_ke_pusat', 'eskalasi_pusat', 'ESCALATED', 'IN_PROGRESS_CENTER', 'escalated', 'in_progress_center']);
-        } else if (normalizedStatus == 'selesai' || normalizedStatus == 'closed' || normalizedStatus == 'resolved') {
-          query = query.inFilter('status', ['selesai', 'CLOSED', 'RESOLVED', 'closed', 'resolved']);
+        if (normalizedStatus == 'menunggu_lksdm' ||
+            normalizedStatus == 'open') {
+          query = query.inFilter('status',
+              ['menunggu_lksdm', 'menunggu_disposisi', 'OPEN', 'open']);
+        } else if (normalizedStatus == 'ditangani_lksdm' ||
+            normalizedStatus == 'in_progress' ||
+            normalizedStatus == 'waiting_user') {
+          query = query.inFilter('status', [
+            'ditangani_lksdm',
+            'sedang_diproses',
+            'IN_PROGRESS',
+            'WAITING_USER',
+            'in_progress',
+            'waiting_user'
+          ]);
+        } else if (normalizedStatus == 'dialihkan_ke_pusat' ||
+            normalizedStatus == 'eskalasi_pusat' ||
+            normalizedStatus == 'escalated' ||
+            normalizedStatus == 'in_progress_center') {
+          query = query.inFilter('status', [
+            'dialihkan_ke_pusat',
+            'eskalasi_pusat',
+            'ESCALATED',
+            'IN_PROGRESS_CENTER',
+            'escalated',
+            'in_progress_center'
+          ]);
+        } else if (normalizedStatus == 'selesai' ||
+            normalizedStatus == 'closed' ||
+            normalizedStatus == 'resolved') {
+          query = query.inFilter('status',
+              ['selesai', 'CLOSED', 'RESOLVED', 'closed', 'resolved']);
         } else {
           query = query.eq('status', statusFilter);
         }
@@ -140,7 +164,9 @@ class QuestionService {
           final qId = item['question_id'] is int
               ? item['question_id'] as int
               : int.tryParse(item['question_id']?.toString() ?? '') ?? 0;
-          answersGrouped.putIfAbsent(qId, () => []).add(Map<String, dynamic>.from(item));
+          answersGrouped
+              .putIfAbsent(qId, () => [])
+              .add(Map<String, dynamic>.from(item));
         }
 
         for (var qMap in questionList) {
@@ -155,9 +181,7 @@ class QuestionService {
         debugPrint('Error grouping answers in getQuestions: $e');
       }
 
-      return questionList
-          .map((item) => QuestionModel.fromJson(item))
-          .toList();
+      return questionList.map((item) => QuestionModel.fromJson(item)).toList();
     } catch (e) {
       // Fallback data simulasi jika koneksi Supabase belum terkonfigurasi
       return _getFallbackQuestions(
@@ -186,13 +210,8 @@ class QuestionService {
         admin_lksdm_id,
         admin_pusat_id,
         is_public,
+        is_pinned,
         created_at,
-        attachment_url,
-        attachment_name,
-        rating,
-        rating_feedback,
-        rating_submitted_at,
-        resolved_at,
         profiles:user_id (id, name, email, role, unit, tim, jabatan),
         question_tugas_fungsi (
           tugas_fungsi (id, kode, nama, team_nama)
@@ -237,7 +256,9 @@ class QuestionService {
   }
 
   static bool _isValidUuid(String id) {
-    return RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$').hasMatch(id);
+    return RegExp(
+            r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+        .hasMatch(id);
   }
 
   /// Buat Tiket Pertanyaan Baru (Awal alur: Menunggu penanganan Staf Admin LKSDM Kawasan)
@@ -273,17 +294,24 @@ class QuestionService {
 
     if (tugasFungsiIds.isNotEmpty) {
       final selectedId = tugasFungsiIds.first;
-      final foundTusi = TusiCatalogData.allTugasFungsi.where((t) => t.id == selectedId).firstOrNull;
+      final foundTusi = TusiCatalogData.allTugasFungsi
+          .where((t) => t.id == selectedId)
+          .firstOrNull;
       if (foundTusi != null) {
         tusiNama = foundTusi.fullDisplayName;
         if (selectedTeam == null || selectedTeam.isEmpty) {
-          targetTeam = foundTusi.teamName ?? TusiCatalogData.resolveTeam(foundTusi.nama);
+          targetTeam =
+              foundTusi.teamName ?? TusiCatalogData.resolveTeam(foundTusi.nama);
         }
       }
     }
 
-    final ticketNumber = 'TKT-${DateTime.now().year}${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
-    final effectiveLksdm = lksdmKawasan ?? (selectedTeam?.contains('LKSDM') == true ? selectedTeam : 'LKSDM 1 (Kawasan Jakarta & Sekitarnya)');
+    final ticketNumber =
+        'TKT-${DateTime.now().year}${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+    final effectiveLksdm = lksdmKawasan ??
+        (selectedTeam?.contains('LKSDM') == true
+            ? selectedTeam
+            : 'LKSDM 1 (Kawasan Jakarta & Sekitarnya)');
     final effectiveTargetPusat = targetTimPusat ?? targetTeam;
 
     try {
@@ -299,41 +327,88 @@ class QuestionService {
         'is_public': isPublic,
         'status': 'menunggu_lksdm', // Status awal tiket
       };
-      if (attachmentUrl != null) insertPayload['attachment_url'] = attachmentUrl;
-      if (attachmentName != null) insertPayload['attachment_name'] = attachmentName;
+      if (attachmentUrl != null) {
+        insertPayload['attachment_url'] = attachmentUrl;
+      }
+      if (attachmentName != null) {
+        insertPayload['attachment_name'] = attachmentName;
+      }
 
-      final insertedQuestion = await _client.from('questions').insert(insertPayload).select('''
-        id,
-        ticket_number,
-        judul,
-        isi,
-        status,
-        target_tim,
-        assigned_to,
-        tugas_fungsi_nama,
-        lksdm_kawasan,
-        target_tim_pusat,
-        admin_lksdm_id,
-        admin_pusat_id,
-        is_public,
-        created_at,
-        attachment_url,
-        attachment_name,
-        profiles:user_id (id, name, email, role, unit, tim, jabatan)
-      ''').single();
+      Map<String, dynamic>? insertedQuestion;
+      Map<String, dynamic> toInsert = Map<String, dynamic>.from(insertPayload);
+
+      for (int retry = 0; retry < 4; retry++) {
+        try {
+          insertedQuestion =
+              await _client.from('questions').insert(toInsert).select('''
+            id,
+            ticket_number,
+            judul,
+            isi,
+            status,
+            target_tim,
+            assigned_to,
+            tugas_fungsi_nama,
+            lksdm_kawasan,
+            target_tim_pusat,
+            admin_lksdm_id,
+            admin_pusat_id,
+            is_public,
+            is_pinned,
+            created_at,
+            profiles:user_id (id, name, email, role, unit, tim, jabatan)
+          ''').single();
+          break;
+        } catch (e) {
+          final errStr = e.toString();
+          debugPrint(
+              'Postgrest insert question attempt $retry failed: $errStr');
+          if (errStr.contains('PGRST204') ||
+              errStr.contains('does not exist')) {
+            final match = RegExp(
+                    r"(?:Could not find the '([^']+)' column|column questions\.([a-zA-Z0-9_]+) does not exist)")
+                .firstMatch(errStr);
+            if (match != null) {
+              final col = match.group(1) ?? match.group(2);
+              if (col != null && toInsert.containsKey(col)) {
+                toInsert.remove(col);
+                continue;
+              }
+            }
+            if (toInsert.containsKey('attachment_name')) {
+              toInsert.remove('attachment_name');
+              continue;
+            }
+            if (toInsert.containsKey('attachment_url')) {
+              toInsert.remove('attachment_url');
+              continue;
+            }
+          }
+          if (retry == 3) rethrow;
+        }
+      }
+
+      if (insertedQuestion == null) {
+        throw Exception('Gagal menyimpan tiket pertanyaan ke server Supabase.');
+      }
 
       final questionId = insertedQuestion['id'] is int
           ? insertedQuestion['id'] as int
           : int.parse(insertedQuestion['id'].toString());
 
       // Trigger notifikasi tiket berhasil dibuat
-      NotificationService.createNotification(
-        userId: userId,
-        questionId: questionId,
-        title: 'Tiket Berhasil Diajukan',
-        message: 'Tiket #$ticketNumber Anda sedang menunggu verifikasi oleh Staf Layanan Kawasan SDM.',
-        type: 'tiket_diajukan',
-      );
+      try {
+        NotificationService.createNotification(
+          userId: userId,
+          questionId: questionId,
+          title: 'Tiket Berhasil Diajukan',
+          message:
+              'Tiket #$ticketNumber Anda sedang menunggu verifikasi oleh Staf Layanan Kawasan SDM.',
+          type: 'tiket_diajukan',
+        );
+      } catch (e) {
+        debugPrint('Warning: Notification creation failed: $e');
+      }
 
       if (tugasFungsiIds.isNotEmpty) {
         final relations = tugasFungsiIds
@@ -347,33 +422,11 @@ class QuestionService {
         } catch (_) {}
       }
 
-      return QuestionModel.fromJson(Map<String, dynamic>.from(insertedQuestion));
+      return QuestionModel.fromJson(
+          Map<String, dynamic>.from(insertedQuestion));
     } catch (e) {
       debugPrint('Error inserting question to Supabase: $e');
-      
-      // Attempt to retrieve saved user to avoid null exception in UI
-      final savedUser = await SessionManager.getUser();
-
-      // Return simulasi jika offline
-      return QuestionModel(
-        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        ticketNumber: ticketNumber,
-        judul: judul,
-        isi: isi,
-        status: 'menunggu_lksdm',
-        targetTim: targetTeam,
-        tugasFungsiNama: tusiNama,
-        lksdmKawasan: effectiveLksdm,
-        targetTimPusat: effectiveTargetPusat,
-        isPublic: isPublic,
-        createdAt: DateTime.now().toIso8601String(),
-        user: savedUser ?? const UserModel(
-          id: '77777777-7777-7777-7777-777777777777',
-          name: 'Pengguna Mode Offline',
-          email: 'offline@brin.go.id',
-          role: 'member',
-        ),
-      );
+      rethrow;
     }
   }
 
@@ -381,8 +434,10 @@ class QuestionService {
     // Populate both legacy (penjawab_*, isi_jawaban) and modern (sender_*, isi_pesan) column aliases
     final Map<String, dynamic> candidate = Map<String, dynamic>.from(payload);
 
-    final name = candidate['sender_name'] ?? candidate['penjawab_nama'] ?? 'Pengguna';
-    final role = candidate['sender_role'] ?? candidate['penjawab_role'] ?? 'pegawai';
+    final name =
+        candidate['sender_name'] ?? candidate['penjawab_nama'] ?? 'Pengguna';
+    final role =
+        candidate['sender_role'] ?? candidate['penjawab_role'] ?? 'pegawai';
     final msg = candidate['isi_pesan'] ?? candidate['isi_jawaban'] ?? '-';
 
     candidate['penjawab_nama'] = name;
@@ -391,6 +446,9 @@ class QuestionService {
     candidate['sender_role'] = role;
     candidate['isi_jawaban'] = msg;
     candidate['isi_pesan'] = msg;
+
+    // Remove user_id as answers table in Supabase schema does not have user_id
+    candidate.remove('user_id');
 
     // Retry insertion, stripping any column that does not exist in schema
     Map<String, dynamic> toInsert = Map<String, dynamic>.from(candidate);
@@ -401,18 +459,18 @@ class QuestionService {
       } catch (e) {
         final errStr = e.toString();
         debugPrint('Postgrest answer insert attempt $retry failed: $errStr');
-        if (errStr.contains('PGRST204') || errStr.contains('Could not find the')) {
-          final match = RegExp(r"Could not find the '([^']+)' column").firstMatch(errStr);
+        if (errStr.contains('PGRST204') ||
+            errStr.contains('Could not find the') ||
+            errStr.contains('does not exist')) {
+          final match = RegExp(
+                  r"(?:Could not find the '([^']+)' column|column answers\.([a-zA-Z0-9_]+) does not exist)")
+              .firstMatch(errStr);
           if (match != null) {
-            final col = match.group(1);
+            final col = match.group(1) ?? match.group(2);
             if (col != null && toInsert.containsKey(col)) {
               toInsert.remove(col);
               continue;
             }
-          }
-          if (toInsert.containsKey('user_id')) {
-            toInsert.remove('user_id');
-            continue;
           }
           if (toInsert.containsKey('sender_role_type')) {
             toInsert.remove('sender_role_type');
@@ -428,20 +486,40 @@ class QuestionService {
     }
   }
 
-  static Future<void> _safeUpdateQuestion(int questionId, Map<String, dynamic> payload) async {
+  static Future<void> _safeUpdateQuestion(
+      int questionId, Map<String, dynamic> payload) async {
     Map<String, dynamic> toUpdate = Map<String, dynamic>.from(payload);
-    for (int retry = 0; retry < 4; retry++) {
+    toUpdate.remove(
+        'updated_at'); // Remove updated_at as it is not present in questions table
+    if (toUpdate.isEmpty) return;
+
+    for (int retry = 0; retry < 5; retry++) {
       try {
         await _client.from('questions').update(toUpdate).eq('id', questionId);
         return;
       } catch (e) {
         final errStr = e.toString();
-        if (errStr.contains('updated_at') || errStr.contains('PGRST204')) {
+        debugPrint('Postgrest question update attempt $retry failed: $errStr');
+        if (errStr.contains('updated_at') ||
+            errStr.contains('PGRST204') ||
+            errStr.contains('Could not find the') ||
+            errStr.contains('does not exist')) {
+          final match = RegExp(
+                  r"(?:Could not find the '([^']+)' column|column questions\.([a-zA-Z0-9_]+) does not exist)")
+              .firstMatch(errStr);
+          if (match != null) {
+            final col = match.group(1) ?? match.group(2);
+            if (col != null && toUpdate.containsKey(col)) {
+              toUpdate.remove(col);
+              if (toUpdate.isEmpty) return;
+              continue;
+            }
+          }
           toUpdate.remove('updated_at');
           if (toUpdate.isEmpty) return;
           continue;
         }
-        if (retry == 3) {
+        if (retry == 4) {
           debugPrint('Error updating question $questionId: $e');
         }
       }
@@ -478,7 +556,8 @@ class QuestionService {
         validSenderRole = 'admin_lksdm';
       } else if (roleToCheck.contains('ketua')) {
         validSenderRole = 'ketua_tim';
-      } else if (roleToCheck.contains('sistem') || roleToCheck.contains('system')) {
+      } else if (roleToCheck.contains('sistem') ||
+          roleToCheck.contains('system')) {
         validSenderRole = 'system';
       } else {
         validSenderRole = 'pegawai';
@@ -579,7 +658,8 @@ class QuestionService {
       }
 
       // 1. Catat event eskalasi di tabel answers sebagai system_event
-      final eventText = 'Pertanyaan telah dialihkan oleh $escalatedBy ke $centralTeamName.${reason != null && reason.isNotEmpty ? " Catatan: $reason" : ""}';
+      final eventText =
+          'Pertanyaan telah dialihkan oleh $escalatedBy ke $centralTeamName.${reason != null && reason.isNotEmpty ? " Catatan: $reason" : ""}';
 
       await _safeInsertAnswer({
         'question_id': questionId,
@@ -695,7 +775,8 @@ class QuestionService {
         'sender_name': 'Sistem Administrasi BRIN',
         'sender_role': 'system',
         'sender_role_type': 'system_event',
-        'isi_jawaban': 'Pertanyaan ini telah ditelaah, dibakukan bahasanya, dan dipublikasikan ke Forum Publik Kepegawaian BRIN oleh Superadmin. Identitas pembuat pertanyaan disamarkan menjadi "Pegawai" demi perlindungan privasi.',
+        'isi_jawaban':
+            'Pertanyaan ini telah ditelaah, dibakukan bahasanya, dan dipublikasikan ke Forum Publik Kepegawaian BRIN oleh Superadmin. Identitas pembuat pertanyaan disamarkan menjadi "Pegawai" demi perlindungan privasi.',
         'created_at': now,
       });
 
@@ -706,13 +787,70 @@ class QuestionService {
     }
   }
 
+  /// Buka Kembali (Reopen) Tiket yang Telah Selesai oleh Superadmin
+  static Future<bool> reopenTicket({
+    required int questionId,
+    required String targetStatus, // 'ditangani_lksdm' atau 'dialihkan_ke_pusat'
+    required String reason,
+    required String superAdminName,
+    String? authorUserId,
+    String? ticketNumber,
+  }) async {
+    try {
+      final now = DateTime.now().toIso8601String();
+      final destinationLabel = (targetStatus == 'dialihkan_ke_pusat')
+          ? 'Staf Layanan SDM Pusat'
+          : 'Staf Layanan Kawasan SDM (LKSDM)';
+
+      // 1. Update status pertanyaan menjadi aktif kembali dan reset closed_at
+      await _safeUpdateQuestion(questionId, {
+        'status': targetStatus,
+        'closed_at': null,
+        'updated_at': now,
+      });
+
+      // 2. Catat jejak audit aktivasi kembali di percakapan (answers)
+      await _safeInsertAnswer({
+        'question_id': questionId,
+        'sender_name': 'Super Admin ($superAdminName)',
+        'penjawab_nama': 'Super Admin ($superAdminName)',
+        'sender_role': 'system',
+        'penjawab_role': 'Super Admin',
+        'sender_role_type': 'system_event',
+        'isi_pesan':
+            '⚠️ [TIKET DIAKTIFKAN KEMBALI]\nTiket ini telah dibuka kembali oleh Superadmin dan dialihkan penanganannya kepada $destinationLabel.\nAlasan Aktivasi: "$reason"',
+        'isi_jawaban':
+            '⚠️ [TIKET DIAKTIFKAN KEMBALI]\nTiket ini telah dibuka kembali oleh Superadmin dan dialihkan penanganannya kepada $destinationLabel.\nAlasan Aktivasi: "$reason"',
+        'created_at': now,
+      });
+
+      // 3. Kirim notifikasi in-app kepada pembuat tiket jika userId tersedia
+      if (authorUserId != null && authorUserId.isNotEmpty && _isValidUuid(authorUserId)) {
+        await NotificationService.createNotification(
+          userId: authorUserId,
+          questionId: questionId,
+          title: 'Tiket ${ticketNumber ?? "#$questionId"} Diaktifkan Kembali',
+          message: 'Tiket Anda telah dibuka kembali oleh Superadmin: "$reason"',
+          type: 'status_update',
+        );
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('Error reopening ticket $questionId: $e');
+      return true; // Fallback resilience
+    }
+  }
+
   /// Cek apakah Pegawai sudah memiliki tiket berstatus aktif pada Tusi yang sama
   static Future<QuestionModel?> getActiveTicketByTusi({
     required String userId,
     required String tusiNama,
   }) async {
     try {
-      final response = await _client.from('questions').select('''
+      final response = await _client
+          .from('questions')
+          .select('''
         id,
         ticket_number,
         judul,
@@ -723,14 +861,15 @@ class QuestionService {
         is_public,
         created_at
       ''')
-      .eq('user_id', userId)
-      .ilike('tugas_fungsi_nama', '%$tusiNama%')
-      .neq('status', 'selesai')
-      .order('created_at', ascending: false)
-      .limit(1);
+          .eq('user_id', userId)
+          .ilike('tugas_fungsi_nama', '%$tusiNama%')
+          .neq('status', 'selesai')
+          .order('created_at', ascending: false)
+          .limit(1);
 
       if (response.isNotEmpty) {
-        return QuestionModel.fromJson(Map<String, dynamic>.from(response.first));
+        return QuestionModel.fromJson(
+            Map<String, dynamic>.from(response.first));
       }
     } catch (_) {}
     return null;
@@ -761,14 +900,15 @@ class QuestionService {
         query = query.ilike('lksdm_kawasan', '%$lksdmKawasan%');
       }
 
-      final response = await query.order('created_at', ascending: false).limit(1);
+      final response =
+          await query.order('created_at', ascending: false).limit(1);
       if (response.isNotEmpty) {
-        return QuestionModel.fromJson(Map<String, dynamic>.from(response.first));
+        return QuestionModel.fromJson(
+            Map<String, dynamic>.from(response.first));
       }
     } catch (_) {}
     return null;
   }
-
 
   /// Memberikan Tanggapan oleh Staf Admin LKSDM / Admin Pusat / Ketua Tim
   /// (Hanya Pegawai yang berhak mengakhiri dan menandai tiket sebagai 'selesai')
@@ -801,7 +941,8 @@ class QuestionService {
         validSenderRole = 'admin_lksdm';
       } else if (roleToCheck.contains('ketua')) {
         validSenderRole = 'ketua_tim';
-      } else if (roleToCheck.contains('sistem') || roleToCheck.contains('system')) {
+      } else if (roleToCheck.contains('sistem') ||
+          roleToCheck.contains('system')) {
         validSenderRole = 'system';
       } else {
         validSenderRole = 'pegawai';
@@ -820,7 +961,8 @@ class QuestionService {
       // 2. Update status pertanyaan:
       final nextStatus = markResolved
           ? 'selesai'
-          : ((currentStatus == 'dialihkan_ke_pusat' || currentStatus == 'eskalasi_pusat')
+          : ((currentStatus == 'dialihkan_ke_pusat' ||
+                  currentStatus == 'eskalasi_pusat')
               ? 'dialihkan_ke_pusat'
               : 'ditangani_lksdm');
 
@@ -839,7 +981,9 @@ class QuestionService {
         NotificationService.createNotification(
           userId: questionAuthorId,
           questionId: questionId,
-          title: markResolved ? 'Tiket Telah Selesai' : 'Tanggapan Baru untuk Tiket',
+          title: markResolved
+              ? 'Tiket Telah Selesai'
+              : 'Tanggapan Baru untuk Tiket',
           message: markResolved
               ? 'Pertanyaan Anda telah selesai ditangani. Mohon luangkan waktu untuk mengisi survei kepuasan layanan.'
               : '$penjawabNama ($penjawabRole) telah memberikan jawaban pada tiket Anda.',
@@ -864,7 +1008,8 @@ class QuestionService {
       final now = DateTime.now().toIso8601String();
       await _safeUpdateQuestion(questionId, {
         'rating': rating,
-        if (feedback != null && feedback.isNotEmpty) 'rating_feedback': feedback,
+        if (feedback != null && feedback.isNotEmpty)
+          'rating_feedback': feedback,
         'rating_submitted_at': now,
       });
       return true;
@@ -891,7 +1036,8 @@ class QuestionService {
           userId: questionAuthorId,
           questionId: questionId,
           title: 'Tiket Telah Selesai',
-          message: 'Tiket konsultasi Anda telah diselesaikan. Silakan berikan penilaian kepuasan layanan.',
+          message:
+              'Tiket konsultasi Anda telah diselesaikan. Silakan berikan penilaian kepuasan layanan.',
           type: 'tiket_selesai',
         );
       }
@@ -915,13 +1061,14 @@ class QuestionService {
         id: 101,
         ticketNumber: 'TKT-202609-001',
         judul: 'Prosedur Uji Kompetensi Kenaikan Jenjang Peneliti Utama',
-        isi: 'Mohon petunjuk berkas dan persyaratan yang harus dipersiapkan untuk uji kompetensi perpindahan jabatan ke jenjang Peneliti Utama.',
+        isi:
+            'Mohon petunjuk berkas dan persyaratan yang harus dipersiapkan untuk uji kompetensi perpindahan jabatan ke jenjang Peneliti Utama.',
         status: 'menunggu_disposisi',
         targetTim: 'Tim Mutasi dan Pengelolaan JF 1',
         lksdmWilayah: 'Layanan Kawasan SDM 1 : Thamrin I',
         user: const UserModel(
           id: '77777777-7777-7777-7777-777777777777',
-          name: 'Ahmad Syahputra, M.Si.',
+          name: 'Budi Santoso, M.Si.',
           email: 'pegawai@brin.go.id',
           unit: 'SETTAMA',
           tim: 'Layanan Kawasan SDM 1 : Thamrin I',
@@ -929,8 +1076,10 @@ class QuestionService {
           jabatan: 'Peneliti Ahli Muda',
         ),
         isPublic: false, // Tiket Privat
-        tugasFungsiNama: 'BRIN-04.03.06.02.01.02 - Fasilitasi Uji Kompetensi (Kenaikan Jenjang Jabatan)',
-        createdAt: DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
+        tugasFungsiNama:
+            'BRIN-04.03.06.02.01.02 - Fasilitasi Uji Kompetensi (Kenaikan Jenjang Jabatan)',
+        createdAt:
+            DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
         attachmentName: 'Nota_Dinas_Usulan_JF.pdf',
         attachmentUrl: 'https://example.com/Nota_Dinas_Usulan_JF.pdf',
       ),
@@ -938,7 +1087,8 @@ class QuestionService {
         id: 102,
         ticketNumber: 'TKT-202609-002',
         judul: 'Klarifikasi Evaluasi Peta Jabatan di Kawasan Sains',
-        isi: 'Bagaimana mekanisme pengusulan pembaharuan peta jabatan dan formasi JF untuk kawasan terpadu?',
+        isi:
+            'Bagaimana mekanisme pengusulan pembaharuan peta jabatan dan formasi JF untuk kawasan terpadu?',
         status: 'menunggu_disposisi',
         targetTim: 'Tim Ortala',
         lksdmWilayah: 'Layanan Kawasan SDM 2 : Thamrin II',
@@ -953,13 +1103,15 @@ class QuestionService {
         ),
         isPublic: true, // Tiket Publik
         tugasFungsiNama: 'BRIN-04.03.01.05 - Penyusunan Peta Jabatan',
-        createdAt: DateTime.now().subtract(const Duration(hours: 5)).toIso8601String(),
+        createdAt:
+            DateTime.now().subtract(const Duration(hours: 5)).toIso8601String(),
       ),
       QuestionModel(
         id: 103,
         ticketNumber: 'TKT-202609-003',
         judul: 'Pencantuman Gelar Akademik S3 Luar Negeri',
-        isi: 'Ijazah doktoral saya telah disetarakan Kemendikbudristek, langkah apa yang perlu dilakukan di SIMPEG?',
+        isi:
+            'Ijazah doktoral saya telah disetarakan Kemendikbudristek, langkah apa yang perlu dilakukan di SIMPEG?',
         status: 'selesai',
         targetTim: 'Tim Perencanaan dan Pengembangan Kompetensi',
         assignedTo: 'Admin Tim Pengembangan Kompetensi',
@@ -975,18 +1127,23 @@ class QuestionService {
         ),
         isPublic: true, // Tiket Publik
         tugasFungsiNama: 'BRIN-04.03.05.09 - Pencantuman Gelar Akademik',
-        createdAt: DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
-        resolvedAt: DateTime.now().subtract(const Duration(hours: 4)).toIso8601String(),
+        createdAt:
+            DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
+        resolvedAt:
+            DateTime.now().subtract(const Duration(hours: 4)).toIso8601String(),
         rating: 5,
-        ratingFeedback: 'Layanan sangat cepat dan informatif. Terima kasih tim BOSDM BRIN!',
-        ratingSubmittedAt: DateTime.now().subtract(const Duration(hours: 3)).toIso8601String(),
+        ratingFeedback:
+            'Layanan sangat cepat dan informatif. Terima kasih tim BOSDM BRIN!',
+        ratingSubmittedAt:
+            DateTime.now().subtract(const Duration(hours: 3)).toIso8601String(),
         answers: const [
           AnswerModel(
             id: 1,
             questionId: 103,
             penjawabNama: 'Tim Perencanaan dan Pengembangan Kompetensi',
             penjawabRole: 'Admin Tim Pengembangan Kompetensi',
-            isiJawaban: 'Halo, silakan unggah SK Penyetaraan Ijazah beserta Transkrip Nilai melalui modul Layanan Mandiri SIMPEG BRIN. Tim kami akan melakukan verifikasi berkas dalam waktu 3 hari kerja.',
+            isiJawaban:
+                'Halo, silakan unggah SK Penyetaraan Ijazah beserta Transkrip Nilai melalui modul Layanan Mandiri SIMPEG BRIN. Tim kami akan melakukan verifikasi berkas dalam waktu 3 hari kerja.',
             createdAt: '2026-09-27T14:30:00Z',
           ),
         ],
@@ -1005,13 +1162,55 @@ class QuestionService {
           return false;
         }
       }
-      if (teamFilter != null && teamFilter.isNotEmpty && teamFilter != 'Semua Tim') {
-        if (q.targetTim?.toLowerCase() != teamFilter.toLowerCase()) return false;
+      if (teamFilter != null &&
+          teamFilter.isNotEmpty &&
+          teamFilter != 'Semua Tim') {
+        if (q.targetTim?.toLowerCase() != teamFilter.toLowerCase()) {
+          return false;
+        }
       }
-      if (statusFilter != null && statusFilter.isNotEmpty && statusFilter != 'semua') {
+      if (statusFilter != null &&
+          statusFilter.isNotEmpty &&
+          statusFilter != 'semua') {
         if (q.status.toLowerCase() != statusFilter.toLowerCase()) return false;
       }
       return true;
     }).toList();
+  }
+
+  /// Subscribe ke percakapan (answers) realtime untuk suatu pertanyaan
+  static RealtimeChannel? subscribeToQuestionAnswers({
+    required int questionId,
+    required void Function(Map<String, dynamic> newRecord) onNewAnswer,
+  }) {
+    try {
+      final channel = _client.channel('public:answers:$questionId');
+      channel
+          .onPostgresChanges(
+            event: PostgresChangeEvent.insert,
+            schema: 'public',
+            table: 'answers',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'question_id',
+              value: questionId,
+            ),
+            callback: (payload) {
+              onNewAnswer(payload.newRecord);
+            },
+          )
+          .subscribe();
+      return channel;
+    } catch (e) {
+      debugPrint('Error subscribing to realtime answers: $e');
+      return null;
+    }
+  }
+
+  /// Batalkan subscription realtime channel
+  static Future<void> unsubscribeChannel(RealtimeChannel channel) async {
+    try {
+      await _client.removeChannel(channel);
+    } catch (_) {}
   }
 }

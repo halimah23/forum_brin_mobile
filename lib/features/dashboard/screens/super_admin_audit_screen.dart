@@ -8,6 +8,7 @@ import '../../questions/data/tusi_catalog_data.dart';
 import '../../questions/models/question_model.dart';
 import '../../questions/screens/question_detail_screen.dart';
 import '../../questions/services/question_service.dart';
+import '../../questions/widgets/reopen_ticket_dialog.dart';
 import '../widgets/audit_question_card.dart';
 
 class SuperAdminAuditScreen extends StatefulWidget {
@@ -78,6 +79,27 @@ class _SuperAdminAuditScreenState extends State<SuperAdminAuditScreen>
         _allQuestions = list;
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _handleReopenTicket(QuestionModel q) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final success = await ReopenTicketDialog.show(
+      context,
+      question: q,
+      superAdminName: widget.user.name,
+    );
+
+    if (!mounted) return;
+
+    if (success == true) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Tiket berhasil dibuka kembali dan dialihkan penanganannya.'),
+          backgroundColor: Color(0xFF16A34A),
+        ),
+      );
+      _loadQuestions();
     }
   }
 
@@ -516,6 +538,7 @@ class _SuperAdminAuditScreenState extends State<SuperAdminAuditScreen>
                                   final q = filteredQuestions[index];
                                   return AuditQuestionCard(
                                     question: q,
+                                    onReopen: q.isClosed ? () => _handleReopenTicket(q) : null,
                                     onTap: () async {
                                       await Navigator.push(
                                         context,

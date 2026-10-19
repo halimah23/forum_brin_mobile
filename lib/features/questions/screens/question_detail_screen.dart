@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_radius.dart';
@@ -13,6 +14,7 @@ import '../models/ticket_status.dart';
 import '../services/question_service.dart';
 import '../widgets/csat_rating_card.dart';
 import '../widgets/publish_and_standardize_dialog.dart';
+import '../widgets/reopen_ticket_dialog.dart';
 import '../widgets/ticket_timeline_tracker.dart';
 import 'ask_question_screen.dart';
 
@@ -34,6 +36,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
   late QuestionModel question;
   final TextEditingController _replyController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  RealtimeChannel? _realtimeChannel;
   bool isProcessing = false;
   bool isSendingReply = false;
   bool _showOriginalText = false;
@@ -42,8 +45,26 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
   void initState() {
     super.initState();
     question = widget.question;
+    _setupRealtimeSubscription();
     _loadFreshDetails();
     _scrollToBottom(isInstant: true);
+  }
+
+  void _setupRealtimeSubscription() {
+    final qId = question.id;
+    if (qId == null) return;
+    try {
+      _realtimeChannel = QuestionService.subscribeToQuestionAnswers(
+        questionId: qId,
+        onNewAnswer: (record) {
+          if (mounted) {
+            _loadFreshDetails();
+          }
+        },
+      );
+    } catch (e) {
+      debugPrint('Realtime channel error in detail screen: $e');
+    }
   }
 
   void _scrollToBottom({bool isInstant = false}) {
@@ -77,6 +98,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
 
   @override
   void dispose() {
+    if (_realtimeChannel != null) {
+      QuestionService.unsubscribeChannel(_realtimeChannel!);
+    }
     _replyController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -547,6 +571,27 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
     }
   }
 
+  Future<void> _handleReopenTicket() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final success = await ReopenTicketDialog.show(
+      context,
+      question: question,
+      superAdminName: widget.currentUser?.name ?? 'Super Admin',
+    );
+
+    if (!mounted) return;
+
+    if (success == true) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Tiket berhasil dibuka kembali dan dialihkan penanganannya.'),
+          backgroundColor: Color(0xFF16A34A),
+        ),
+      );
+      _loadFreshDetails();
+    }
+  }
+
   void _showAttachmentPreviewDialog(String fileName, String fileUrl) {
     final isImg = fileName.toLowerCase().endsWith('.png') ||
         fileName.toLowerCase().endsWith('.jpg') ||
@@ -736,6 +781,13 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                 }
               },
             ),
+            if (question.isClosed) ...[
+              IconButton(
+                tooltip: 'Buka Kembali Tiket Selesai',
+                icon: const Icon(Icons.replay_rounded, color: Colors.amber),
+                onPressed: _handleReopenTicket,
+              ),
+            ],
           ],
           if (widget.currentUser?.isSuperAdmin != true && widget.currentUser?.isEksekutif != true)
             IconButton(
@@ -1554,15 +1606,31 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(color: Colors.grey.shade300),
                               ),
-                              child: const Row(
+                              child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.lock_rounded, size: 16, color: Colors.grey),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Tiket telah selesai diakhiri oleh Pegawai.',
-                                    style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
+                                  const Icon(Icons.lock_rounded, size: 16, color: Colors.grey),
+                                  const SizedBox(width: 8),
+                                  const Expanded(
+                                    child: Text(
+                                      'Tiket telah selesai diakhiri oleh Pegawai.',
+                                      style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
+                                    ),
                                   ),
+                                  if (widget.currentUser?.userRole == UserRole.superAdmin || widget.currentUser?.isSuperAdmin == true) ...[
+                                    const SizedBox(width: 8),
+                                    ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.amber.shade900,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                                      ),
+                                      icon: const Icon(Icons.replay_rounded, size: 14),
+                                      label: const Text('Buka Kembali', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                      onPressed: _handleReopenTicket,
+                                    ),
+                                  ],
                                 ],
                               ),
                             )
