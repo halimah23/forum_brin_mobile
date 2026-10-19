@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -35,17 +36,19 @@ class _AttachmentPickerWidgetState extends State<AttachmentPickerWidget> {
     try {
       setState(() => _isUploading = true);
 
-      final file = await FilePicker.pickFile(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
+        withData: true,
       );
 
-      if (file == null) {
+      if (result == null || result.files.isEmpty) {
         setState(() => _isUploading = false);
         return;
       }
 
-      final fileSize = file.lengthSync() ?? (await file.length()) ?? 0;
+      final file = result.files.first;
+      final fileSize = file.size;
 
       // Batasan ukuran maksimum 10 MB
       if (fileSize > 10 * 1024 * 1024) {
@@ -70,9 +73,13 @@ class _AttachmentPickerWidgetState extends State<AttachmentPickerWidget> {
         final safeName = file.name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
         final storagePath = 'questions/${timestamp}_$safeName';
 
-        final bytes = await file.readAsBytes();
-        await client.storage.from('attachments').uploadBinary(storagePath, bytes);
-        publicUrl = client.storage.from('attachments').getPublicUrl(storagePath);
+        final bytes = file.bytes ?? (file.path != null ? await File(file.path!).readAsBytes() : null);
+        if (bytes != null) {
+          await client.storage.from('attachments').uploadBinary(storagePath, bytes);
+          publicUrl = client.storage.from('attachments').getPublicUrl(storagePath);
+        } else {
+          publicUrl = file.path ?? 'storage://local/${file.name}';
+        }
       } catch (uploadError) {
         debugPrint('Supabase storage upload fallback: $uploadError');
         // Fallback: gunakan path lokal perangkat atau fallback pseudo URL
