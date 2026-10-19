@@ -57,11 +57,15 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         title: Row(
           children: [
             Image.asset(
               AppConstants.logoAssetPath,
-              height: 36,
+              height: 32,
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -96,6 +100,10 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
               ),
             ),
           ],
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.border, height: 1),
         ),
       ),
       body: RefreshIndicator(

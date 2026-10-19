@@ -105,6 +105,8 @@ class _MemberTicketsScreenState extends State<MemberTicketsScreen>
         backgroundColor: AppColors.primaryRed,
         foregroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,

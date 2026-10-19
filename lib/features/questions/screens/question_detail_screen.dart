@@ -692,7 +692,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
         backgroundColor: const Color(0xFFF2F4F8),
         appBar: AppBar(
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back_rounded),
             onPressed: () => Navigator.pop(context, true),
           ),
           title: Column(
@@ -711,6 +711,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
           ),
           backgroundColor: AppColors.primaryRed,
           foregroundColor: Colors.white,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
         actions: [
           if (widget.currentUser?.userRole == UserRole.superAdmin || widget.currentUser?.isSuperAdmin == true) ...[
             IconButton(

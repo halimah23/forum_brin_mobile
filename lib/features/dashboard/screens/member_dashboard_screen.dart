@@ -60,7 +60,8 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,
-        scrolledUnderElevation: 0.5,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         title: Row(
           children: [
             Image.asset(
@@ -84,6 +85,10 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
           NotificationBellWidget(user: widget.user),
           const SizedBox(width: 8),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.border, height: 1),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: _loadMyQuestions,

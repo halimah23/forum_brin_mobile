@@ -160,6 +160,9 @@ class _QuestionListViewState extends State<QuestionListView> with SingleTickerPr
         ),
         backgroundColor: AppColors.primaryRed,
         foregroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         actions: [
           if (widget.user.userRole != UserRole.member)
             BlocBuilder<QuestionListCubit, QuestionListState>(
