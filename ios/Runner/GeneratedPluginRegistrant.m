@@ -12,10 +12,10 @@
 @import app_links;
 #endif
 
-#if __has_include(<file_picker_darwin/FilePickerPlugin.h>)
-#import <file_picker_darwin/FilePickerPlugin.h>
+#if __has_include(<file_picker/FilePickerPlugin.h>)
+#import <file_picker/FilePickerPlugin.h>
 #else
-@import file_picker_darwin;
+@import file_picker;
 #endif
 
 #if __has_include(<shared_preferences_foundation/SharedPreferencesPlugin.h>)

@@ -38,7 +38,12 @@ class _FaqScreenState extends State<FaqScreen> {
         title: const Text('Pertanyaan Populer & FAQ', style: AppTypography.heading3),
         backgroundColor: AppColors.surface,
         elevation: 0,
-        scrolledUnderElevation: 0.5,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.border, height: 1),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

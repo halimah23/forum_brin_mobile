@@ -140,7 +140,8 @@ class _AskQuestionViewState extends State<AskQuestionView> {
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,
-        scrolledUnderElevation: 0.5,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         automaticallyImplyLeading: !widget.isTab,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,6 +156,10 @@ class _AskQuestionViewState extends State<AskQuestionView> {
               overflow: TextOverflow.ellipsis,
             ),
           ],
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.border, height: 1),
         ),
       ),
       body: BlocConsumer<AskQuestionCubit, AskQuestionState>(

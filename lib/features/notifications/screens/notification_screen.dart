@@ -167,7 +167,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
         title: const Text('Pusat Notifikasi', style: AppTypography.heading3),
         backgroundColor: AppColors.surface,
         elevation: 0,
-        scrolledUnderElevation: 0.5,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         actions: [
           if (unreadCount > 0)
             TextButton.icon(
@@ -183,6 +184,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
               ),
             ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(color: AppColors.border, height: 1),
+        ),
       ),
       body: RefreshIndicator(
         onRefresh: _loadNotifications,

@@ -362,6 +362,8 @@ class _SuperAdminAuditScreenState extends State<SuperAdminAuditScreen>
         backgroundColor: const Color(0xFF512DA8),
         foregroundColor: Colors.white,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
         title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
