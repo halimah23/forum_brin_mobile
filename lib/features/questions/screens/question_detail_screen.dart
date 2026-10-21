@@ -7,7 +7,6 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/models/user_role.dart';
-import '../data/trending_issues_data.dart';
 import '../models/answer_model.dart';
 import '../models/question_model.dart';
 import '../models/ticket_status.dart';
@@ -140,7 +139,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
   bool get isAuthorPegawai {
     final user = widget.currentUser;
     if (user == null) return false;
+    if (question.userId != null && user.id != null && question.userId == user.id) return true;
     if (question.user?.id != null && user.id == question.user!.id) return true;
+    if (question.user?.email != null && user.email == question.user!.email) return true;
     return user.isPegawai;
   }
 
@@ -193,24 +194,24 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
   }
 
   void _promptEscalationToCentral() async {
-    final suggestedTeam = TrendingIssuesData.suggestCentralTeam(question.judul, question.isi);
-    String selectedTeam = suggestedTeam;
-
-    final teams = [
-      'Tim Kelompok Jabatan Fungsional',
-      'Tim Mutasi & Kepangkatan',
-      'Tim Penggajian & Tunjangan',
-      'Tim Kesejahteraan & Kinerja Pegawai',
-      'Tim Pengembangan Kapasitas SDM',
-      'Tim Pensiun & Pemberhentian',
-      'Tim Penegakan Disiplin & Etika',
-      'Tim Layanan SDM Pusat',
+    final centralTeams = [
+      {'code': 'ORTALA', 'name': 'Organisasi dan Tata Laksana'},
+      {'code': 'RENBANGRIR', 'name': 'Perencanaan dan Pengembangan Karir SDM'},
+      {'code': 'MUKESRA', 'name': 'Mutasi Umum dan Kesejahteraan'},
+      {'code': 'JF1', 'name': 'Mutasi & Pengelolaan Jabatan Fungsional I'},
+      {'code': 'JF2', 'name': 'Mutasi & Pengelolaan Jabatan Fungsional II'},
+      {'code': 'JF3', 'name': 'Mutasi & Pengelolaan Jabatan Fungsional III'},
+      {'code': 'RENBANGKOM', 'name': 'Perencanaan & Pengembangan Kompetensi SDM'},
+      {'code': 'PENKOM', 'name': 'Penilaian Kompetensi'},
+      {'code': 'MANKIN', 'name': 'Manajemen Kinerja dan Penghargaan ASN'},
+      {'code': 'BINDIS', 'name': 'Pembinaan dan Penegakan Disiplin ASN'},
+      {'code': 'PDIS', 'name': 'Pengelolaan Data dan Informasi SDM'},
+      {'code': 'MPR', 'name': 'Sekretariat Majelis Profesor Riset'},
+      {'code': 'RB', 'name': 'Sekretariat Reformasi Birokrasi'},
+      {'code': 'PKSPU', 'name': 'Program Pembinaan Karir SDM & Penugasan Ulang'},
     ];
 
-    if (!teams.contains(suggestedTeam)) {
-      teams.insert(0, suggestedTeam);
-    }
-
+    String selectedTeamCode = centralTeams.first['code']!;
     final reasonController = TextEditingController();
 
     final result = await showDialog<String>(
@@ -248,7 +249,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
               ),
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
-                initialValue: selectedTeam,
+                initialValue: selectedTeamCode,
                 isExpanded: true,
                 style: AppTypography.bodyMedium,
                 decoration: InputDecoration(
@@ -270,9 +271,20 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                     borderSide: const BorderSide(color: AppColors.slate800, width: 1.5),
                   ),
                 ),
-                items: teams.map((t) => DropdownMenuItem(value: t, child: Text(t, style: AppTypography.bodySmall))).toList(),
+                items: centralTeams
+                    .map(
+                      (t) => DropdownMenuItem(
+                        value: t['code'],
+                        child: Text(
+                          '${t['code']} - ${t['name']}',
+                          style: AppTypography.bodySmall,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
+                    .toList(),
                 onChanged: (val) {
-                  if (val != null) setModalState(() => selectedTeam = val);
+                  if (val != null) setModalState(() => selectedTeamCode = val);
                 },
               ),
               const SizedBox(height: 12),
@@ -314,7 +326,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
               ),
-              onPressed: () => Navigator.pop(ctx, selectedTeam),
+              onPressed: () => Navigator.pop(ctx, selectedTeamCode),
               icon: const Icon(Icons.alt_route_rounded, size: 16),
               label: const Text('Eskalasikan Sekarang'),
             ),
@@ -800,7 +812,10 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AskQuestionScreen(token: widget.currentUser?.token ?? ''),
+                    builder: (context) => AskQuestionScreen(
+                      token: widget.currentUser?.token ?? '',
+                      user: widget.currentUser,
+                    ),
                   ),
                 );
               },

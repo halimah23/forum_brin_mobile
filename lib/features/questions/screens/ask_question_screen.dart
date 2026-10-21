@@ -5,9 +5,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/services/storage/session_manager.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
 import '../../../core/widgets/status_badge.dart';
+import '../../auth/models/user_model.dart';
 import '../cubits/ask_question_cubit.dart';
 import '../cubits/ask_question_state.dart';
 import '../data/lksdm_catalog_data.dart';
@@ -20,12 +22,14 @@ class AskQuestionScreen extends StatelessWidget {
   final String token;
   final bool isTab;
   final VoidCallback? onSuccess;
+  final UserModel? user;
 
   const AskQuestionScreen({
     super.key,
     required this.token,
     this.isTab = false,
     this.onSuccess,
+    this.user,
   });
 
   @override
@@ -36,6 +40,7 @@ class AskQuestionScreen extends StatelessWidget {
         token: token,
         isTab: isTab,
         onSuccess: onSuccess,
+        user: user,
       ),
     );
   }
@@ -45,12 +50,14 @@ class AskQuestionView extends StatefulWidget {
   final String token;
   final bool isTab;
   final VoidCallback? onSuccess;
+  final UserModel? user;
 
   const AskQuestionView({
     super.key,
     required this.token,
     this.isTab = false,
     this.onSuccess,
+    this.user,
   });
 
   @override
@@ -71,17 +78,37 @@ class _AskQuestionViewState extends State<AskQuestionView> {
   bool dismissActiveBanner = false;
   String? attachedFileUrl;
   String? attachedFileName;
+  UserModel? currentUser;
 
   @override
   void initState() {
     super.initState();
+    currentUser = widget.user;
     selectedLksdm = lksdmList.first;
-    _checkActiveTicket();
+    _resolveUserAndLksdm();
+  }
+
+  void _resolveUserAndLksdm() async {
+    currentUser ??= await SessionManager.getUser();
+    final lksdmShort = currentUser?.effectiveLksdm ?? 'LKSDM 1';
+    final matched = lksdmList.firstWhere(
+      (item) => item.shortName.toUpperCase() == lksdmShort.toUpperCase(),
+      orElse: () => lksdmList.firstWhere(
+        (item) => item.name.toUpperCase().contains(lksdmShort.toUpperCase()),
+        orElse: () => lksdmList.first,
+      ),
+    );
+    if (mounted) {
+      setState(() {
+        selectedLksdm = matched;
+      });
+      _checkActiveTicket();
+    }
   }
 
   void _checkActiveTicket() async {
     final user = Supabase.instance.client.auth.currentUser;
-    final userId = user?.id ?? '77777777-7777-7777-7777-777777777777';
+    final userId = user?.id ?? currentUser?.id ?? 'usr_240';
     final ticket = await QuestionService.getUserActiveTicket(
       userId: userId,
       lksdmKawasan: selectedLksdm.shortName,
@@ -304,55 +331,97 @@ class _AskQuestionViewState extends State<AskQuestionView> {
                                 const SizedBox(height: 16),
                               ],
 
-                              // 1. LKSDM Selector
+                              // 1. Wilayah Kerja LKSDM (Terdeteksi Otomatis)
                               const Text(
-                                '1. Wilayah Kerja LKSDM',
+                                '1. Wilayah Penanganan Kawasan SDM',
                                 style: AppTypography.labelMedium,
                               ),
                               const SizedBox(height: 6),
-                              DropdownButtonFormField<LksdmItem>(
-                                initialValue: selectedLksdm,
-                                isExpanded: true,
-                                style: AppTypography.bodyMedium,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor: AppColors.surface,
-                                  prefixIcon: const Icon(Icons.location_on_outlined, color: AppColors.slate500, size: 20),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(AppRadius.md),
-                                    borderSide: const BorderSide(color: AppColors.border, width: 1),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(AppRadius.md),
-                                    borderSide: const BorderSide(color: AppColors.border, width: 1),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(AppRadius.md),
-                                    borderSide: const BorderSide(color: AppColors.primaryRed, width: 1.5),
-                                  ),
+                              Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  border: Border.all(color: AppColors.border, width: 1),
                                 ),
-                                items: lksdmList.map((item) {
-                                  return DropdownMenuItem<LksdmItem>(
-                                    value: item,
-                                    child: Text(
-                                      item.name,
-                                      style: AppTypography.bodyMedium,
-                                      overflow: TextOverflow.ellipsis,
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.slate100,
+                                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                                      ),
+                                      child: const Icon(
+                                        Icons.location_on_rounded,
+                                        size: 22,
+                                        color: AppColors.primaryRed,
+                                      ),
                                     ),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    setState(() {
-                                      selectedLksdm = value;
-                                    });
-                                  }
-                                },
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                selectedLksdm.shortName,
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.slate900,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.teal.shade50,
+                                                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                                                  border: Border.all(color: Colors.teal.shade300, width: 0.8),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Icon(Icons.check_circle_rounded, size: 10, color: Colors.teal.shade700),
+                                                    const SizedBox(width: 3),
+                                                    Text(
+                                                      'Otomatis dari Profil',
+                                                      style: TextStyle(
+                                                        fontSize: 9,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Colors.teal.shade800,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            selectedLksdm.name,
+                                            style: AppTypography.caption.copyWith(color: AppColors.slate700),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          if (currentUser?.satuanKerja != null && currentUser!.satuanKerja!.isNotEmpty) ...[
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              'Unit Kerja: ${currentUser!.satuanKerja}',
+                                              style: AppTypography.caption.copyWith(color: AppColors.slate500),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                               const SizedBox(height: 8),
                               Container(
-                                padding: const EdgeInsets.all(10),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 decoration: BoxDecoration(
                                   color: AppColors.slate50,
                                   borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -360,12 +429,12 @@ class _AskQuestionViewState extends State<AskQuestionView> {
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.info_outline, size: 16, color: AppColors.slate500),
+                                    const Icon(Icons.info_outline, size: 14, color: AppColors.slate500),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        'Cakupan: ${selectedLksdm.coverageUnits.join(", ")}',
-                                        style: AppTypography.caption,
+                                        'Pertanyaan Anda akan otomatis ditujukan ke Staf Admin dan Ketua Tim ${selectedLksdm.shortName}.',
+                                        style: AppTypography.caption.copyWith(color: AppColors.slate600),
                                       ),
                                     ),
                                   ],

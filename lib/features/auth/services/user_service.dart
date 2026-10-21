@@ -4,13 +4,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_model.dart';
 import '../models/user_role.dart';
-import 'auth_service.dart';
 
 class UserService {
   static SupabaseClient get _client => Supabase.instance.client;
-
-  // In-memory cache untuk fallback lokal ketika offline
-  static final List<UserModel> _localMemoryUsers = [];
 
   /// Generate UUID v4 sederhana tanpa dependensi eksternal
   static String _generateUuid() {
@@ -42,77 +38,54 @@ class UserService {
     }
   }
 
-  /// Mengambil seluruh data pengguna dari tabel `public.profiles` di Supabase
+  /// Mengambil seluruh data pengguna secara langsung dari tabel `public.users` (atau `profiles`) di Supabase
   static Future<List<UserModel>> getUsers({
     String? query,
     UserRole? roleFilter,
   }) async {
+    List<UserModel> users = [];
     try {
-      var dbQuery = _client.from('profiles').select();
-
-      final response = await dbQuery.order('name', ascending: true);
+      final response = await _client
+          .from('users')
+          .select('*, teams:id_tim(*)')
+          .order('first_name', ascending: true);
       final rawList = List<Map<String, dynamic>>.from(response);
-
-      List<UserModel> users = rawList.map((item) => UserModel.fromJson(item)).toList();
-
-      // Sinkronisasikan dengan demo users jika data Supabase masih sedikit
-      if (users.isEmpty) {
-        users = AuthService.demoUsers.values.toList();
-      }
-
-      // Gabungkan akun lokal yang dibuat saat sesi offline jika belum ada di database
-      for (final local in _localMemoryUsers) {
-        if (!users.any((u) => u.id == local.id || u.email.toLowerCase() == local.email.toLowerCase())) {
-          users.add(local);
-        }
-      }
-
-      // Filter berdasarkan Role
-      if (roleFilter != null) {
-        users = users.where((u) => u.userRole == roleFilter).toList();
-      }
-
-      // Filter berdasarkan Search Query (Nama, Email, Unit, Jabatan)
-      if (query != null && query.trim().isNotEmpty) {
-        final q = query.trim().toLowerCase();
-        users = users.where((u) {
-          final nameMatch = u.name.toLowerCase().contains(q);
-          final emailMatch = u.email.toLowerCase().contains(q);
-          final unitMatch = (u.unit ?? '').toLowerCase().contains(q);
-          final timMatch = (u.tim ?? '').toLowerCase().contains(q);
-          final jabatanMatch = (u.jabatan ?? '').toLowerCase().contains(q);
-          return nameMatch || emailMatch || unitMatch || timMatch || jabatanMatch;
-        }).toList();
-      }
-
-      return users;
+      users = rawList.map((item) => UserModel.fromJson(item)).toList();
     } catch (e) {
-      debugPrint('Warning fetch users from Supabase: $e');
-      // Fallback offline menggunakan Demo Users + Akun Lokal
-      List<UserModel> fallback = [
-        ...AuthService.demoUsers.values,
-        ..._localMemoryUsers,
-      ];
-
-      if (roleFilter != null) {
-        fallback = fallback.where((u) => u.userRole == roleFilter).toList();
+      debugPrint('Notice fetch from users table: $e');
+      try {
+        final response = await _client.from('profiles').select().order('name', ascending: true);
+        final rawList = List<Map<String, dynamic>>.from(response);
+        users = rawList.map((item) => UserModel.fromJson(item)).toList();
+      } catch (err) {
+        debugPrint('Error fetch users fallback profiles: $err');
+        return [];
       }
-
-      if (query != null && query.trim().isNotEmpty) {
-        final q = query.trim().toLowerCase();
-        fallback = fallback.where((u) {
-          return u.name.toLowerCase().contains(q) ||
-              u.email.toLowerCase().contains(q) ||
-              (u.unit ?? '').toLowerCase().contains(q) ||
-              (u.tim ?? '').toLowerCase().contains(q);
-        }).toList();
-      }
-
-      return fallback;
     }
+
+    // Filter berdasarkan Role jika ditentukan
+    if (roleFilter != null) {
+      users = users.where((u) => u.userRole == roleFilter).toList();
+    }
+
+    // Filter berdasarkan Search Query (Nama, Username, Email, Satuan Kerja, Tim, Jabatan)
+    if (query != null && query.trim().isNotEmpty) {
+      final q = query.trim().toLowerCase();
+      users = users.where((u) {
+        final nameMatch = u.name.toLowerCase().contains(q);
+        final usernameMatch = (u.username ?? '').toLowerCase().contains(q);
+        final emailMatch = u.email.toLowerCase().contains(q);
+        final unitMatch = (u.unit ?? '').toLowerCase().contains(q);
+        final timMatch = (u.tim ?? '').toLowerCase().contains(q);
+        final jabatanMatch = (u.jabatan ?? '').toLowerCase().contains(q);
+        return nameMatch || usernameMatch || emailMatch || unitMatch || timMatch || jabatanMatch;
+      }).toList();
+    }
+
+    return users;
   }
 
-  /// Menambahkan akun pengguna baru ke Supabase
+  /// Menambahkan akun pengguna baru ke tabel `public.users` atau `public.profiles` di Supabase
   static Future<UserModel> createUser({
     required String name,
     required String email,
@@ -131,7 +104,7 @@ class UserService {
 
     String assignedId = _generateUuid();
 
-    // 1. Coba registrasikan ke Supabase Auth via Detached Client (agar tidak menimpa sesi Superadmin aktif)
+    // 1. Coba daftarkan akun ke auth.users via Supabase Auth client terpisah jika tersedia
     try {
       final supabaseUrl = dotenv.env['SUPABASE_URL'];
       final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
@@ -155,30 +128,38 @@ class UserService {
         }
       }
     } catch (authError) {
-      debugPrint('Notice: Supabase Auth signUp fallback to direct profiles insert: $authError');
+      debugPrint('Notice Supabase Auth signUp: $authError');
     }
 
+    // 2. Simpan record pengguna ke tabel `users` atau fallback `profiles`
     final newUserData = {
-      'id': assignedId,
-      'name': cleanName,
+      'id_user': assignedId,
+      'first_name': cleanName,
+      'username': cleanEmail.split('@').first,
       'email': cleanEmail,
       'role': dbRole,
-      'unit': cleanUnit,
-      'tim': cleanTim,
+      'satuan_kerja': cleanUnit,
       'jabatan': cleanJabatan,
-      'created_at': DateTime.now().toIso8601String(),
     };
 
-    // 2. Simpan record profil ke tabel `public.profiles`
     try {
-      await _client.from('profiles').upsert(newUserData);
+      await _client.from('users').upsert(newUserData);
+      return UserModel.fromJson(newUserData);
     } catch (e) {
-      debugPrint('Warning: gagal upsert profiles ke Supabase: $e');
+      debugPrint('Notice insert to users failed, trying profiles: $e');
+      final legacyData = {
+        'id': assignedId,
+        'name': cleanName,
+        'email': cleanEmail,
+        'role': dbRole,
+        'unit': cleanUnit,
+        'tim': cleanTim,
+        'jabatan': cleanJabatan,
+        'created_at': DateTime.now().toIso8601String(),
+      };
+      await _client.from('profiles').upsert(legacyData);
+      return UserModel.fromJson(legacyData);
     }
-
-    final newUser = UserModel.fromJson(newUserData);
-    _localMemoryUsers.add(newUser);
-    return newUser;
   }
 
   /// Mengedit data profil akun pengguna di Supabase
@@ -196,40 +177,28 @@ class UserService {
     final cleanJabatan = jabatan.trim();
     final dbRole = _mapRoleToDbString(role);
 
-    final updateData = {
-      'name': cleanName,
-      'role': dbRole,
-      'unit': cleanUnit,
-      'tim': cleanTim,
-      'jabatan': cleanJabatan,
-    };
-
-    bool isSuccess = false;
-
     try {
+      await _client.from('users').update({
+        'first_name': cleanName,
+        'role': dbRole,
+        'satuan_kerja': cleanUnit,
+        'jabatan': cleanJabatan,
+      }).eq('id_user', id);
+      return true;
+    } catch (_) {
+      final updateData = {
+        'name': cleanName,
+        'role': dbRole,
+        'unit': cleanUnit,
+        'tim': cleanTim,
+        'jabatan': cleanJabatan,
+      };
       await _client.from('profiles').update(updateData).eq('id', id);
-      isSuccess = true;
-    } catch (e) {
-      debugPrint('Warning: Gagal update profiles di Supabase: $e');
-      isSuccess = true; // Flag true untuk ketahanan UX offline
+      return true;
     }
-
-    // Perbarui juga data di cache memori lokal
-    final idx = _localMemoryUsers.indexWhere((u) => u.id == id);
-    if (idx != -1) {
-      _localMemoryUsers[idx] = _localMemoryUsers[idx].copyWith(
-        name: cleanName,
-        role: dbRole,
-        unit: cleanUnit,
-        tim: cleanTim,
-        jabatan: cleanJabatan,
-      );
-    }
-
-    return isSuccess;
   }
 
-  /// Menghapus akun pengguna dari Supabase secara permanen
+  /// Menghapus akun pengguna dari tabel `public.users` atau `public.profiles` di Supabase secara permanen
   static Future<bool> deleteUser({
     required String userId,
     required String currentSuperAdminId,
@@ -239,17 +208,12 @@ class UserService {
       throw Exception('Tindakan ditolak: Anda tidak dapat menghapus akun Superadmin Anda sendiri.');
     }
 
-    bool isSuccess = false;
-
     try {
+      await _client.from('users').delete().eq('id_user', userId);
+      return true;
+    } catch (_) {
       await _client.from('profiles').delete().eq('id', userId);
-      isSuccess = true;
-    } catch (e) {
-      debugPrint('Warning: Gagal menghapus user dari Supabase: $e');
-      isSuccess = true; // Fallback untuk offline
+      return true;
     }
-
-    _localMemoryUsers.removeWhere((u) => u.id == userId);
-    return isSuccess;
   }
 }

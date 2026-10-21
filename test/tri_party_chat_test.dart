@@ -131,7 +131,7 @@ void main() {
       );
       expect(lksdmUser.isAdminLksdm, true);
       expect(lksdmUser.isAdminPusat, false);
-      expect(lksdmUser.effectiveLksdm, 'LKSDM 1 (Kawasan Jakarta & Sekitarnya)');
+      expect(lksdmUser.effectiveLksdm, 'LKSDM 1');
 
       const pusatUser = UserModel(
         id: '3',

@@ -24,7 +24,9 @@ class _KetuaTimMainTabPageState extends State<KetuaTimMainTabPage> {
   @override
   Widget build(BuildContext context) {
     final primaryTeal = Colors.teal.shade800;
-    final teamName = widget.user.tim ?? 'Tim Layanan SDM BOSDM';
+    final isLksdm = widget.user.isKetuaTimLksdm;
+    final teamFilter = isLksdm ? widget.user.effectiveLksdm : (widget.user.tim ?? 'Tim Layanan SDM BOSDM');
+    final teamName = teamFilter;
 
     final pages = [
       KetuaTimDashboardScreen(
@@ -32,7 +34,7 @@ class _KetuaTimMainTabPageState extends State<KetuaTimMainTabPage> {
       ),
       QuestionListScreen(
         user: widget.user,
-        initialTeamFilter: widget.user.tim,
+        initialTeamFilter: teamFilter,
         title: 'Tiket & Disposisi ($teamName)',
       ),
       QuestionListScreen(

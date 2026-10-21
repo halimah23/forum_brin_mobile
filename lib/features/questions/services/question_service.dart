@@ -19,9 +19,9 @@ class QuestionService {
   /// Ambil daftar seluruh 15 Tim BOSDM
   static Future<List<String>> getTeams() async {
     try {
-      final response = await _client.from('teams').select('nama').order('id');
+      final response = await _client.from('teams').select();
       final list = response
-          .map((item) => item['nama']?.toString() ?? '')
+          .map((item) => (item['detail_nama_tim'] ?? item['tim'] ?? item['nama'])?.toString() ?? '')
           .where((name) => name.isNotEmpty)
           .toList();
       if (list.isNotEmpty) return list;
@@ -37,16 +37,41 @@ class QuestionService {
     String? token,
   }) async {
     try {
-      var query = _client.from('tugas_fungsi').select();
       if (teamName != null && teamName.isNotEmpty) {
+        // Query via relasi team_tusi
+        try {
+          final response = await _client
+              .from('team_tusi')
+              .select('tugas_fungsi:id_tusi(*), teams:id_tim(*)')
+              .or('teams.tim.ilike.%$teamName%,teams.detail_nama_tim.ilike.%$teamName%');
+          final list = response.map((item) {
+            final tusi = item['tugas_fungsi'] as Map<String, dynamic>? ?? {};
+            final team = item['teams'] as Map<String, dynamic>? ?? {};
+            return CategoryModel(
+              id: int.tryParse(tusi['id_tusi']?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0,
+              idTusi: tusi['id_tusi']?.toString(),
+              nama: tusi['tugas_fungsi']?.toString() ?? '-',
+              kode: tusi['id_tusi']?.toString(),
+              teamName: team['detail_nama_tim']?.toString() ?? team['tim']?.toString(),
+            );
+          }).toList();
+          if (list.isNotEmpty) return list;
+        } catch (_) {}
+
+        var query = _client.from('tugas_fungsi').select();
         query = query.ilike('team_nama', '%$teamName%');
+        final response = await query;
+        final list = response
+            .map((item) => CategoryModel.fromJson(Map<String, dynamic>.from(item)))
+            .toList();
+        if (list.isNotEmpty) return list;
+      } else {
+        final response = await _client.from('tugas_fungsi').select();
+        final list = response
+            .map((item) => CategoryModel.fromJson(Map<String, dynamic>.from(item)))
+            .toList();
+        if (list.isNotEmpty) return list;
       }
-      final response = await query.order('id');
-      final list = response
-          .map(
-              (item) => CategoryModel.fromJson(Map<String, dynamic>.from(item)))
-          .toList();
-      if (list.isNotEmpty) return list;
     } catch (_) {
       // Fallback lokal
     }
@@ -68,87 +93,134 @@ class QuestionService {
   }) async {
     try {
       // 1. Ambil pertanyaan beserta profil pembuat dan tugas fungsi
-      var query = _client.from('questions').select('''
-        id,
-        ticket_number,
-        judul,
-        isi,
-        status,
-        target_tim,
-        assigned_to,
-        tugas_fungsi_nama,
-        lksdm_kawasan,
-        target_tim_pusat,
-        admin_lksdm_id,
-        admin_pusat_id,
-        is_public,
-        is_pinned,
-        created_at,
-        profiles:user_id (id, name, email, role, unit, tim, jabatan),
-        question_tugas_fungsi (
-          tugas_fungsi (id, kode, nama, team_nama)
-        )
-      ''');
+      PostgrestFilterBuilder<List<Map<String, dynamic>>> buildQuery(String selectClause) {
+        var q = _client.from('questions').select(selectClause);
 
-      if (isPublicOnly == true) {
-        query = query.eq('is_public', true);
-      } else if (isPrivateOnly == true) {
-        query = query.eq('is_public', false);
+        if (isPublicOnly == true) {
+          q = q.eq('is_public', true);
+        } else if (isPrivateOnly == true) {
+          q = q.eq('is_public', false);
+        }
+
+        if (userIdFilter != null && userIdFilter.isNotEmpty) {
+          q = q.eq('user_id', userIdFilter);
+        }
+
+        if (teamFilter != null &&
+            teamFilter.isNotEmpty &&
+            teamFilter != 'Semua Tim') {
+          final cleanTeam = teamFilter.trim();
+          final lksdmMatch = RegExp(r'LKSDM\s*(\d+)', caseSensitive: false).firstMatch(cleanTeam);
+          if (lksdmMatch != null) {
+            final shortLksdm = 'LKSDM ${lksdmMatch.group(1)}';
+            q = q.or(
+                'lksdm_kawasan.ilike.%$shortLksdm%,lksdm_kawasan.ilike.%$cleanTeam%,target_tim_pusat.ilike.%$cleanTeam%');
+          } else {
+            q = q.or(
+                'lksdm_kawasan.ilike.%$cleanTeam%,target_tim_pusat.ilike.%$cleanTeam%');
+          }
+        }
+
+        if (statusFilter != null &&
+            statusFilter.isNotEmpty &&
+            statusFilter.toLowerCase() != 'semua') {
+          final normalizedStatus = statusFilter.toLowerCase();
+          if (normalizedStatus == 'menunggu_lksdm' ||
+              normalizedStatus == 'open') {
+            q = q.inFilter('status',
+                ['menunggu_lksdm', 'menunggu_disposisi', 'OPEN', 'open']);
+          } else if (normalizedStatus == 'ditangani_lksdm' ||
+              normalizedStatus == 'in_progress' ||
+              normalizedStatus == 'waiting_user') {
+            q = q.inFilter('status', [
+              'ditangani_lksdm',
+              'sedang_diproses',
+              'IN_PROGRESS',
+              'WAITING_USER',
+              'in_progress',
+              'waiting_user'
+            ]);
+          } else if (normalizedStatus == 'dialihkan_ke_pusat' ||
+              normalizedStatus == 'eskalasi_pusat' ||
+              normalizedStatus == 'escalated' ||
+              normalizedStatus == 'in_progress_center') {
+            q = q.inFilter('status', [
+              'dialihkan_ke_pusat',
+              'eskalasi_pusat',
+              'ESCALATED',
+              'IN_PROGRESS_CENTER',
+              'escalated',
+              'in_progress_center'
+            ]);
+          } else if (normalizedStatus == 'selesai' ||
+              normalizedStatus == 'closed' ||
+              normalizedStatus == 'resolved') {
+            q = q.inFilter('status',
+                ['selesai', 'CLOSED', 'RESOLVED', 'closed', 'resolved']);
+          } else {
+            q = q.eq('status', statusFilter);
+          }
+        }
+        return q;
       }
 
-      if (userIdFilter != null && userIdFilter.isNotEmpty) {
-        query = query.eq('user_id', userIdFilter);
-      }
-
-      if (teamFilter != null &&
-          teamFilter.isNotEmpty &&
-          teamFilter != 'Semua Tim') {
-        query = query.or(
-            'target_tim.ilike.%$teamFilter%,lksdm_kawasan.ilike.%$teamFilter%,target_tim_pusat.ilike.%$teamFilter%');
-      }
-
-      if (statusFilter != null &&
-          statusFilter.isNotEmpty &&
-          statusFilter.toLowerCase() != 'semua') {
-        final normalizedStatus = statusFilter.toLowerCase();
-        if (normalizedStatus == 'menunggu_lksdm' ||
-            normalizedStatus == 'open') {
-          query = query.inFilter('status',
-              ['menunggu_lksdm', 'menunggu_disposisi', 'OPEN', 'open']);
-        } else if (normalizedStatus == 'ditangani_lksdm' ||
-            normalizedStatus == 'in_progress' ||
-            normalizedStatus == 'waiting_user') {
-          query = query.inFilter('status', [
-            'ditangani_lksdm',
-            'sedang_diproses',
-            'IN_PROGRESS',
-            'WAITING_USER',
-            'in_progress',
-            'waiting_user'
-          ]);
-        } else if (normalizedStatus == 'dialihkan_ke_pusat' ||
-            normalizedStatus == 'eskalasi_pusat' ||
-            normalizedStatus == 'escalated' ||
-            normalizedStatus == 'in_progress_center') {
-          query = query.inFilter('status', [
-            'dialihkan_ke_pusat',
-            'eskalasi_pusat',
-            'ESCALATED',
-            'IN_PROGRESS_CENTER',
-            'escalated',
-            'in_progress_center'
-          ]);
-        } else if (normalizedStatus == 'selesai' ||
-            normalizedStatus == 'closed' ||
-            normalizedStatus == 'resolved') {
-          query = query.inFilter('status',
-              ['selesai', 'CLOSED', 'RESOLVED', 'closed', 'resolved']);
-        } else {
-          query = query.eq('status', statusFilter);
+      List<dynamic> response;
+      try {
+        response = await buildQuery('''
+          id,
+          ticket_number,
+          judul,
+          isi,
+          status,
+          tugas_fungsi_nama,
+          lksdm_kawasan,
+          target_tim_pusat,
+          admin_lksdm_id,
+          admin_pusat_id,
+          is_public,
+          is_pinned,
+          created_at,
+          users:user_id (id_user, first_name, email, role, satuan_kerja, kawasan, jabatan, teams:id_tim(id_tim, tim, detail_nama_tim, eskalasi)),
+          tugas_fungsi:id_tusi (id_tusi, tugas_fungsi)
+        ''').order('created_at', ascending: false);
+      } catch (err) {
+        debugPrint('Fallback question query without tusi relation: $err');
+        try {
+          response = await buildQuery('''
+            id,
+            ticket_number,
+            judul,
+            isi,
+            status,
+            tugas_fungsi_nama,
+            lksdm_kawasan,
+            target_tim_pusat,
+            admin_lksdm_id,
+            admin_pusat_id,
+            is_public,
+            is_pinned,
+            created_at,
+            users:user_id (id_user, first_name, email, role, satuan_kerja, kawasan, jabatan, teams:id_tim(id_tim, tim, detail_nama_tim, eskalasi))
+          ''').order('created_at', ascending: false);
+        } catch (err2) {
+          debugPrint('Fallback question query basic fields: $err2');
+          response = await buildQuery('''
+            id,
+            ticket_number,
+            judul,
+            isi,
+            status,
+            tugas_fungsi_nama,
+            lksdm_kawasan,
+            target_tim_pusat,
+            admin_lksdm_id,
+            admin_pusat_id,
+            is_public,
+            is_pinned,
+            created_at
+          ''').order('created_at', ascending: false);
         }
       }
-
-      final response = await query.order('created_at', ascending: false);
       final List<Map<String, dynamic>> questionList =
           List<Map<String, dynamic>>.from(response);
 
@@ -196,27 +268,64 @@ class QuestionService {
   /// Ambil detail 1 pertanyaan beserta seluruh percakapan/jawaban terbarunya secara live
   static Future<QuestionModel?> getQuestionDetail(int questionId) async {
     try {
-      final qResponse = await _client.from('questions').select('''
-        id,
-        ticket_number,
-        judul,
-        isi,
-        status,
-        target_tim,
-        assigned_to,
-        tugas_fungsi_nama,
-        lksdm_kawasan,
-        target_tim_pusat,
-        admin_lksdm_id,
-        admin_pusat_id,
-        is_public,
-        is_pinned,
-        created_at,
-        profiles:user_id (id, name, email, role, unit, tim, jabatan),
-        question_tugas_fungsi (
-          tugas_fungsi (id, kode, nama, team_nama)
-        )
-      ''').eq('id', questionId).single();
+      Map<String, dynamic> qResponse;
+      try {
+        final res = await _client.from('questions').select('''
+          id,
+          ticket_number,
+          judul,
+          isi,
+          status,
+          tugas_fungsi_nama,
+          lksdm_kawasan,
+          target_tim_pusat,
+          admin_lksdm_id,
+          admin_pusat_id,
+          is_public,
+          is_pinned,
+          created_at,
+          users:user_id (id_user, first_name, email, role, satuan_kerja, kawasan, jabatan, teams:id_tim(id_tim, tim, detail_nama_tim, eskalasi)),
+          tugas_fungsi:id_tusi (id_tusi, tugas_fungsi)
+        ''').eq('id', questionId).single();
+        qResponse = Map<String, dynamic>.from(res);
+      } catch (_) {
+        try {
+          final res = await _client.from('questions').select('''
+            id,
+            ticket_number,
+            judul,
+            isi,
+            status,
+            tugas_fungsi_nama,
+            lksdm_kawasan,
+            target_tim_pusat,
+            admin_lksdm_id,
+            admin_pusat_id,
+            is_public,
+            is_pinned,
+            created_at,
+            users:user_id (id_user, first_name, email, role, satuan_kerja, kawasan, jabatan, teams:id_tim(id_tim, tim, detail_nama_tim, eskalasi))
+          ''').eq('id', questionId).single();
+          qResponse = Map<String, dynamic>.from(res);
+        } catch (_) {
+          final res = await _client.from('questions').select('''
+            id,
+            ticket_number,
+            judul,
+            isi,
+            status,
+            tugas_fungsi_nama,
+            lksdm_kawasan,
+            target_tim_pusat,
+            admin_lksdm_id,
+            admin_pusat_id,
+            is_public,
+            is_pinned,
+            created_at
+          ''').eq('id', questionId).single();
+          qResponse = Map<String, dynamic>.from(res);
+        }
+      }
 
       final qMap = Map<String, dynamic>.from(qResponse);
 
@@ -255,10 +364,63 @@ class QuestionService {
     );
   }
 
-  static bool _isValidUuid(String id) {
-    return RegExp(
-            r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
-        .hasMatch(id);
+  static bool _isValidUserId(String? id) {
+    if (id == null) return false;
+    final clean = id.trim();
+    return clean.isNotEmpty;
+  }
+
+  static bool _isValidUuid(String? id) => _isValidUserId(id);
+
+  /// Mengirimkan notifikasi ke seluruh Staf Admin dan Ketua Tim yang bertugas di tim / kawasan terkait
+  static Future<void> notifyTeamMembers({
+    required String targetTeam,
+    int? questionId,
+    required String title,
+    required String message,
+    String type = 'info',
+  }) async {
+    try {
+      final cleanTarget = targetTeam.trim().toUpperCase();
+      final lksdmMatch = RegExp(r'LKSDM\s*(\d+)', caseSensitive: false).firstMatch(cleanTarget);
+      final targetShortLksdm = lksdmMatch != null ? 'LKSDM ${lksdmMatch.group(1)}' : cleanTarget;
+
+      final users = await _client
+          .from('users')
+          .select('id_user, role, kawasan, teams:id_tim(id_tim, tim, eskalasi)')
+          .or('role.ilike.%admin%,role.ilike.%ketua%');
+
+      for (var u in users) {
+        final uTeam = (u['teams'] is Map ? u['teams']['tim'] : null)?.toString().toUpperCase() ?? '';
+        final uKawasan = u['kawasan']?.toString().toUpperCase() ?? '';
+        final uId = u['id_user']?.toString();
+
+        if (uId == null || uId.isEmpty) continue;
+
+        bool isMatch = false;
+        if (targetShortLksdm.startsWith('LKSDM')) {
+          if (uTeam.contains(targetShortLksdm) || uKawasan.contains(targetShortLksdm)) {
+            isMatch = true;
+          }
+        } else {
+          if (uTeam == cleanTarget || uTeam.contains(cleanTarget) || cleanTarget.contains(uTeam)) {
+            isMatch = true;
+          }
+        }
+
+        if (isMatch) {
+          await NotificationService.createNotification(
+            userId: uId,
+            questionId: questionId,
+            title: title,
+            message: message,
+            type: type,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Notice notifyTeamMembers: $e');
+    }
   }
 
   /// Buat Tiket Pertanyaan Baru (Awal alur: Menunggu penanganan Staf Admin LKSDM Kawasan)
@@ -275,18 +437,16 @@ class QuestionService {
     String? attachmentName,
   }) async {
     final currentUser = _client.auth.currentUser;
-    String? userId = currentUser?.id;
+    String? resolvedId = currentUser?.id;
 
-    if (userId == null || !_isValidUuid(userId)) {
+    if (!_isValidUserId(resolvedId)) {
       final savedUser = await SessionManager.getUser();
-      if (savedUser?.id != null && _isValidUuid(savedUser!.id!)) {
-        userId = savedUser.id;
+      if (_isValidUserId(savedUser?.id)) {
+        resolvedId = savedUser!.id;
       }
     }
-    // Fallback ID pegawai jika sesi auth lokal belum memiliki ID Supabase valid
-    if (userId == null || !_isValidUuid(userId)) {
-      userId = '77777777-7777-7777-7777-777777777777';
-    }
+    // Fallback ID pegawai ke akun Pegawai terdaftar di database Supabase (Manda Talita / usr_240)
+    final String userId = (_isValidUserId(resolvedId)) ? resolvedId! : 'usr_240';
 
     // Tentukan Tusi dan Tim Terkait
     String targetTeam = selectedTeam ?? 'Tim Layanan SDM BOSDM';
@@ -308,11 +468,11 @@ class QuestionService {
 
     final ticketNumber =
         'TKT-${DateTime.now().year}${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
-    final effectiveLksdm = lksdmKawasan ??
-        (selectedTeam?.contains('LKSDM') == true
+    final String effectiveLksdm = lksdmKawasan ??
+        (selectedTeam != null && selectedTeam.contains('LKSDM')
             ? selectedTeam
-            : 'LKSDM 1 (Kawasan Jakarta & Sekitarnya)');
-    final effectiveTargetPusat = targetTimPusat ?? targetTeam;
+            : 'LKSDM 1');
+    final effectiveTargetPusat = targetTimPusat ?? (targetTeam.contains('LKSDM') ? null : targetTeam);
 
     try {
       final insertPayload = <String, dynamic>{
@@ -320,10 +480,9 @@ class QuestionService {
         'ticket_number': ticketNumber,
         'judul': judul,
         'isi': isi,
-        'target_tim': targetTeam,
         'tugas_fungsi_nama': tusiNama,
         'lksdm_kawasan': effectiveLksdm,
-        'target_tim_pusat': effectiveTargetPusat,
+        if (effectiveTargetPusat != null) 'target_tim_pusat': effectiveTargetPusat,
         'is_public': isPublic,
         'status': 'menunggu_lksdm', // Status awal tiket
       };
@@ -346,8 +505,6 @@ class QuestionService {
             judul,
             isi,
             status,
-            target_tim,
-            assigned_to,
             tugas_fungsi_nama,
             lksdm_kawasan,
             target_tim_pusat,
@@ -356,7 +513,7 @@ class QuestionService {
             is_public,
             is_pinned,
             created_at,
-            profiles:user_id (id, name, email, role, unit, tim, jabatan)
+            users:user_id (id_user, first_name, email, role, satuan_kerja, kawasan, jabatan, teams:id_tim(id_tim, tim, detail_nama_tim, eskalasi))
           ''').single();
           break;
         } catch (e) {
@@ -398,13 +555,22 @@ class QuestionService {
 
       // Trigger notifikasi tiket berhasil dibuat
       try {
-        NotificationService.createNotification(
+        await NotificationService.createNotification(
           userId: userId,
           questionId: questionId,
           title: 'Tiket Berhasil Diajukan',
           message:
-              'Tiket #$ticketNumber Anda sedang menunggu verifikasi oleh Staf Layanan Kawasan SDM.',
+              'Tiket #$ticketNumber Anda sedang menunggu verifikasi oleh Staf Layanan Kawasan SDM ($effectiveLksdm).',
           type: 'tiket_diajukan',
+        );
+
+        // Notifikasi ke seluruh Staf Admin & Ketua Tim Kawasan LKSDM
+        await notifyTeamMembers(
+          targetTeam: effectiveLksdm,
+          questionId: questionId,
+          title: 'Tiket Baru Masuk (#$ticketNumber)',
+          message: 'Ada tiket baru dari pegawai di $effectiveLksdm: "$judul".',
+          type: 'tiket_baru',
         );
       } catch (e) {
         debugPrint('Warning: Notification creation failed: $e');
@@ -431,26 +597,41 @@ class QuestionService {
   }
 
   static Future<void> _safeInsertAnswer(Map<String, dynamic> payload) async {
-    // Populate both legacy (penjawab_*, isi_jawaban) and modern (sender_*, isi_pesan) column aliases
-    final Map<String, dynamic> candidate = Map<String, dynamic>.from(payload);
-
     final name =
-        candidate['sender_name'] ?? candidate['penjawab_nama'] ?? 'Pengguna';
+        payload['sender_name'] ?? payload['penjawab_nama'] ?? 'Pengguna';
     final role =
-        candidate['sender_role'] ?? candidate['penjawab_role'] ?? 'pegawai';
-    final msg = candidate['isi_pesan'] ?? candidate['isi_jawaban'] ?? '-';
+        payload['sender_role'] ?? payload['penjawab_role'] ?? 'pegawai';
+    final msg = payload['isi_pesan'] ?? payload['isi_jawaban'] ?? '-';
 
+    // 1. Coba format tabel answers SOP instansi terbaru
+    final Map<String, dynamic> modernPayload = {
+      'question_id': payload['question_id'],
+      'sender_name': name,
+      'sender_role': role,
+      'isi_pesan': msg,
+    };
+    if (payload['user_id'] != null) {
+      modernPayload['user_id'] = payload['user_id'];
+    }
+    if (payload['attachment_url'] != null) {
+      modernPayload['attachment_url'] = payload['attachment_url'];
+    }
+
+    try {
+      await _client.from('answers').insert(modernPayload);
+      return;
+    } catch (_) {}
+
+    // 2. Fallback untuk skema legacy
+    final Map<String, dynamic> candidate = Map<String, dynamic>.from(payload);
     candidate['penjawab_nama'] = name;
     candidate['sender_name'] = name;
     candidate['penjawab_role'] = role;
     candidate['sender_role'] = role;
     candidate['isi_jawaban'] = msg;
     candidate['isi_pesan'] = msg;
-
-    // Remove user_id as answers table in Supabase schema does not have user_id
     candidate.remove('user_id');
 
-    // Retry insertion, stripping any column that does not exist in schema
     Map<String, dynamic> toInsert = Map<String, dynamic>.from(candidate);
     for (int retry = 0; retry < 6; retry++) {
       try {
@@ -538,15 +719,13 @@ class QuestionService {
     try {
       final currentUser = _client.auth.currentUser;
       String? userId = currentUser?.id;
-      if (userId == null || !_isValidUuid(userId)) {
+      if (!_isValidUserId(userId)) {
         final savedUser = await SessionManager.getUser();
-        if (savedUser?.id != null && _isValidUuid(savedUser!.id!)) {
-          userId = savedUser.id;
+        if (_isValidUserId(savedUser?.id)) {
+          userId = savedUser!.id;
         }
       }
-      if (userId == null || !_isValidUuid(userId)) {
-        userId = '77777777-7777-7777-7777-777777777777';
-      }
+      userId ??= 'usr_002';
 
       final String validSenderRole;
       final roleToCheck = (senderRoleType ?? pengirimRole).toLowerCase();
@@ -578,16 +757,62 @@ class QuestionService {
       });
 
       // 2. Perbarui status pertanyaan: jika direspon oleh Ketua Tim / Admin LKSDM, ubah jadi 'ditangani_lksdm' (IN_PROGRESS)
-      final updateData = <String, dynamic>{
-        'updated_at': DateTime.now().toIso8601String(),
-      };
+      final updateData = <String, dynamic>{};
       if (validSenderRole == 'admin_lksdm' || validSenderRole == 'ketua_tim') {
         updateData['status'] = 'ditangani_lksdm';
       } else if (validSenderRole == 'admin_pusat') {
         updateData['status'] = 'dialihkan_ke_pusat';
       }
 
-      await _safeUpdateQuestion(questionId, updateData);
+      if (updateData.isNotEmpty) {
+        await _safeUpdateQuestion(questionId, updateData);
+      }
+
+      // 3. Dispatch notifikasi ke pihak lawan bicara
+      try {
+        final qRecord = await _client
+            .from('questions')
+            .select('user_id, ticket_number, lksdm_kawasan, target_tim_pusat')
+            .eq('id', questionId)
+            .maybeSingle();
+
+        if (qRecord != null) {
+          final authorId = qRecord['user_id']?.toString();
+          final ticketNumber = qRecord['ticket_number']?.toString() ?? questionId.toString();
+
+          if (validSenderRole != 'pegawai') {
+            // Dijawab oleh staf/ketua tim -> Kirim notifikasi ke Pegawai
+            if (authorId != null && authorId.isNotEmpty) {
+              await NotificationService.createNotification(
+                userId: authorId,
+                questionId: questionId,
+                title: 'Pertanyaan Anda Telah Dijawab',
+                message: '$pengirimNama telah memberikan jawaban pada tiket #$ticketNumber Anda.',
+                type: 'jawaban_baru',
+              );
+            }
+          } else {
+            // Pegawai mengirim pesan balasan -> Kirim notifikasi ke tim penangan
+            final targetLksdm = qRecord['lksdm_kawasan']?.toString();
+            final targetPusat = qRecord['target_tim_pusat']?.toString();
+            final targetTeam = (targetPusat != null && targetPusat.isNotEmpty)
+                ? targetPusat
+                : (targetLksdm ?? '');
+
+            if (targetTeam.isNotEmpty) {
+              await notifyTeamMembers(
+                targetTeam: targetTeam,
+                questionId: questionId,
+                title: 'Balasan Baru dari Pegawai (#$ticketNumber)',
+                message: '$pengirimNama membalas percakapan pada tiket #$ticketNumber.',
+                type: 'balasan_pegawai',
+              );
+            }
+          }
+        }
+      } catch (notifErr) {
+        debugPrint('Notice sending reply notifications: $notifErr');
+      }
 
       return true;
     } catch (e) {
@@ -647,19 +872,17 @@ class QuestionService {
     try {
       final currentUser = _client.auth.currentUser;
       String? userId = currentUser?.id;
-      if (userId == null || !_isValidUuid(userId)) {
+      if (!_isValidUserId(userId)) {
         final savedUser = await SessionManager.getUser();
-        if (savedUser?.id != null && _isValidUuid(savedUser!.id!)) {
-          userId = savedUser.id;
+        if (_isValidUserId(savedUser?.id)) {
+          userId = savedUser!.id;
         }
       }
-      if (userId == null || !_isValidUuid(userId)) {
-        userId = '44444444-4444-4444-4444-444444444444';
-      }
+      userId ??= 'usr_002';
 
       // 1. Catat event eskalasi di tabel answers sebagai system_event
       final eventText =
-          'Pertanyaan telah dialihkan oleh $escalatedBy ke $centralTeamName.${reason != null && reason.isNotEmpty ? " Catatan: $reason" : ""}';
+          'Pertanyaan telah dialihkan oleh $escalatedBy ke Tim $centralTeamName.${reason != null && reason.isNotEmpty ? " Catatan: $reason" : ""}';
 
       await _safeInsertAnswer({
         'question_id': questionId,
@@ -669,18 +892,53 @@ class QuestionService {
         'isi_pesan': eventText,
       });
 
-      // 2. Perbarui status pertanyaan menjadi 'dialihkan_ke_pusat' dan set target_tim ke Tim Pusat
+      // 2. Perbarui status pertanyaan menjadi 'dialihkan_ke_pusat' dan target_tim_pusat
       await _safeUpdateQuestion(questionId, {
         'status': 'dialihkan_ke_pusat',
-        'target_tim': centralTeamName,
         'target_tim_pusat': centralTeamName,
-        'updated_at': DateTime.now().toIso8601String(),
       });
+
+      // 3. Notifikasi ke pembuat tiket (Pegawai) & Tim Pusat terkait
+      try {
+        final qRecord = await _client
+            .from('questions')
+            .select('user_id, ticket_number, lksdm_kawasan, judul')
+            .eq('id', questionId)
+            .maybeSingle();
+
+        if (qRecord != null) {
+          final authorId = qRecord['user_id']?.toString();
+          final ticketNumber = qRecord['ticket_number']?.toString() ?? questionId.toString();
+          final lksdm = qRecord['lksdm_kawasan']?.toString() ?? 'LKSDM';
+
+          // Notifikasi ke Pegawai
+          if (authorId != null && authorId.isNotEmpty) {
+            await NotificationService.createNotification(
+              userId: authorId,
+              questionId: questionId,
+              title: 'Tiket Dialihkan ke Tim Pusat',
+              message: 'Tiket #$ticketNumber Anda telah dialihkan ke Tim $centralTeamName untuk penanganan lebih lanjut.',
+              type: 'eskalasi_pusat',
+            );
+          }
+
+          // Notifikasi ke Staf Admin & Ketua Tim Pusat
+          await notifyTeamMembers(
+            targetTeam: centralTeamName,
+            questionId: questionId,
+            title: 'Eskalasi Tiket Baru (#$ticketNumber)',
+            message: 'Tiket dari $lksdm telah dialihkan ke tim Anda ($centralTeamName): "${qRecord['judul']}".',
+            type: 'eskalasi_pusat',
+          );
+        }
+      } catch (notifErr) {
+        debugPrint('Warning sending escalation notifications: $notifErr');
+      }
 
       return true;
     } catch (e) {
       debugPrint('Error escalating ticket to central: $e');
-      return true; // Return true for mock/offline resilience
+      return true;
     }
   }
 
@@ -693,15 +951,13 @@ class QuestionService {
     try {
       final currentUser = _client.auth.currentUser;
       String? userId = currentUser?.id;
-      if (userId == null || !_isValidUuid(userId)) {
+      if (!_isValidUserId(userId)) {
         final savedUser = await SessionManager.getUser();
-        if (savedUser?.id != null && _isValidUuid(savedUser!.id!)) {
-          userId = savedUser.id;
+        if (_isValidUserId(savedUser?.id)) {
+          userId = savedUser!.id;
         }
       }
-      if (userId == null || !_isValidUuid(userId)) {
-        userId = '77777777-7777-7777-7777-777777777777';
-      }
+      userId ??= 'usr_240';
 
       final newStatus = isResolved ? 'selesai' : 'dialihkan_ke_pusat';
 
@@ -856,7 +1112,7 @@ class QuestionService {
         judul,
         isi,
         status,
-        target_tim,
+        target_tim_pusat,
         tugas_fungsi_nama,
         is_public,
         created_at
@@ -887,7 +1143,7 @@ class QuestionService {
         judul,
         isi,
         status,
-        target_tim,
+        target_tim_pusat,
         lksdm_kawasan,
         tugas_fungsi_nama,
         is_public,
@@ -1069,7 +1325,7 @@ class QuestionService {
         user: const UserModel(
           id: '77777777-7777-7777-7777-777777777777',
           name: 'Budi Santoso, M.Si.',
-          email: 'pegawai@brin.go.id',
+          email: 'budi.pegawai@brin.go.id',
           unit: 'SETTAMA',
           tim: 'Layanan Kawasan SDM 1 : Thamrin I',
           lksdm: 'LKSDM 1 : Thamrin I',

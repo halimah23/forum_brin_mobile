@@ -378,7 +378,10 @@ class _QuestionListViewState extends State<QuestionListView> with SingleTickerPr
                 await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AskQuestionScreen(token: widget.user.token ?? ''),
+                    builder: (context) => AskQuestionScreen(
+                      token: widget.user.token ?? '',
+                      user: widget.user,
+                    ),
                   ),
                 );
 

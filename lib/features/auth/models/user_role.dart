@@ -7,9 +7,11 @@ enum UserRole {
   eksekutif,
   member;
 
-  static UserRole fromString(String? roleStr) {
+  static UserRole fromString(String? roleStr, {String? eskalasi}) {
     if (roleStr == null || roleStr.isEmpty) return UserRole.member;
     final normalized = roleStr.toLowerCase().replaceAll(' ', '_').trim();
+    final esk = eskalasi?.toUpperCase().trim();
+
     switch (normalized) {
       case 'super_admin':
       case 'superadmin':
@@ -17,10 +19,12 @@ enum UserRole {
       case 'admin_lksdm':
       case 'lksdm':
       case 'staf_lksdm':
+      case 'staff_lksdm':
         return UserRole.adminLksdm;
       case 'admin_pusat':
       case 'adminpusat':
       case 'staf_pusat':
+      case 'staff_pusat':
         return UserRole.adminPusat;
       case 'admin':
       case 'admin_layanan':
@@ -31,6 +35,9 @@ enum UserRole {
       case 'staf':
       case 'staff':
       case 'staf_admin':
+      case 'staff_admin':
+        if (esk == 'LKSDM') return UserRole.adminLksdm;
+        if (esk == 'PUSAT') return UserRole.adminPusat;
         return UserRole.admin;
       case 'ketua_tim':
       case 'ketuatim':

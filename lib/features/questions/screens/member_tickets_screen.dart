@@ -264,6 +264,7 @@ class _MemberTicketsScreenState extends State<MemberTicketsScreen>
                       MaterialPageRoute(
                         builder: (context) => AskQuestionScreen(
                           token: widget.user.token ?? '',
+                          user: widget.user,
                         ),
                       ),
                     );

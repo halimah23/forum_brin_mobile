@@ -35,8 +35,10 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
 
   Future<void> _loadData() async {
     setState(() => isLoading = true);
-    final teamName = widget.user.tim ?? 'Tim Layanan SDM BOSDM';
-    final list = await QuestionService.getQuestions(teamFilter: teamName);
+    final filter = widget.user.isKetuaTimLksdm
+        ? widget.user.effectiveLksdm
+        : (widget.user.tim ?? 'Tim Layanan SDM BOSDM');
+    final list = await QuestionService.getQuestions(teamFilter: filter);
     if (mounted) {
       setState(() {
         teamQuestions = list;
@@ -48,7 +50,9 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final primaryTeal = Colors.teal.shade800;
-    final teamName = widget.user.tim ?? 'Tim Layanan SDM BOSDM';
+    final teamName = widget.user.isKetuaTimLksdm
+        ? widget.user.effectiveLksdm
+        : (widget.user.tim ?? 'Tim Layanan SDM BOSDM');
 
     final totalCount = teamQuestions.length;
     final pendingCount = teamQuestions.where((q) => q.ticketStatus.dbKey == 'OPEN').length;

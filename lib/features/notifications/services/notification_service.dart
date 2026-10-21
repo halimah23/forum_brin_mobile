@@ -113,6 +113,15 @@ class NotificationService {
 
       return NotificationModel.fromJson(response);
     } catch (e) {
+      try {
+        final retryPayload = Map<String, dynamic>.from(payload)..remove('type');
+        final res = await _client
+            .from('notifications')
+            .insert(retryPayload)
+            .select()
+            .single();
+        return NotificationModel.fromJson(res);
+      } catch (_) {}
       debugPrint('Fallback createNotification: $e');
       final fallbackItem = NotificationModel(
         id: DateTime.now().millisecondsSinceEpoch,

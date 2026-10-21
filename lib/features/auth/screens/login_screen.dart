@@ -44,8 +44,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void handleQuickDemoLogin(String email) {
     emailController.text = email;
-    passwordController.text = 'password123';
-    context.read<AuthCubit>().login(email: email, password: 'password123');
+    passwordController.text = 'Password123!';
+    context.read<AuthCubit>().login(email: email, password: 'Password123!');
   }
 
   void showMessage(String message) {
@@ -132,20 +132,21 @@ class _LoginScreenState extends State<LoginScreen> {
                         CustomTextField(
                           controller: emailController,
                           focusNode: emailFocusNode,
-                          label: 'Email Pegawai',
-                          hintText: 'nama@brin.go.id',
-                          keyboardType: TextInputType.emailAddress,
+                          label: 'Email Pegawai / Username',
+                          hintText: 'nama@brin.go.id atau username',
+                          keyboardType: TextInputType.text,
                           textInputAction: TextInputAction.next,
-                          prefixIcon: const Icon(Icons.email_outlined),
+                          prefixIcon: const Icon(Icons.person_outline),
                           onFieldSubmitted: (_) {
                             passwordFocusNode.requestFocus();
                           },
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'Email harus diisi';
+                              return 'Email atau username harus diisi';
                             }
-                            if (!value.contains('@')) {
-                              return 'Format email tidak valid';
+                            final val = value.trim();
+                            if (val.length < 3) {
+                              return 'Minimal 3 karakter';
                             }
                             return null;
                           },
@@ -234,14 +235,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   const SizedBox(width: 10),
                                   const Text(
-                                    'Akses Pengujian Cepat',
+                                    'Akses Pengujian Cepat (Database Supabase)',
                                     style: AppTypography.heading3,
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 4),
                               const Text(
-                                'Pilih profil pengujian di bawah ini untuk simulasi login:',
+                                'Pilih akun resmi dari basis data Supabase di bawah ini untuk masuk cepat:',
                                 style: AppTypography.caption,
                               ),
                               const SizedBox(height: 14),
@@ -250,34 +251,89 @@ class _LoginScreenState extends State<LoginScreen> {
                                 runSpacing: 8,
                                 children: [
                                   _buildRoleTile(
-                                    roleName: 'Pegawai',
+                                    roleName: 'Manda Talita TH (Member LK1)',
                                     roleTag: 'Member',
-                                    email: 'pegawai@brin.go.id',
+                                    email: 'manda.talita.taruli.hasibuan.@brin.go.id',
                                   ),
                                   _buildRoleTile(
-                                    roleName: 'Staf LKSDM',
-                                    roleTag: 'LKSDM',
-                                    email: 'admin.lksdm1@brin.go.id',
+                                    roleName: 'Lutvia R. (Ketua LKSDM 1)',
+                                    roleTag: 'Ketua LKSDM',
+                                    email: 'lutvia.restu.putriana@brin.go.id',
                                   ),
                                   _buildRoleTile(
-                                    roleName: 'Staf Pusat',
-                                    roleTag: 'Pusat',
-                                    email: 'admin.pusat@brin.go.id',
+                                    roleName: 'Faris Setya AH (Admin LKSDM 1)',
+                                    roleTag: 'Admin LKSDM',
+                                    email: 'faris.setya.aqil.humam@brin.go.id',
                                   ),
                                   _buildRoleTile(
-                                    roleName: 'Ketua Tim',
-                                    roleTag: 'Lead',
-                                    email: 'ketuatim@brin.go.id',
+                                    roleName: 'Raisya QN (Ketua PDIS)',
+                                    roleTag: 'Ketua Pusat',
+                                    email: 'raisya.qianisa.nabilla@brin.go.id',
+                                  ),                                  
+                                  _buildRoleTile(
+                                    roleName: 'Abisakha SA (Admin PDIS)',
+                                    roleTag: 'Admin Pusat',
+                                    email: 'abisakha.saif.alfath@brin.go.id',
                                   ),
                                   _buildRoleTile(
-                                    roleName: 'Eksekutif',
-                                    roleTag: 'Exec',
-                                    email: 'eksekutif@brin.go.id',
+                                    roleName: 'Rizka FL (Member LK6)',
+                                    roleTag: 'Member',
+                                    email: 'rizka.fazri.lestari@brin.go.id',
                                   ),
                                   _buildRoleTile(
-                                    roleName: 'Super Admin',
-                                    roleTag: 'Admin',
-                                    email: 'superadmin@brin.go.id',
+                                    roleName: 'Redho H. Fatah (Ketua LKSDM 6)',
+                                    roleTag: 'Ketua LKSDM',
+                                    email: 'redho.hasyrahim.fatah@brin.go.id',
+                                  ),
+                                  _buildRoleTile(
+                                    roleName: 'Maria Fernanda DV (Admin LKSDM 6)',
+                                    roleTag: 'Admin LKSDM',
+                                    email: 'maria.fernanda.de.vega@brin.go.id',
+                                  ),
+                                  _buildRoleTile(
+                                    roleName: 'Rizka A.R (Ketua ORTALA)',
+                                    roleTag: 'Ketua Pusat',
+                                    email: 'rizka.amelia.rahmadhani@brin.go.id',
+                                  ),                                  
+                                  _buildRoleTile(
+                                    roleName: 'Merlina M. (Admin ORTALA)',
+                                    roleTag: 'Admin Pusat',
+                                    email: 'merlina.meiriyanti@brin.go.id',
+                                  ),
+                                  _buildRoleTile(
+                                    roleName: 'Haliza FA (Member LK3)',
+                                    roleTag: 'Member',
+                                    email: 'haliza.fawwaz.ayuningtyas@brin.go.id',
+                                  ),
+                                  _buildRoleTile(
+                                    roleName: 'Tri Gunawan (Ketua LKSDM 3)',
+                                    roleTag: 'Ketua LKSDM',
+                                    email: 'tri.gunawan.musa@brin.go.id',
+                                  ),
+                                  _buildRoleTile(
+                                    roleName: 'Najwa KS (Admin LKSDM 3)',
+                                    roleTag: 'Admin LKSDM',
+                                    email: 'najwa.khairana.sulistyoningsih@brin.go.id',
+                                  ),
+                                  _buildRoleTile(
+                                    roleName: 'Renatha IR (Ketua PENKOM)',
+                                    roleTag: 'Ketua Pusat',
+                                    email: 'renatha.indah.riski@brin.go.id',
+                                  ),                                  
+                                  _buildRoleTile(
+                                    roleName: 'Zaidan ND (Admin PENKOM)',
+                                    roleTag: 'Admin Pusat',
+                                    email: 'zaidan.nabil.diwangkara@brin.go.id',
+                                  ),
+                                  _buildRoleTile(
+                                    roleName: 'Aisyah F. (Super Admin)',
+                                    roleTag: 'Super Admin',
+                                    email: 'aisyah.febrianti.kusmiandini@brin.go.id',
+                                  ),
+                                  _buildRoleTile(
+                                    roleName: 'Siti Halimah (Eksekutif)',
+                                    roleTag: 'Eksekutif',
+                                    email: 'siti.halimah@brin.go.id',
                                   ),
                                 ],
                               ),

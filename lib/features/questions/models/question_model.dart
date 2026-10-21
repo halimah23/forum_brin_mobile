@@ -35,6 +35,8 @@ class QuestionModel {
 
   String? get lksdmKawasan => lksdmWilayah;
   String? get escalatedToTeam => targetTimPusat;
+  UserModel? get author => user;
+  String? get userId => user?.id;
 
   TicketStatus get ticketStatus => TicketStatus.fromString(status);
   bool get isClosed => ticketStatus.isClosed;
@@ -189,7 +191,11 @@ class QuestionModel {
 
   factory QuestionModel.fromJson(Map<String, dynamic> json) {
     UserModel? author;
-    if (json['profiles'] is Map<String, dynamic>) {
+    if (json['users'] is Map<String, dynamic>) {
+      author = UserModel.fromJson(Map<String, dynamic>.from(json['users']));
+    } else if (json['author'] is Map<String, dynamic>) {
+      author = UserModel.fromJson(Map<String, dynamic>.from(json['author']));
+    } else if (json['profiles'] is Map<String, dynamic>) {
       author = UserModel.fromJson(Map<String, dynamic>.from(json['profiles']));
     } else if (json['user'] is Map<String, dynamic>) {
       author = UserModel.fromJson(Map<String, dynamic>.from(json['user']));
@@ -214,6 +220,10 @@ class QuestionModel {
       categories = (json['tugas_fungsi'] as List)
           .map((item) => CategoryModel.fromJson(Map<String, dynamic>.from(item)))
           .toList();
+    } else if (json['tugas_fungsi'] is Map) {
+      categories = [
+        CategoryModel.fromJson(Map<String, dynamic>.from(json['tugas_fungsi']))
+      ];
     }
 
     List<AnswerModel>? answersList;
