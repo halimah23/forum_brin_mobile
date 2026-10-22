@@ -128,7 +128,7 @@ void main() {
     });
 
     test('SQL migration file exists and contains all required SOP tables and seed rows', () {
-      final sqlFile = File('lib/core/network/supabase_migration_sop_instansi.sql');
+      final sqlFile = File('supabase/migrations/supabase_migration_sop_instansi.sql');
       expect(sqlFile.existsSync(), isTrue);
 
       final content = sqlFile.readAsStringSync();

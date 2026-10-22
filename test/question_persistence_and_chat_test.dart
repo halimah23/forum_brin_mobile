@@ -1,3 +1,5 @@
+import 'package:forum_brin_mobile/core/services/storage/session_manager.dart';
+import 'package:forum_brin_mobile/features/auth/models/user_model.dart';
 // ignore_for_file: avoid_print
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,6 +21,14 @@ void main() {
     final key = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
 
     await Supabase.initialize(url: url, publishableKey: key);
+    await SessionManager.saveUser(
+      const UserModel(
+        id: 'usr_240',
+        name: 'Annisah Tanziela Aziezir',
+        email: 'annisah.tanziela.aziezir@brin.go.id',
+        role: 'pegawai',
+      ),
+    );
   });
 
   test('E2E: Pegawai creates question -> persists to DB -> loads via getQuestions -> all roles send chat answers', () async {

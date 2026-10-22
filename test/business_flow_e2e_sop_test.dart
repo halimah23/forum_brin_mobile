@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:forum_brin_mobile/features/auth/models/user_model.dart';
-import 'package:forum_brin_mobile/features/auth/models/user_role.dart';
 import 'package:forum_brin_mobile/features/questions/models/question_model.dart';
 import 'package:forum_brin_mobile/features/questions/models/ticket_status.dart';
 

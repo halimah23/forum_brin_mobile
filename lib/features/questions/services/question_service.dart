@@ -2,10 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/storage/session_manager.dart';
 import '../data/tusi_catalog_data.dart';
-import '../models/answer_model.dart';
 import '../models/category_model.dart';
 import '../models/question_model.dart';
-import '../../auth/models/user_model.dart';
 import '../../notifications/services/notification_service.dart';
 
 class QuestionService {
@@ -255,13 +253,8 @@ class QuestionService {
 
       return questionList.map((item) => QuestionModel.fromJson(item)).toList();
     } catch (e) {
-      // Fallback data simulasi jika koneksi Supabase belum terkonfigurasi
-      return _getFallbackQuestions(
-        teamFilter: teamFilter,
-        statusFilter: statusFilter,
-        userIdFilter: userIdFilter,
-        isPublicOnly: isPublicOnly,
-      );
+      debugPrint('Error fetching questions from Supabase: $e');
+      return [];
     }
   }
 
@@ -390,6 +383,7 @@ class QuestionService {
           .select('id_user, role, kawasan, teams:id_tim(id_tim, tim, eskalasi)')
           .or('role.ilike.%admin%,role.ilike.%ketua%');
 
+      final matchedIds = <String>[];
       for (var u in users) {
         final uTeam = (u['teams'] is Map ? u['teams']['tim'] : null)?.toString().toUpperCase() ?? '';
         final uKawasan = u['kawasan']?.toString().toUpperCase() ?? '';
@@ -409,14 +403,19 @@ class QuestionService {
         }
 
         if (isMatch) {
-          await NotificationService.createNotification(
-            userId: uId,
-            questionId: questionId,
-            title: title,
-            message: message,
-            type: type,
-          );
+          matchedIds.add(uId);
         }
+      }
+
+      if (matchedIds.isNotEmpty) {
+        final futures = matchedIds.take(5).map((id) => NotificationService.createNotification(
+          userId: id,
+          questionId: questionId,
+          title: title,
+          message: message,
+          type: type,
+        ));
+        await Future.wait(futures);
       }
     } catch (e) {
       debugPrint('Notice notifyTeamMembers: $e');
@@ -445,8 +444,10 @@ class QuestionService {
         resolvedId = savedUser!.id;
       }
     }
-    // Fallback ID pegawai ke akun Pegawai terdaftar di database Supabase (Manda Talita / usr_240)
-    final String userId = (_isValidUserId(resolvedId)) ? resolvedId! : 'usr_240';
+    if (!_isValidUserId(resolvedId)) {
+      throw Exception('Sesi pengguna tidak valid atau belum login.');
+    }
+    final String userId = resolvedId!;
 
     // Tentukan Tusi dan Tim Terkait
     String targetTeam = selectedTeam ?? 'Tim Layanan SDM BOSDM';
@@ -725,7 +726,9 @@ class QuestionService {
           userId = savedUser!.id;
         }
       }
-      userId ??= 'usr_002';
+      if (userId == null || userId.trim().isEmpty) {
+        throw Exception('Sesi pengguna tidak valid atau belum login.');
+      }
 
       final String validSenderRole;
       final roleToCheck = (senderRoleType ?? pengirimRole).toLowerCase();
@@ -878,7 +881,9 @@ class QuestionService {
           userId = savedUser!.id;
         }
       }
-      userId ??= 'usr_002';
+      if (userId == null || userId.trim().isEmpty) {
+        throw Exception('Sesi pengguna tidak valid atau belum login.');
+      }
 
       // 1. Catat event eskalasi di tabel answers sebagai system_event
       final eventText =
@@ -957,7 +962,9 @@ class QuestionService {
           userId = savedUser!.id;
         }
       }
-      userId ??= 'usr_240';
+      if (userId == null || userId.trim().isEmpty) {
+        throw Exception('Sesi pengguna tidak valid atau belum login.');
+      }
 
       final newStatus = isResolved ? 'selesai' : 'dialihkan_ke_pusat';
 
@@ -1302,136 +1309,6 @@ class QuestionService {
       debugPrint('Error resolveTicketByUser: $e');
       return false;
     }
-  }
-
-  /// Fallback dummy data untuk mode offline / preview
-  static List<QuestionModel> _getFallbackQuestions({
-    String? teamFilter,
-    String? statusFilter,
-    String? userIdFilter,
-    bool? isPublicOnly,
-    bool? isPrivateOnly,
-  }) {
-    final list = [
-      QuestionModel(
-        id: 101,
-        ticketNumber: 'TKT-202609-001',
-        judul: 'Prosedur Uji Kompetensi Kenaikan Jenjang Peneliti Utama',
-        isi:
-            'Mohon petunjuk berkas dan persyaratan yang harus dipersiapkan untuk uji kompetensi perpindahan jabatan ke jenjang Peneliti Utama.',
-        status: 'menunggu_disposisi',
-        targetTim: 'Tim Mutasi dan Pengelolaan JF 1',
-        lksdmWilayah: 'Layanan Kawasan SDM 1 : Thamrin I',
-        user: const UserModel(
-          id: '77777777-7777-7777-7777-777777777777',
-          name: 'Budi Santoso, M.Si.',
-          email: 'budi.pegawai@brin.go.id',
-          unit: 'SETTAMA',
-          tim: 'Layanan Kawasan SDM 1 : Thamrin I',
-          lksdm: 'LKSDM 1 : Thamrin I',
-          jabatan: 'Peneliti Ahli Muda',
-        ),
-        isPublic: false, // Tiket Privat
-        tugasFungsiNama:
-            'BRIN-04.03.06.02.01.02 - Fasilitasi Uji Kompetensi (Kenaikan Jenjang Jabatan)',
-        createdAt:
-            DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
-        attachmentName: 'Nota_Dinas_Usulan_JF.pdf',
-        attachmentUrl: 'https://example.com/Nota_Dinas_Usulan_JF.pdf',
-      ),
-      QuestionModel(
-        id: 102,
-        ticketNumber: 'TKT-202609-002',
-        judul: 'Klarifikasi Evaluasi Peta Jabatan di Kawasan Sains',
-        isi:
-            'Bagaimana mekanisme pengusulan pembaharuan peta jabatan dan formasi JF untuk kawasan terpadu?',
-        status: 'menunggu_disposisi',
-        targetTim: 'Tim Ortala',
-        lksdmWilayah: 'Layanan Kawasan SDM 2 : Thamrin II',
-        user: const UserModel(
-          id: '88888888-8888-8888-8888-888888888888',
-          name: 'Siti Nurhaliza, S.T.',
-          email: 'siti.nurhaliza@brin.go.id',
-          unit: 'OR PPT',
-          tim: 'Layanan Kawasan SDM 2 : Thamrin II',
-          lksdm: 'LKSDM 2 : Thamrin II',
-          jabatan: 'Perekayasa Ahli Pertama',
-        ),
-        isPublic: true, // Tiket Publik
-        tugasFungsiNama: 'BRIN-04.03.01.05 - Penyusunan Peta Jabatan',
-        createdAt:
-            DateTime.now().subtract(const Duration(hours: 5)).toIso8601String(),
-      ),
-      QuestionModel(
-        id: 103,
-        ticketNumber: 'TKT-202609-003',
-        judul: 'Pencantuman Gelar Akademik S3 Luar Negeri',
-        isi:
-            'Ijazah doktoral saya telah disetarakan Kemendikbudristek, langkah apa yang perlu dilakukan di SIMPEG?',
-        status: 'selesai',
-        targetTim: 'Tim Perencanaan dan Pengembangan Kompetensi',
-        assignedTo: 'Admin Tim Pengembangan Kompetensi',
-        lksdmWilayah: 'Layanan Kawasan SDM 3 : Cibinong',
-        user: const UserModel(
-          id: '99999999-9999-9999-9999-999999999999',
-          name: 'Dr. Bambang Sutrisno, M.Eng.',
-          email: 'bambang.sutrisno@brin.go.id',
-          unit: 'OR IKN',
-          tim: 'Layanan Kawasan SDM 3 : Cibinong',
-          lksdm: 'LKSDM 3 : Cibinong',
-          jabatan: 'Peneliti Ahli Madya',
-        ),
-        isPublic: true, // Tiket Publik
-        tugasFungsiNama: 'BRIN-04.03.05.09 - Pencantuman Gelar Akademik',
-        createdAt:
-            DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
-        resolvedAt:
-            DateTime.now().subtract(const Duration(hours: 4)).toIso8601String(),
-        rating: 5,
-        ratingFeedback:
-            'Layanan sangat cepat dan informatif. Terima kasih tim BOSDM BRIN!',
-        ratingSubmittedAt:
-            DateTime.now().subtract(const Duration(hours: 3)).toIso8601String(),
-        answers: const [
-          AnswerModel(
-            id: 1,
-            questionId: 103,
-            penjawabNama: 'Tim Perencanaan dan Pengembangan Kompetensi',
-            penjawabRole: 'Admin Tim Pengembangan Kompetensi',
-            isiJawaban:
-                'Halo, silakan unggah SK Penyetaraan Ijazah beserta Transkrip Nilai melalui modul Layanan Mandiri SIMPEG BRIN. Tim kami akan melakukan verifikasi berkas dalam waktu 3 hari kerja.',
-            createdAt: '2026-09-27T14:30:00Z',
-          ),
-        ],
-      ),
-    ];
-
-    return list.where((q) {
-      if (isPublicOnly == true && !q.isPublic) {
-        return false;
-      }
-      if (isPrivateOnly == true && q.isPublic) {
-        return false;
-      }
-      if (userIdFilter != null && userIdFilter.isNotEmpty) {
-        if (q.user?.id != null && q.user?.id.toString() != userIdFilter) {
-          return false;
-        }
-      }
-      if (teamFilter != null &&
-          teamFilter.isNotEmpty &&
-          teamFilter != 'Semua Tim') {
-        if (q.targetTim?.toLowerCase() != teamFilter.toLowerCase()) {
-          return false;
-        }
-      }
-      if (statusFilter != null &&
-          statusFilter.isNotEmpty &&
-          statusFilter != 'semua') {
-        if (q.status.toLowerCase() != statusFilter.toLowerCase()) return false;
-      }
-      return true;
-    }).toList();
   }
 
   /// Subscribe ke percakapan (answers) realtime untuk suatu pertanyaan

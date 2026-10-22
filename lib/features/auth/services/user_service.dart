@@ -52,15 +52,8 @@ class UserService {
       final rawList = List<Map<String, dynamic>>.from(response);
       users = rawList.map((item) => UserModel.fromJson(item)).toList();
     } catch (e) {
-      debugPrint('Notice fetch from users table: $e');
-      try {
-        final response = await _client.from('profiles').select().order('name', ascending: true);
-        final rawList = List<Map<String, dynamic>>.from(response);
-        users = rawList.map((item) => UserModel.fromJson(item)).toList();
-      } catch (err) {
-        debugPrint('Error fetch users fallback profiles: $err');
-        return [];
-      }
+      debugPrint('Error fetching users from Supabase: $e');
+      return [];
     }
 
     // Filter berdasarkan Role jika ditentukan

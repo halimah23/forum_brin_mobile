@@ -118,47 +118,6 @@ class AuthService {
       debugPrint('Notice query users Supabase: $dbError');
     }
 
-    // 3. Fallback ke tabel `public.profiles` legacy jika database belum dimigrasikan
-    try {
-      var profile = await _client
-          .from('profiles')
-          .select()
-          .ilike('email', cleanInput)
-          .maybeSingle();
-
-      if (profile == null && cleanInput.contains('superadmin')) {
-        profile = await _client
-            .from('profiles')
-            .select()
-            .or('email.ilike.%superadmin%,email.ilike.%super.admin%')
-            .limit(1)
-            .maybeSingle();
-      }
-
-      if (profile != null) {
-        final profileData = Map<String, dynamic>.from(profile);
-        final rawRole = profileData['role']?.toString() ?? 'member';
-
-        final userModel = UserModel(
-          id: profileData['id']?.toString(),
-          name: profileData['name']?.toString() ??
-              profileData['nama']?.toString() ??
-              cleanInput.split('@').first,
-          email: profileData['email']?.toString() ?? cleanInput,
-          role: rawRole,
-          unit: profileData['unit']?.toString(),
-          tim: profileData['tim']?.toString(),
-          jabatan: profileData['jabatan']?.toString(),
-          token: 'supabase-token-${profileData['id']}',
-        );
-
-        await SessionManager.saveUser(userModel);
-        return userModel;
-      }
-    } catch (dbError) {
-      debugPrint('Notice query fallback profiles Supabase: $dbError');
-    }
-
     throw Exception('Akun "$cleanInput" tidak terdaftar di database Supabase.');
   }
 
