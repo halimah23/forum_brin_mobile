@@ -178,11 +178,17 @@ class QuestionService {
           is_public,
           is_pinned,
           created_at,
+          attachment_url,
+          attachment_name,
+          rating,
+          rating_feedback,
+          rating_submitted_at,
+          rating_tags,
+          resolved_at,
           users:user_id (id_user, first_name, email, role, satuan_kerja, kawasan, jabatan, teams:id_tim(id_tim, tim, detail_nama_tim, eskalasi)),
           tugas_fungsi:id_tusi (id_tusi, tugas_fungsi)
         ''').order('created_at', ascending: false);
       } catch (err) {
-        debugPrint('Fallback question query without tusi relation: $err');
         try {
           response = await buildQuery('''
             id,
@@ -198,6 +204,12 @@ class QuestionService {
             is_public,
             is_pinned,
             created_at,
+            attachment_url,
+            attachment_name,
+            rating,
+            rating_feedback,
+            rating_submitted_at,
+            resolved_at,
             users:user_id (id_user, first_name, email, role, satuan_kerja, kawasan, jabatan, teams:id_tim(id_tim, tim, detail_nama_tim, eskalasi))
           ''').order('created_at', ascending: false);
         } catch (err2) {
@@ -215,7 +227,11 @@ class QuestionService {
             admin_pusat_id,
             is_public,
             is_pinned,
-            created_at
+            created_at,
+            rating,
+            rating_feedback,
+            rating_submitted_at,
+            resolved_at
           ''').order('created_at', ascending: false);
         }
       }
@@ -277,6 +293,13 @@ class QuestionService {
           is_public,
           is_pinned,
           created_at,
+          attachment_url,
+          attachment_name,
+          rating,
+          rating_feedback,
+          rating_submitted_at,
+          rating_tags,
+          resolved_at,
           users:user_id (id_user, first_name, email, role, satuan_kerja, kawasan, jabatan, teams:id_tim(id_tim, tim, detail_nama_tim, eskalasi)),
           tugas_fungsi:id_tusi (id_tusi, tugas_fungsi)
         ''').eq('id', questionId).single();
@@ -297,6 +320,12 @@ class QuestionService {
             is_public,
             is_pinned,
             created_at,
+            attachment_url,
+            attachment_name,
+            rating,
+            rating_feedback,
+            rating_submitted_at,
+            resolved_at,
             users:user_id (id_user, first_name, email, role, satuan_kerja, kawasan, jabatan, teams:id_tim(id_tim, tim, detail_nama_tim, eskalasi))
           ''').eq('id', questionId).single();
           qResponse = Map<String, dynamic>.from(res);
@@ -314,7 +343,11 @@ class QuestionService {
             admin_pusat_id,
             is_public,
             is_pinned,
-            created_at
+            created_at,
+            rating,
+            rating_feedback,
+            rating_submitted_at,
+            resolved_at
           ''').eq('id', questionId).single();
           qResponse = Map<String, dynamic>.from(res);
         }
@@ -617,6 +650,9 @@ class QuestionService {
     if (payload['attachment_url'] != null) {
       modernPayload['attachment_url'] = payload['attachment_url'];
     }
+    if (payload['attachment_name'] != null) {
+      modernPayload['attachment_name'] = payload['attachment_name'];
+    }
 
     try {
       await _client.from('answers').insert(modernPayload);
@@ -716,6 +752,7 @@ class QuestionService {
     String pengirimRole = 'pegawai',
     String? senderRoleType,
     String? attachmentUrl,
+    String? attachmentName,
   }) async {
     try {
       final currentUser = _client.auth.currentUser;
@@ -757,6 +794,7 @@ class QuestionService {
         'isi_pesan': isiPesan,
         'isi_jawaban': isiPesan,
         if (attachmentUrl != null) 'attachment_url': attachmentUrl,
+        if (attachmentName != null) 'attachment_name': attachmentName,
       });
 
       // 2. Perbarui status pertanyaan: jika direspon oleh Ketua Tim / Admin LKSDM, ubah jadi 'ditangani_lksdm' (IN_PROGRESS)
@@ -975,13 +1013,15 @@ class QuestionService {
       await _safeInsertAnswer({
         'question_id': questionId,
         'user_id': userId,
-        'sender_name': 'Pegawai',
-        'sender_role': isResolved ? 'pegawai' : 'system',
+        'sender_name': 'Sistem',
+        'sender_role': 'system',
+        'sender_role_type': 'system',
         'isi_pesan': systemMessage,
       });
 
       await _safeUpdateQuestion(questionId, {
         'status': newStatus,
+        if (isResolved) 'resolved_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
       });
 
@@ -1266,15 +1306,27 @@ class QuestionService {
     required int questionId,
     required int rating,
     String? feedback,
+    String? tags,
   }) async {
     try {
       final now = DateTime.now().toIso8601String();
-      await _safeUpdateQuestion(questionId, {
-        'rating': rating,
-        if (feedback != null && feedback.isNotEmpty)
-          'rating_feedback': feedback,
-        'rating_submitted_at': now,
-      });
+      try {
+        await _safeUpdateQuestion(questionId, {
+          'rating': rating,
+          if (feedback != null && feedback.isNotEmpty)
+            'rating_feedback': feedback,
+          if (tags != null && tags.isNotEmpty)
+            'rating_tags': tags,
+          'rating_submitted_at': now,
+        });
+      } catch (_) {
+        await _safeUpdateQuestion(questionId, {
+          'rating': rating,
+          if (feedback != null && feedback.isNotEmpty)
+            'rating_feedback': feedback,
+          'rating_submitted_at': now,
+        });
+      }
       return true;
     } catch (e) {
       debugPrint('Error submitRating: $e');
@@ -1345,5 +1397,60 @@ class QuestionService {
     try {
       await _client.removeChannel(channel);
     } catch (_) {}
+  }
+
+  /// Mengambil detail profil pengguna lengkap (untuk popup profil di chat)
+  static Future<Map<String, dynamic>?> getUserProfileDetails({
+    String? userId,
+    String? userName,
+    String? userEmail,
+  }) async {
+    try {
+      if (userId != null && userId.isNotEmpty) {
+        try {
+          final res = await _client
+              .from('users')
+              .select('*, teams:id_tim(*)')
+              .eq('id_user', userId)
+              .maybeSingle();
+          if (res != null) return Map<String, dynamic>.from(res);
+        } catch (_) {}
+
+        try {
+          final res = await _client
+              .from('profiles')
+              .select()
+              .eq('id', userId)
+              .maybeSingle();
+          if (res != null) return Map<String, dynamic>.from(res);
+        } catch (_) {}
+      }
+
+      if (userEmail != null && userEmail.isNotEmpty) {
+        try {
+          final res = await _client
+              .from('users')
+              .select('*, teams:id_tim(*)')
+              .ilike('email', userEmail.trim())
+              .maybeSingle();
+          if (res != null) return Map<String, dynamic>.from(res);
+        } catch (_) {}
+      }
+
+      if (userName != null && userName.isNotEmpty) {
+        try {
+          final res = await _client
+              .from('users')
+              .select('*, teams:id_tim(*)')
+              .or('first_name.ilike.%$userName%,name.ilike.%$userName%')
+              .limit(1)
+              .maybeSingle();
+          if (res != null) return Map<String, dynamic>.from(res);
+        } catch (_) {}
+      }
+    } catch (e) {
+      debugPrint('Error getting user profile details: $e');
+    }
+    return null;
   }
 }

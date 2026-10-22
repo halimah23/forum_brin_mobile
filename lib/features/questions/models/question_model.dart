@@ -31,7 +31,11 @@ class QuestionModel {
   final int? rating;
   final String? ratingFeedback;
   final String? ratingSubmittedAt;
+  final String? ratingTags;
   final String? resolvedAt;
+
+  List<String> get ratingTagsList =>
+      ratingTags?.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList() ?? [];
 
   String? get lksdmKawasan => lksdmWilayah;
   String? get escalatedToTeam => targetTimPusat;
@@ -99,6 +103,7 @@ class QuestionModel {
     this.rating,
     this.ratingFeedback,
     this.ratingSubmittedAt,
+    this.ratingTags,
     this.resolvedAt,
   })  : lksdmWilayah = lksdmWilayah ?? lksdmKawasan,
         targetTimPusat = targetTimPusat ?? escalatedToTeam;
@@ -278,6 +283,7 @@ class QuestionModel {
       rating: parsedRating,
       ratingFeedback: json['rating_feedback']?.toString(),
       ratingSubmittedAt: json['rating_submitted_at']?.toString(),
+      ratingTags: json['rating_tags']?.toString(),
       resolvedAt: json['resolved_at']?.toString(),
     );
   }
@@ -311,6 +317,7 @@ class QuestionModel {
       'rating': rating,
       'rating_feedback': ratingFeedback,
       'rating_submitted_at': ratingSubmittedAt,
+      'rating_tags': ratingTags,
       'resolved_at': resolvedAt,
     };
   }
@@ -344,6 +351,7 @@ class QuestionModel {
     int? rating,
     String? ratingFeedback,
     String? ratingSubmittedAt,
+    String? ratingTags,
     String? resolvedAt,
   }) {
     return QuestionModel(
@@ -373,6 +381,7 @@ class QuestionModel {
       rating: rating ?? this.rating,
       ratingFeedback: ratingFeedback ?? this.ratingFeedback,
       ratingSubmittedAt: ratingSubmittedAt ?? this.ratingSubmittedAt,
+      ratingTags: ratingTags ?? this.ratingTags,
       resolvedAt: resolvedAt ?? this.resolvedAt,
     );
   }

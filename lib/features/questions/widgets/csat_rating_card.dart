@@ -23,6 +23,19 @@ class _CsatRatingCardState extends State<CsatRatingCard> {
   final TextEditingController _feedbackController = TextEditingController();
   bool _isSubmitting = false;
 
+  static const List<String> _availableTags = [
+    'Staf Ramah & Solutif',
+    'Jawaban Jelas & Akurat',
+    'Respon Cepat (Gercep)',
+    'Aplikasi Mudah Digunakan',
+  ];
+
+  final Set<String> _selectedTags = {
+    'Staf Ramah & Solutif',
+    'Jawaban Jelas & Akurat',
+    'Respon Cepat (Gercep)',
+  };
+
   final List<String> _ratingLabels = [
     'Sangat Kecewa',
     'Kurang Puas',
@@ -37,6 +50,16 @@ class _CsatRatingCardState extends State<CsatRatingCard> {
     super.dispose();
   }
 
+  void _toggleTag(String tag) {
+    setState(() {
+      if (_selectedTags.contains(tag)) {
+        _selectedTags.remove(tag);
+      } else {
+        _selectedTags.add(tag);
+      }
+    });
+  }
+
   Future<void> _submitCsat() async {
     if (widget.question.id == null) return;
     setState(() => _isSubmitting = true);
@@ -45,6 +68,7 @@ class _CsatRatingCardState extends State<CsatRatingCard> {
       questionId: widget.question.id!,
       rating: _selectedRating,
       feedback: _feedbackController.text.trim(),
+      tags: _selectedTags.join(', '),
     );
 
     if (mounted) {
@@ -52,7 +76,7 @@ class _CsatRatingCardState extends State<CsatRatingCard> {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Terima kasih atas penilaian dan ulasan Anda!'),
+            content: Text('Terima kasih atas penilaian dan ulasan layanan Anda!'),
             backgroundColor: Color(0xFF16A34A),
           ),
         );
@@ -74,6 +98,8 @@ class _CsatRatingCardState extends State<CsatRatingCard> {
 
     // Jika sudah pernah dinilai oleh user
     if (existingRating != null && existingRating > 0) {
+      final tags = widget.question.ratingTagsList;
+
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -135,15 +161,56 @@ class _CsatRatingCardState extends State<CsatRatingCard> {
                 color: Color(0xFF15803D),
               ),
             ),
+            if (tags.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: tags.map((t) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDCFCE7),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      border: Border.all(color: const Color(0xFF86EFAC), width: 0.8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.check_rounded, size: 12, color: Color(0xFF15803D)),
+                        const SizedBox(width: 4),
+                        Text(
+                          t,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF15803D),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
             if (widget.question.ratingFeedback != null &&
                 widget.question.ratingFeedback!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Ulasan: "${widget.question.ratingFeedback}"',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                  color: AppColors.slate700,
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha(204),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  border: Border.all(color: const Color(0xFFDCFCE7), width: 1),
+                ),
+                child: Text(
+                  'Ulasan: "${widget.question.ratingFeedback}"',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: AppColors.slate700,
+                  ),
                 ),
               ),
             ],
@@ -191,7 +258,7 @@ class _CsatRatingCardState extends State<CsatRatingCard> {
                       ),
                     ),
                     Text(
-                      'Bagaimana penilaian Anda terhadap penanganan tiket ini?',
+                      'Bagaimana penilaian Anda terhadap penanganan tiket dan aplikasi ini?',
                       style: TextStyle(fontSize: 11, color: AppColors.slate600),
                     ),
                   ],
@@ -199,7 +266,8 @@ class _CsatRatingCardState extends State<CsatRatingCard> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
+
           // Bintang Interaktif 1-5
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -229,23 +297,79 @@ class _CsatRatingCardState extends State<CsatRatingCard> {
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
+
+          // Quick Satisfaction Tags Pilihan
+          const Text(
+            'Aspek Layanan yang Dinilai:',
+            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppColors.slate700),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _availableTags.map((tag) {
+              final isSelected = _selectedTags.contains(tag);
+              return InkWell(
+                onTap: () => _toggleTag(tag),
+                borderRadius: BorderRadius.circular(20),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isSelected ? const Color(0xFFDCFCE7) : AppColors.slate100,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isSelected ? const Color(0xFF22C55E) : AppColors.slate300,
+                      width: isSelected ? 1.2 : 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isSelected ? Icons.check_circle_rounded : Icons.add_circle_outline_rounded,
+                        size: 14,
+                        color: isSelected ? const Color(0xFF15803D) : AppColors.slate500,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        tag,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          color: isSelected ? const Color(0xFF15803D) : AppColors.slate700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 14),
+
           // Field Catatan / Saran
           TextField(
             controller: _feedbackController,
             maxLines: 2,
             style: const TextStyle(fontSize: 12),
             decoration: InputDecoration(
-              hintText: 'Tuliskan masukan atau catatan untuk layanan BOSDM (opsional)...',
-              hintStyle: const TextStyle(fontSize: 12, color: AppColors.slate400),
+              hintText: 'Tuliskan masukan atau ulasan terkait penanganan staf atau aplikasi (opsional)...',
+              hintStyle: const TextStyle(fontSize: 11.5, color: AppColors.slate400),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.sm),
                 borderSide: const BorderSide(color: AppColors.border),
               ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                borderSide: const BorderSide(color: AppColors.primaryRed, width: 1.2),
+              ),
               contentPadding: const EdgeInsets.all(10),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
+
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(

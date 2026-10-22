@@ -12,6 +12,8 @@ import '../../questions/screens/faq_screen.dart';
 import '../../questions/screens/question_detail_screen.dart';
 import '../../questions/services/question_service.dart';
 import '../../questions/widgets/question_card.dart';
+import '../services/performance_analytics_service.dart';
+import '../widgets/performance_analytics_widgets.dart';
 import '../widgets/trending_chart_widget.dart';
 
 class SuperAdminDashboardScreen extends StatefulWidget {
@@ -53,6 +55,10 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
     final activeCount = questions.where((q) => q.isActive).length;
     final escalatedCount = questions.where((q) => q.isEscalated).length;
     final closedCount = questions.where((q) => q.isClosed).length;
+
+    final csatOverview = PerformanceAnalyticsService.calculateCsatOverview(questions);
+    final staffLeaderboard = PerformanceAnalyticsService.getStaffPerformanceLeaderboard(questions, limit: 10);
+    final topMembers = PerformanceAnalyticsService.getTopActiveMembers(questions, limit: 5);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -281,6 +287,33 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                           );
                         },
                       ),
+
+                    const SizedBox(height: 20),
+
+                    // INDEKS KEPUASAN LAYANAN & APLIKASI (CSAT)
+                    CsatScoreCardWidget(
+                      overview: csatOverview,
+                      title: 'Indeks Kepuasan Layanan & Aplikasi (CSAT)',
+                      subtitle: 'Audit penilaian kinerja layanan staf dan kepuasan pengguna terhadap aplikasi BOSDM',
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // LEADERBOARD KINERJA PETUGAS & STAF ADMIN
+                    StaffLeaderboardCardWidget(
+                      staffList: staffLeaderboard,
+                      title: 'Leaderboard Kinerja Petugas & Staf Admin',
+                      subtitle: 'Penilaian kuantitatif dan kualitatif penanganan tiket seluruh kawasan',
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // DAFTAR PEGAWAI PALING AKTIF BERTANYA
+                    TopMembersCardWidget(
+                      memberList: topMembers,
+                      title: 'Daftar Pegawai Paling Aktif Bertanya',
+                      subtitle: 'Pegawai yang paling sering menyampaikan kendala di sistem',
+                    ),
 
                     const SizedBox(height: 24),
 
@@ -547,6 +580,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
   }
 
   void _showStatistikDialog(BuildContext context) {
+    final csatOverview = PerformanceAnalyticsService.calculateCsatOverview(questions);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -566,6 +600,9 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
             Text('Tiket Aktif: ${questions.where((q) => q.isActive).length}', style: const TextStyle(fontSize: 12.5)),
             Text('Tiket Eskalasi Pusat: ${questions.where((q) => q.isEscalated).length}', style: const TextStyle(fontSize: 12.5)),
             Text('Tiket Selesai: ${questions.where((q) => q.isClosed).length}', style: const TextStyle(fontSize: 12.5)),
+            const Divider(height: 18),
+            Text('Rata-rata Rating CSAT: ${csatOverview.averageRating > 0 ? '${csatOverview.averageRating.toStringAsFixed(1)} ★' : '-'}', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFFB45309))),
+            Text('Tingkat Kepuasan: ${csatOverview.satisfactionRate.toStringAsFixed(1)}% (${csatOverview.totalRated} Ulasan)', style: const TextStyle(fontSize: 12.5, color: Color(0xFF15803D))),
             const SizedBox(height: 12),
             const Text(
               'Statistik ini diperbarui secara otomatis dari seluruh aktivitas layanan kepegawaian BRIN.',

@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -14,6 +16,7 @@ import '../services/question_service.dart';
 import '../widgets/csat_rating_card.dart';
 import '../widgets/publish_and_standardize_dialog.dart';
 import '../widgets/reopen_ticket_dialog.dart';
+import '../widgets/sender_profile_dialog.dart';
 import '../widgets/ticket_timeline_tracker.dart';
 import 'ask_question_screen.dart';
 
@@ -39,6 +42,188 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
   bool isProcessing = false;
   bool isSendingReply = false;
   bool _showOriginalText = false;
+
+  String? _pendingAttachmentUrl;
+  String? _pendingAttachmentName;
+  int? _pendingAttachmentSize;
+  bool _isUploadingAttachment = false;
+
+  Future<void> _pickReplyAttachment() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+
+      if (file.size > 10 * 1024 * 1024) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ukuran berkas melebihi batas maksimal 10 MB.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+
+      setState(() => _isUploadingAttachment = true);
+
+      final bytes = file.bytes ?? (file.path != null ? await File(file.path!).readAsBytes() : null);
+      String? publicUrl;
+
+      try {
+        final client = Supabase.instance.client;
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final safeName = file.name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
+        final storagePath = 'chat/${question.id ?? 0}_${timestamp}_$safeName';
+
+        if (bytes != null) {
+          await client.storage.from('attachments').uploadBinary(
+                storagePath,
+                bytes,
+                fileOptions: const FileOptions(upsert: true),
+              );
+          publicUrl = client.storage.from('attachments').getPublicUrl(storagePath);
+        } else {
+          publicUrl = file.path ?? 'storage://local_chat/${file.name}';
+        }
+      } catch (uploadErr) {
+        debugPrint('Upload chat attachment fallback: $uploadErr');
+        publicUrl = file.path ?? 'storage://local_chat/${file.name}';
+      }
+
+      if (mounted) {
+        setState(() {
+          _pendingAttachmentUrl = publicUrl ?? file.name;
+          _pendingAttachmentName = file.name;
+          _pendingAttachmentSize = file.size;
+          _isUploadingAttachment = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking reply attachment: $e');
+      if (mounted) {
+        setState(() => _isUploadingAttachment = false);
+      }
+    }
+  }
+
+  String _formatFileSize(int bytes) {
+    if (bytes >= 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    } else if (bytes >= 1024) {
+      return '${(bytes / 1024).toStringAsFixed(0)} KB';
+    }
+    return '$bytes B';
+  }
+
+  bool _checkIsMe(AnswerModel ans) {
+    if (ans.isSystemEvent) return false;
+    final currentUserId = widget.currentUser?.id;
+    final currentUserName = widget.currentUser?.name.trim().toLowerCase() ?? '';
+
+    if (ans.userId != null && currentUserId != null && ans.userId == currentUserId) {
+      return true;
+    }
+    if (currentUserName.isNotEmpty && ans.penjawabNama.trim().toLowerCase() == currentUserName) {
+      return true;
+    }
+    if (isAuthorPegawai && !ans.isOfficial && !ans.isSystemEvent) {
+      return true;
+    }
+    return false;
+  }
+
+  Widget _buildBubbleAttachment({
+    required String? attachmentUrl,
+    required String? attachmentName,
+    required bool isMe,
+  }) {
+    if (attachmentUrl == null || attachmentUrl.isEmpty) return const SizedBox.shrink();
+
+    final urlLow = attachmentUrl.toLowerCase();
+    final nameLow = (attachmentName ?? '').toLowerCase();
+    final isImg = urlLow.contains('.jpg') ||
+        urlLow.contains('.jpeg') ||
+        urlLow.contains('.png') ||
+        nameLow.endsWith('.jpg') ||
+        nameLow.endsWith('.jpeg') ||
+        nameLow.endsWith('.png');
+
+    if (isImg) {
+      return Container(
+        margin: const EdgeInsets.only(top: 6, bottom: 4),
+        constraints: const BoxConstraints(maxHeight: 180, maxWidth: 260),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(color: isMe ? const Color(0xFFC5E1A5) : const Color(0xFFCBD5E1)),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: InkWell(
+            onTap: () => _showAttachmentPreviewDialog(attachmentName ?? 'Gambar Lampiran', attachmentUrl),
+            child: Image.network(
+              attachmentUrl,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              errorBuilder: (_, __, ___) => Container(
+                padding: const EdgeInsets.all(12),
+                color: AppColors.slate100,
+                child: Row(
+                  children: [
+                    const Icon(Icons.image_not_supported_outlined, size: 20, color: AppColors.slate500),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        attachmentName ?? 'Gambar Lampiran',
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return InkWell(
+      onTap: () => _showAttachmentPreviewDialog(attachmentName ?? 'Dokumen Pendukung', attachmentUrl),
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: Container(
+        margin: const EdgeInsets.only(top: 6, bottom: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: isMe ? const Color(0xFFC8E6C9) : AppColors.slate100,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(color: isMe ? const Color(0xFFA5D6A7) : AppColors.slate300),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.description_rounded, size: 20, color: AppColors.primaryRed),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                attachmentName ?? 'Dokumen Pendukung',
+                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.slate900),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.open_in_new_rounded, size: 14, color: AppColors.slate600),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -390,7 +575,8 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
   void _sendFollowUpReply() async {
     if (widget.currentUser?.isEksekutif == true) return;
     final text = _replyController.text.trim();
-    if (text.isEmpty) return;
+    final hasAttachment = _pendingAttachmentUrl != null && _pendingAttachmentUrl!.isNotEmpty;
+    if (text.isEmpty && !hasAttachment) return;
 
     setState(() => isSendingReply = true);
     final user = widget.currentUser;
@@ -414,12 +600,18 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
       roleBadgeName = 'Pegawai';
     }
 
+    final attachmentUrlToSend = _pendingAttachmentUrl;
+    final attachmentNameToSend = _pendingAttachmentName;
+    final messageBody = text.isNotEmpty ? text : (attachmentNameToSend ?? 'Lampiran Berkas');
+
     final success = await QuestionService.sendFollowUpMessage(
       questionId: question.id ?? 0,
-      isiPesan: text,
+      isiPesan: messageBody,
       pengirimNama: userName,
       pengirimRole: roleBadgeName,
       senderRoleType: senderRoleType,
+      attachmentUrl: attachmentUrlToSend,
+      attachmentName: attachmentNameToSend,
     );
 
     if (mounted) {
@@ -432,8 +624,11 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
           senderName: userName,
           senderRole: roleBadgeName,
           senderRoleType: senderRoleType,
-          isiJawaban: text,
-          isiPesan: text,
+          isiJawaban: messageBody,
+          isiPesan: messageBody,
+          attachmentUrl: attachmentUrlToSend,
+          attachmentName: attachmentNameToSend,
+          senderPhotoUrl: user?.photoUrl,
           createdAt: DateTime.now().toIso8601String(),
         );
 
@@ -443,6 +638,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
             : question.status;
 
         setState(() {
+          _pendingAttachmentUrl = null;
+          _pendingAttachmentName = null;
+          _pendingAttachmentSize = null;
           question = question.copyWith(
             status: nextStatus,
             answers: updatedAnswers,
@@ -1077,18 +1275,8 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                 ),
                               ],
                             ],
-                            const SizedBox(height: 10),
-                            Text(
-                              question.judul,
-                              style: AppTypography.heading3.copyWith(fontSize: 15),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              question.isi,
-                              style: AppTypography.bodySmall.copyWith(fontSize: 13, height: 1.45),
-                            ),
                             if (widget.currentUser?.isSuperAdmin == true) ...[
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 8),
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: TextButton.icon(
@@ -1119,66 +1307,6 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                 ),
                               ),
                             ],
-                            if (question.attachmentUrl != null && question.attachmentUrl!.isNotEmpty) ...[
-                              const SizedBox(height: 10),
-                              InkWell(
-                                onTap: () {
-                                  _showAttachmentPreviewDialog(
-                                    question.attachmentName ?? 'Lampiran Berkas Pendukung',
-                                    question.attachmentUrl!,
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(AppRadius.sm),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.slate100,
-                                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                                    border: Border.all(color: AppColors.slate300, width: 1),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.attach_file_rounded, size: 18, color: AppColors.primaryRed),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          question.attachmentName ?? 'Lampiran Berkas Pendukung',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.slate800,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(4),
-                                          border: Border.all(color: AppColors.slate300),
-                                        ),
-                                        child: const Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(Icons.visibility_outlined, size: 12, color: AppColors.slate700),
-                                            SizedBox(width: 4),
-                                            Text(
-                                              'Lihat',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: AppColors.slate700,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
                             if (tusiText.isNotEmpty || (question.assignedTo != null && question.assignedTo!.isNotEmpty)) ...[
                               const SizedBox(height: 10),
                               const Divider(height: 1, color: AppColors.border),
@@ -1206,10 +1334,240 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                         ),
                       ),
 
+                      // BUBBLE PERTAMA: PERTANYAAN AWAL KONSULTASI PEGAWAI (WhatsApp Style)
+                      Builder(builder: (context) {
+                        final bool isAuthorMe = isAuthorPegawai;
+                        final authorDisplayName = question.getAuthorDisplayName(widget.currentUser);
+
+                        if (isAuthorMe) {
+                          // Dari sisi Pegawai aktif (Sisi Kanan - WhatsApp Light Green Bubble)
+                          return Align(
+                            alignment: Alignment.centerRight,
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 12, left: 40),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDCF8C6),
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(16),
+                                  topRight: Radius.circular(16),
+                                  bottomLeft: Radius.circular(16),
+                                  bottomRight: Radius.circular(4),
+                                ),
+                                border: Border.all(color: const Color(0xFFC5E1A5), width: 0.8),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        authorDisplayName,
+                                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFC8E6C9),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: const Text(
+                                          'KONSULTASI AWAL',
+                                          style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF1B5E20)),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    question.judul,
+                                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppColors.slate900),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    question.isi,
+                                    style: const TextStyle(fontSize: 13, height: 1.35, color: Colors.black87),
+                                  ),
+                                  if (question.attachmentUrl != null && question.attachmentUrl!.isNotEmpty)
+                                    _buildBubbleAttachment(
+                                      attachmentUrl: question.attachmentUrl,
+                                      attachmentName: question.attachmentName ?? 'Berkas Pendukung',
+                                      isMe: true,
+                                    ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      if (question.createdAt != null)
+                                        Text(
+                                          question.createdAt!.split('T').first,
+                                          style: const TextStyle(fontSize: 9.5, color: Color(0xFF558B2F)),
+                                        ),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.done_all, size: 13, color: Color(0xFF2E7D32)),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        } else {
+                          // Dari sisi Admin / Staf / Pusat / Ketua Tim (Sisi Kiri - White Card Bubble)
+                          return Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 12, right: 40),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(16),
+                                  topRight: Radius.circular(16),
+                                  bottomRight: Radius.circular(16),
+                                  bottomLeft: Radius.circular(4),
+                                ),
+                                border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x0A000000),
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  InkWell(
+                                    onTap: () {
+                                      SenderProfileDialog.show(
+                                        context: context,
+                                        senderName: question.officialAuthorName,
+                                        senderRole: 'PEGAWAI BRIN',
+                                        userId: question.userId,
+                                        userEmail: question.user?.email,
+                                        photoUrl: question.user?.photoUrl,
+                                        jabatan: question.user?.jabatan,
+                                        unit: question.user?.unit,
+                                        lksdm: question.authorAsalLksdm,
+                                        isAnonymized: (question.isPublic || question.isAnonymized) && !canViewAuthorFullIdentity,
+                                      );
+                                    },
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.person_rounded, size: 14, color: Color(0xFF2E7D32)),
+                                        const SizedBox(width: 5),
+                                        Expanded(
+                                          child: Text(
+                                            canViewAuthorFullIdentity
+                                                ? '$authorDisplayName (Asal: ${question.authorAsalLksdm})'
+                                                : authorDisplayName,
+                                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFE8F5E9),
+                                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                                            border: Border.all(color: const Color(0xFFA5D6A7), width: 0.8),
+                                          ),
+                                          child: const Text(
+                                            'PEGAWAI',
+                                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  const Divider(height: 1, color: AppColors.border),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    question.judul,
+                                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: AppColors.slate900),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    question.isi,
+                                    style: const TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
+                                  ),
+                                  if (question.attachmentUrl != null && question.attachmentUrl!.isNotEmpty)
+                                    _buildBubbleAttachment(
+                                      attachmentUrl: question.attachmentUrl,
+                                      attachmentName: question.attachmentName ?? 'Berkas Pendukung',
+                                      isMe: false,
+                                    ),
+                                  if (question.createdAt != null) ...[
+                                    const SizedBox(height: 4),
+                                    Align(
+                                      alignment: Alignment.bottomRight,
+                                      child: Text(
+                                        question.createdAt!.split('T').first,
+                                        style: TextStyle(fontSize: 9.5, color: Colors.grey.shade500),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+                      }),
+
                       // DAFTAR PERCAKAPAN LANJUTAN & JAWABAN RESMI
                       ...answers.map((ans) {
                         if (ans.isSystemEvent) {
-                          // SYSTEM EVENT BUBBLE (Tengah)
+                          if (ans.isResolutionEvent) {
+                            // SYSTEM EVENT KHUSUS: KONFIRMASI TERJAWAB (Tengah - Amber / Emas)
+                            return Container(
+                              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                border: Border.all(color: const Color(0xFFFCD34D), width: 1.2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFD97706).withAlpha(20),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFFDE68A),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFFB45309)),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      ans.isiJawaban,
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF92400E),
+                                        height: 1.3,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          // SYSTEM EVENT STANDAR (Tengah - Abu Slate)
                           return Container(
                             margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 24),
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -1235,16 +1593,78 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                           );
                         }
 
-                        final bool isOfficial = ans.isOfficial;
+                        final bool isMe = _checkIsMe(ans);
 
-                        if (isOfficial) {
-                          // TANGGAPAN RESMI STAF ADMIN / KETUA TIM (Sisi Kiri - White Card)
+                        if (isMe) {
+                          // BUBBLE PENGGUNA AKTIF (Sisi Kanan - WhatsApp Light Green Bubble)
+                          return Align(
+                            alignment: Alignment.centerRight,
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 12, left: 40),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDCF8C6),
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(16),
+                                  topRight: Radius.circular(16),
+                                  bottomLeft: Radius.circular(16),
+                                  bottomRight: Radius.circular(4),
+                                ),
+                                border: Border.all(color: const Color(0xFFC5E1A5), width: 0.8),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    ans.penjawabNama,
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    ans.isiJawaban,
+                                    style: const TextStyle(fontSize: 13, height: 1.35, color: Colors.black87),
+                                  ),
+                                  if (ans.attachmentUrl != null && ans.attachmentUrl!.isNotEmpty)
+                                    _buildBubbleAttachment(
+                                      attachmentUrl: ans.attachmentUrl,
+                                      attachmentName: ans.attachmentName ?? 'Lampiran',
+                                      isMe: true,
+                                    ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      if (ans.createdAt != null)
+                                        Text(
+                                          ans.createdAt!.split('T').first,
+                                          style: const TextStyle(fontSize: 9.5, color: Color(0xFF558B2F)),
+                                        ),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.done_all, size: 13, color: Color(0xFF2E7D32)),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        } else {
+                          // BUBBLE LAWAN BICARA (Sisi Kiri - White Card Bubble dengan Header Berwarna & Tappable Profile)
                           final isLksdm = ans.isAdminLksdm;
                           final isPusat = ans.isAdminPusat;
+                          final isKetua = ans.isKetuaTim;
 
                           final headerBg = isPusat
                               ? Colors.amber.shade900
-                              : (isLksdm ? Colors.teal.shade800 : Colors.purple.shade800);
+                              : (isLksdm
+                                  ? Colors.teal.shade800
+                                  : (isKetua ? Colors.purple.shade800 : const Color(0xFF2E7D32)));
+
+                          final roleBadgeLabel = isPusat
+                              ? 'TIM PUSAT'
+                              : (isLksdm
+                                  ? 'STAF LKSDM'
+                                  : (isKetua ? 'KETUA TIM' : 'PEGAWAI'));
 
                           return Align(
                             alignment: Alignment.centerLeft,
@@ -1271,29 +1691,45 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    children: [
-                                      Icon(Icons.verified, size: 15, color: headerBg),
-                                      const SizedBox(width: 5),
-                                      Expanded(
-                                        child: Text(
-                                          ans.penjawabNama,
-                                          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: headerBg),
+                                  InkWell(
+                                    onTap: () {
+                                      SenderProfileDialog.show(
+                                        context: context,
+                                        senderName: ans.penjawabNama,
+                                        senderRole: ans.penjawabRole,
+                                        userId: ans.userId,
+                                        userEmail: ans.senderEmail,
+                                        photoUrl: ans.senderPhotoUrl,
+                                        jabatan: ans.senderJabatan,
+                                        unit: ans.senderUnit,
+                                        lksdm: ans.senderLksdm,
+                                        isAnonymized: false,
+                                      );
+                                    },
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.person_rounded, size: 14, color: headerBg),
+                                        const SizedBox(width: 5),
+                                        Expanded(
+                                          child: Text(
+                                            ans.penjawabNama,
+                                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: headerBg),
+                                          ),
                                         ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.slate100,
-                                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                                          border: Border.all(color: AppColors.slate300, width: 1),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.slate100,
+                                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                                            border: Border.all(color: AppColors.slate300, width: 1),
+                                          ),
+                                          child: Text(
+                                            roleBadgeLabel,
+                                            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.slate800),
+                                          ),
                                         ),
-                                        child: Text(
-                                          isPusat ? 'TIM PUSAT' : (isLksdm ? 'STAF LKSDM' : 'KETUA TIM'),
-                                          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.slate800),
-                                        ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                   Text(
                                     ans.penjawabRole,
@@ -1306,6 +1742,12 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                     ans.isiJawaban,
                                     style: const TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
                                   ),
+                                  if (ans.attachmentUrl != null && ans.attachmentUrl!.isNotEmpty)
+                                    _buildBubbleAttachment(
+                                      attachmentUrl: ans.attachmentUrl,
+                                      attachmentName: ans.attachmentName ?? 'Lampiran',
+                                      isMe: false,
+                                    ),
                                   if (ans.createdAt != null) ...[
                                     const SizedBox(height: 4),
                                     Align(
@@ -1316,55 +1758,6 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                       ),
                                     ),
                                   ],
-                                ],
-                              ),
-                            ),
-                          );
-                        } else {
-                          // PERTANYAAN SUSULAN DARI MEMBER (Sisi Kanan - WhatsApp Light Green Bubble)
-                          return Align(
-                            alignment: Alignment.centerRight,
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 12, left: 40),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFDCF8C6),
-                                borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(16),
-                                  topRight: Radius.circular(16),
-                                  bottomLeft: Radius.circular(16),
-                                  bottomRight: Radius.circular(4),
-                                ),
-                                border: Border.all(color: const Color(0xFFC5E1A5), width: 0.8),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    canViewAuthorFullIdentity
-                                        ? '${ans.penjawabNama} (Asal: ${question.authorAsalLksdm})'
-                                        : ans.penjawabNama,
-                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    ans.isiJawaban,
-                                    style: const TextStyle(fontSize: 13, height: 1.35, color: Colors.black87),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      if (ans.createdAt != null)
-                                        Text(
-                                          ans.createdAt!.split('T').first,
-                                          style: const TextStyle(fontSize: 9.5, color: Color(0xFF558B2F)),
-                                        ),
-                                      const SizedBox(width: 4),
-                                      const Icon(Icons.done_all, size: 13, color: Color(0xFF2E7D32)),
-                                    ],
-                                  ),
                                 ],
                               ),
                             ),
@@ -1652,47 +2045,96 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                 ],
                               ),
                             )
-                          : Row(
+                          : Column(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _replyController,
-                                    minLines: 1,
-                                    maxLines: 3,
-                                    textInputAction: TextInputAction.send,
-                                    onSubmitted: (_) => _sendFollowUpReply(),
-                                    onTapOutside: (_) => FocusScope.of(context).unfocus(),
-                                    decoration: InputDecoration(
-                                      hintText: isAuthorPegawai
-                                          ? 'Tulis pertanyaan susulan...'
-                                          : 'Tulis tanggapan untuk tiket ini...',
-                                      hintStyle: const TextStyle(fontSize: 12, color: AppColors.slate500),
-                                      filled: true,
-                                      fillColor: const Color(0xFFF1F5F9),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(AppRadius.full),
-                                        borderSide: BorderSide.none,
-                                      ),
+                                if (_pendingAttachmentName != null)
+                                  Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                                      border: Border.all(color: AppColors.slate300),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.attach_file_rounded, size: 16, color: AppColors.primaryRed),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            '$_pendingAttachmentName (${_formatFileSize(_pendingAttachmentSize ?? 0)})',
+                                            style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.slate800),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        InkWell(
+                                          onTap: () {
+                                            setState(() {
+                                              _pendingAttachmentUrl = null;
+                                              _pendingAttachmentName = null;
+                                              _pendingAttachmentSize = null;
+                                            });
+                                          },
+                                          child: const Icon(Icons.close, size: 16, color: AppColors.slate600),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: AppColors.primaryRed,
-                                    foregroundColor: Colors.white,
-                                    shape: const CircleBorder(),
-                                    padding: const EdgeInsets.all(10),
-                                  ),
-                                  onPressed: isSendingReply ? null : _sendFollowUpReply,
-                                  icon: isSendingReply
-                                      ? const SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                                        )
-                                      : const Icon(Icons.send_rounded, size: 18),
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: _isUploadingAttachment
+                                          ? const SizedBox(
+                                              width: 18,
+                                              height: 18,
+                                              child: CircularProgressIndicator(color: AppColors.primaryRed, strokeWidth: 2),
+                                            )
+                                          : const Icon(Icons.attach_file_rounded, color: AppColors.slate600, size: 22),
+                                      onPressed: (_isUploadingAttachment || isSendingReply) ? null : _pickReplyAttachment,
+                                      tooltip: 'Lampirkan Berkas / Gambar (Maks 10 MB)',
+                                    ),
+                                    Expanded(
+                                      child: TextField(
+                                        controller: _replyController,
+                                        minLines: 1,
+                                        maxLines: 3,
+                                        textInputAction: TextInputAction.send,
+                                        onSubmitted: (_) => _sendFollowUpReply(),
+                                        onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                                        decoration: InputDecoration(
+                                          hintText: isAuthorPegawai
+                                              ? 'Tulis pertanyaan susulan...'
+                                              : 'Tulis tanggapan untuk tiket ini...',
+                                          hintStyle: const TextStyle(fontSize: 12, color: AppColors.slate500),
+                                          filled: true,
+                                          fillColor: const Color(0xFFF1F5F9),
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(AppRadius.full),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    IconButton(
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: AppColors.primaryRed,
+                                        foregroundColor: Colors.white,
+                                        shape: const CircleBorder(),
+                                        padding: const EdgeInsets.all(10),
+                                      ),
+                                      onPressed: (isSendingReply || _isUploadingAttachment) ? null : _sendFollowUpReply,
+                                      icon: isSendingReply
+                                          ? const SizedBox(
+                                              width: 18,
+                                              height: 18,
+                                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                            )
+                                          : const Icon(Icons.send_rounded, size: 18),
+                                    ),
+                                  ],
                                 ),
                               ],
                             )),

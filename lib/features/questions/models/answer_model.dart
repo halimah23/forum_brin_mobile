@@ -7,6 +7,12 @@ class AnswerModel {
   final String? senderRoleType; // pegawai, admin_lksdm, admin_pusat, ketua_tim, system
   final String isiJawaban;
   final String? attachmentUrl;
+  final String? attachmentName;
+  final String? senderPhotoUrl;
+  final String? senderEmail;
+  final String? senderJabatan;
+  final String? senderUnit;
+  final String? senderLksdm;
   final String? createdAt;
 
   String get senderName => penjawabNama;
@@ -25,6 +31,12 @@ class AnswerModel {
     String? isiJawaban,
     String? isiPesan,
     this.attachmentUrl,
+    this.attachmentName,
+    this.senderPhotoUrl,
+    this.senderEmail,
+    this.senderJabatan,
+    this.senderUnit,
+    this.senderLksdm,
     this.createdAt,
   })  : penjawabNama = penjawabNama ?? senderName ?? 'Pengguna',
         penjawabRole = penjawabRole ?? senderRole ?? 'Staf Admin LKSDM',
@@ -43,10 +55,20 @@ class AnswerModel {
         role.contains('verifikator');
   }
 
+  bool get isResolutionEvent {
+    final text = isiJawaban.toLowerCase();
+    return text.contains('pegawai mengonfirmasi bahwa pertanyaan sudah terjawab') ||
+        text.contains('sudah terjawab dengan tuntas') ||
+        text.contains('pertanyaan sudah terjawab') ||
+        (text.contains('pegawai mengonfirmasi') && text.contains('terjawab'));
+  }
+
   bool get isSystemEvent =>
       senderRoleType == 'system' ||
       senderRoleType == 'system_event' ||
-      penjawabRole.toLowerCase() == 'sistem';
+      penjawabRole.toLowerCase() == 'sistem' ||
+      penjawabRole.toLowerCase() == 'system' ||
+      isResolutionEvent;
 
   bool get isAdminLksdm =>
       senderRoleType == 'admin_lksdm' ||
@@ -96,6 +118,18 @@ class AnswerModel {
           json['isi_jawaban']?.toString() ??
           '-',
       attachmentUrl: json['attachment_url']?.toString(),
+      attachmentName: json['attachment_name']?.toString(),
+      senderPhotoUrl: json['sender_photo_url']?.toString() ??
+          json['photo_url']?.toString() ??
+          json['avatar_url']?.toString(),
+      senderEmail: json['sender_email']?.toString() ?? json['email']?.toString(),
+      senderJabatan: json['sender_jabatan']?.toString() ?? json['jabatan']?.toString(),
+      senderUnit: json['sender_unit']?.toString() ??
+          json['unit']?.toString() ??
+          json['satuan_kerja']?.toString(),
+      senderLksdm: json['sender_lksdm']?.toString() ??
+          json['lksdm']?.toString() ??
+          json['kawasan']?.toString(),
       createdAt: json['created_at']?.toString(),
     );
   }
@@ -121,7 +155,44 @@ class AnswerModel {
       'sender_role': dbRole,
       'isi_pesan': isiJawaban,
       if (attachmentUrl != null) 'attachment_url': attachmentUrl,
+      if (attachmentName != null) 'attachment_name': attachmentName,
       if (createdAt != null) 'created_at': createdAt,
     };
+  }
+
+  AnswerModel copyWith({
+    int? id,
+    int? questionId,
+    String? userId,
+    String? penjawabNama,
+    String? penjawabRole,
+    String? senderRoleType,
+    String? isiJawaban,
+    String? attachmentUrl,
+    String? attachmentName,
+    String? senderPhotoUrl,
+    String? senderEmail,
+    String? senderJabatan,
+    String? senderUnit,
+    String? senderLksdm,
+    String? createdAt,
+  }) {
+    return AnswerModel(
+      id: id ?? this.id,
+      questionId: questionId ?? this.questionId,
+      userId: userId ?? this.userId,
+      penjawabNama: penjawabNama ?? this.penjawabNama,
+      penjawabRole: penjawabRole ?? this.penjawabRole,
+      senderRoleType: senderRoleType ?? this.senderRoleType,
+      isiJawaban: isiJawaban ?? this.isiJawaban,
+      attachmentUrl: attachmentUrl ?? this.attachmentUrl,
+      attachmentName: attachmentName ?? this.attachmentName,
+      senderPhotoUrl: senderPhotoUrl ?? this.senderPhotoUrl,
+      senderEmail: senderEmail ?? this.senderEmail,
+      senderJabatan: senderJabatan ?? this.senderJabatan,
+      senderUnit: senderUnit ?? this.senderUnit,
+      senderLksdm: senderLksdm ?? this.senderLksdm,
+      createdAt: createdAt ?? this.createdAt,
+    );
   }
 }

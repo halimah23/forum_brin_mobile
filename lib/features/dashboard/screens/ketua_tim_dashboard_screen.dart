@@ -9,6 +9,8 @@ import '../../questions/screens/question_detail_screen.dart';
 import '../../questions/services/question_service.dart';
 import '../../questions/widgets/question_card.dart';
 import '../../notifications/widgets/notification_bell_widget.dart';
+import '../services/performance_analytics_service.dart';
+import '../widgets/performance_analytics_widgets.dart';
 import '../widgets/trending_chart_widget.dart';
 
 class KetuaTimDashboardScreen extends StatefulWidget {
@@ -59,6 +61,10 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
     final inProgressCount = teamQuestions.where((q) => q.isActive && q.ticketStatus.dbKey != 'OPEN').length;
     final closedCount = teamQuestions.where((q) => q.isClosed).length;
     final pendingList = teamQuestions.where((q) => q.ticketStatus.dbKey == 'OPEN').toList();
+
+    final csatOverview = PerformanceAnalyticsService.calculateCsatOverview(teamQuestions);
+    final staffLeaderboard = PerformanceAnalyticsService.getStaffPerformanceLeaderboard(teamQuestions, limit: 5);
+    final topMembers = PerformanceAnalyticsService.getTopActiveMembers(teamQuestions, limit: 5);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -223,6 +229,33 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
                           );
                         },
                       ),
+
+                    const SizedBox(height: 20),
+
+                    // INDEKS KEPUASAN LAYANAN TIM
+                    CsatScoreCardWidget(
+                      overview: csatOverview,
+                      title: 'Indeks Kepuasan Layanan Tim ($teamName)',
+                      subtitle: 'Skor CSAT dan aspek penilaian layanan dari pegawai yang tuntas dibantu',
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // KINERJA STAF TIM (GERCEP & RATING TINGGI)
+                    StaffLeaderboardCardWidget(
+                      staffList: staffLeaderboard,
+                      title: 'Kinerja Staf Tim ($teamName)',
+                      subtitle: 'Staf tim paling aktif, responsif (gercep), dan ber-rating tinggi',
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // TOP PEGAWAI BERKONSULTASI KE TIM INI
+                    TopMembersCardWidget(
+                      memberList: topMembers,
+                      title: 'Pegawai Paling Sering Berkonsultasi',
+                      subtitle: 'Pegawai yang paling sering meminta pendampingan ke tim ini',
+                    ),
 
                     const SizedBox(height: 24),
 

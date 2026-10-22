@@ -17,6 +17,7 @@ class UserModel {
   final String? kawasan;
   final String? jabatan;
   final String? token;
+  final String? photoUrl;
 
   const UserModel({
     this.id,
@@ -35,6 +36,7 @@ class UserModel {
     this.kawasan,
     this.jabatan,
     this.token,
+    this.photoUrl,
   });
 
   /// Helper untuk mendapatkan enum role yang terstandarisasi dengan hierarki eskalasi tim
@@ -144,6 +146,10 @@ class UserModel {
       kawasan: kawasanVal,
       jabatan: json['jabatan']?.toString(),
       token: token ?? json['token']?.toString(),
+      photoUrl: json['photo_url']?.toString() ??
+          json['avatar_url']?.toString() ??
+          json['foto']?.toString() ??
+          json['photoUrl']?.toString(),
     );
   }
 
@@ -168,6 +174,8 @@ class UserModel {
       'kawasan': kawasan,
       'jabatan': jabatan,
       'token': token,
+      'photo_url': photoUrl,
+      'avatar_url': photoUrl,
     };
   }
 
@@ -188,6 +196,7 @@ class UserModel {
     String? kawasan,
     String? jabatan,
     String? token,
+    String? photoUrl,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -206,6 +215,7 @@ class UserModel {
       kawasan: kawasan ?? this.kawasan,
       jabatan: jabatan ?? this.jabatan,
       token: token ?? this.token,
+      photoUrl: photoUrl ?? this.photoUrl,
     );
   }
 }

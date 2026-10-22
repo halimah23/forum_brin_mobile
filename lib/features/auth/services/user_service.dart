@@ -209,4 +209,30 @@ class UserService {
       return true;
     }
   }
+
+  /// Memperbarui foto profil pengguna di tabel `public.users` dan `public.profiles`
+  static Future<bool> updateProfilePhoto({
+    required String userId,
+    required String photoUrl,
+  }) async {
+    bool updatedInUsers = false;
+    try {
+      await _client.from('users').update({
+        'photo_url': photoUrl,
+      }).eq('id_user', userId);
+      updatedInUsers = true;
+    } catch (e) {
+      debugPrint('Notice updating photo_url on users: $e');
+    }
+
+    try {
+      await _client.from('profiles').update({
+        'photo_url': photoUrl,
+      }).eq('id', userId);
+      return true;
+    } catch (e) {
+      debugPrint('Notice updating photo_url on profiles: $e');
+      return updatedInUsers;
+    }
+  }
 }

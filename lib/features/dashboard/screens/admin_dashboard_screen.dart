@@ -10,6 +10,8 @@ import '../../questions/models/ticket_status.dart';
 import '../../questions/screens/question_detail_screen.dart';
 import '../../questions/services/question_service.dart';
 import '../../questions/widgets/question_card.dart';
+import '../services/performance_analytics_service.dart';
+import '../widgets/performance_analytics_widgets.dart';
 import '../widgets/trending_chart_widget.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -59,6 +61,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final waitingQuestions = teamQuestions.where((q) => q.ticketStatus == TicketStatus.open).toList();
     final inProgressQuestions = teamQuestions.where((q) => q.isActive && q.ticketStatus != TicketStatus.open).toList();
     final closedQuestions = teamQuestions.where((q) => q.isClosed).toList();
+
+    final personalStat = PerformanceAnalyticsService.getStaffPersonalPerformance(
+      teamQuestions,
+      userId: widget.user.id ?? '',
+      userName: widget.user.name,
+      role: isAdminLksdm ? 'Staf Admin LKSDM' : 'Staf Admin Pusat',
+      team: teamName,
+    );
+    final csatOverview = PerformanceAnalyticsService.calculateCsatOverview(teamQuestions);
+    final topMembers = PerformanceAnalyticsService.getTopActiveMembers(teamQuestions, limit: 3);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -223,6 +235,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ],
                     ),
 
+                    const SizedBox(height: 16),
+
+                    // KARTU RAPOR KINERJA PERSONAL STAF ADMIN
+                    PersonalPerformanceCardWidget(personalStat: personalStat),
+
                     const SizedBox(height: 20),
 
                     // DAFTAR TIKET AKTIF KAWASAN
@@ -324,6 +341,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ),
                         ],
                       ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // INDEKS KEPUASAN LAYANAN (CSAT) WILAYAH / TIM
+                    CsatScoreCardWidget(
+                      overview: csatOverview,
+                      title: isAdminLksdm ? 'CSAT Layanan $lksdmName' : 'CSAT Layanan $teamName',
+                      subtitle: 'Hasil evaluasi kepuasan pegawai yang telah selesai dilayani',
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // PEGAWAI PALING AKTIF BERKONSULTASI DI WILAYAH INI
+                    TopMembersCardWidget(
+                      memberList: topMembers,
+                      title: 'Pegawai Paling Sering Berkonsultasi',
+                      subtitle: 'Pegawai yang aktif berinteraksi dengan staf pada tiket',
                     ),
 
                     const SizedBox(height: 24),

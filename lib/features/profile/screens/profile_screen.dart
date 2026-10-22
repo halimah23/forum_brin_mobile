@@ -1,22 +1,139 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_typography.dart';
-import '../../../core/widgets/custom_button.dart';
+import '../../../core/services/storage/session_manager.dart';
 import '../../auth/cubits/auth_cubit.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/models/user_role.dart';
 import '../../auth/screens/login_screen.dart';
+import '../../auth/services/user_service.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   final UserModel user;
 
   const ProfileScreen({
     super.key,
     required this.user,
   });
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  late UserModel currentUser;
+  bool _isUploadingPhoto = false;
+
+  @override
+  void initState() {
+    super.initState();
+    currentUser = widget.user;
+    _refreshUserData();
+  }
+
+  void _refreshUserData() async {
+    final saved = await SessionManager.getUser();
+    if (saved != null && mounted) {
+      setState(() {
+        currentUser = saved;
+      });
+    }
+  }
+
+  Future<void> _pickAndChangeProfilePhoto() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg', 'png'],
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.first;
+
+      // Batasan ukuran maksimum 10 MB
+      if (file.size > 10 * 1024 * 1024) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ukuran foto melebihi batas maksimal 10 MB.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+
+      final bytes = file.bytes ?? (file.path != null ? await File(file.path!).readAsBytes() : null);
+      if (bytes == null) return;
+
+      if (!mounted) return;
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => _PhotoRepositionDialog(
+          imageBytes: bytes,
+          fileName: file.name,
+        ),
+      );
+
+      if (confirmed == true && mounted) {
+        setState(() => _isUploadingPhoto = true);
+        String? publicUrl;
+
+        try {
+          final client = Supabase.instance.client;
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          final safeName = file.name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
+          final storagePath = 'profiles/${currentUser.id ?? "usr"}_${timestamp}_$safeName';
+
+          await client.storage.from('attachments').uploadBinary(
+                storagePath,
+                bytes,
+                fileOptions: const FileOptions(upsert: true),
+              );
+          publicUrl = client.storage.from('attachments').getPublicUrl(storagePath);
+        } catch (uploadErr) {
+          debugPrint('Upload profile photo fallback: $uploadErr');
+          publicUrl = file.path ?? 'storage://local_profile/${file.name}';
+        }
+
+        final userId = currentUser.id;
+        if (userId != null) {
+          await UserService.updateProfilePhoto(userId: userId, photoUrl: publicUrl);
+        }
+
+        final updatedUser = currentUser.copyWith(photoUrl: publicUrl);
+        await SessionManager.saveUser(updatedUser);
+
+        if (mounted) {
+          setState(() {
+            currentUser = updatedUser;
+            _isUploadingPhoto = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Foto profil berhasil diperbarui!'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error picking profile photo: $e');
+      if (mounted) {
+        setState(() => _isUploadingPhoto = false);
+      }
+    }
+  }
 
   void _handleLogout(BuildContext context) async {
     final confirm = await showDialog<bool>(
@@ -76,8 +193,7 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String initial = user.name.isNotEmpty ? user.name[0].toUpperCase() : 'P';
-    final roleColor = _getRoleColor(user.userRole);
+    final roleColor = _getRoleColor(currentUser.userRole);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -108,32 +224,81 @@ class ProfileScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Header Avatar & Name
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: roleColor,
-                  child: Text(
-                    initial,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 32,
+                // Header Avatar & Name (WhatsApp Style Circular Profile Photo)
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 46,
+                      backgroundColor: const Color(0xFFCFD8DC),
+                      child: ClipOval(
+                        child: (currentUser.photoUrl != null && currentUser.photoUrl!.isNotEmpty)
+                            ? Image.network(
+                                currentUser.photoUrl!,
+                                width: 92,
+                                height: 92,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.person_rounded,
+                                  size: 52,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.person_rounded,
+                                size: 52,
+                                color: Colors.white,
+                              ),
+                      ),
                     ),
-                  ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: InkWell(
+                        onTap: _isUploadingPhoto ? null : _pickAndChangeProfilePhoto,
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryRed,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x33000000),
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: _isUploadingPhoto
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                )
+                              : const Icon(
+                                  Icons.camera_alt_rounded,
+                                  size: 14,
+                                  color: Colors.white,
+                                ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Text(
-                  user.name,
+                  currentUser.name,
                   style: AppTypography.heading1,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  user.email,
+                  currentUser.email,
                   style: AppTypography.bodySmall,
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
 
                 // Role Badge
                 Container(
@@ -146,10 +311,10 @@ class ProfileScreen extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(_getRoleIcon(user.userRole), size: 14, color: AppColors.slate800),
+                      Icon(_getRoleIcon(currentUser.userRole), size: 14, color: AppColors.slate800),
                       const SizedBox(width: 6),
                       Text(
-                        _getRoleTitle(user),
+                        _getRoleTitle(currentUser),
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
@@ -171,44 +336,44 @@ class ProfileScreen extends StatelessWidget {
                     _buildInfoRow(
                       icon: Icons.person_outline,
                       label: 'Nama Lengkap',
-                      value: user.name,
+                      value: currentUser.name,
                     ),
                     const Divider(height: 1, color: AppColors.border),
                     _buildInfoRow(
                       icon: Icons.email_outlined,
                       label: 'Email BRIN',
-                      value: user.email,
+                      value: currentUser.email,
                     ),
-                    if (user.jabatan != null && user.jabatan!.isNotEmpty) ...[
+                    if (currentUser.jabatan != null && currentUser.jabatan!.isNotEmpty) ...[
                       const Divider(height: 1, color: AppColors.border),
                       _buildInfoRow(
                         icon: Icons.work_outline,
                         label: 'Jabatan',
-                        value: user.jabatan!,
+                        value: currentUser.jabatan!,
                       ),
                     ],
-                    if (user.unit != null && user.unit!.isNotEmpty) ...[
+                    if (currentUser.unit != null && currentUser.unit!.isNotEmpty) ...[
                       const Divider(height: 1, color: AppColors.border),
                       _buildInfoRow(
                         icon: Icons.business_outlined,
                         label: 'Unit / Satuan Kerja',
-                        value: user.unit!,
+                        value: currentUser.unit!,
                       ),
                     ],
-                    if (user.effectiveLksdm.isNotEmpty) ...[
+                    if (currentUser.effectiveLksdm.isNotEmpty) ...[
                       const Divider(height: 1, color: AppColors.border),
                       _buildInfoRow(
-                        icon: Icons.location_city_outlined,
-                        label: 'Asal / Kawasan LKSDM',
-                        value: user.effectiveLksdm,
+                        icon: Icons.location_on_outlined,
+                        label: 'Kawasan LKSDM',
+                        value: currentUser.effectiveLksdm,
                       ),
                     ],
-                    if (user.tim != null && user.tim!.isNotEmpty) ...[
+                    if (currentUser.tim != null && currentUser.tim!.isNotEmpty) ...[
                       const Divider(height: 1, color: AppColors.border),
                       _buildInfoRow(
                         icon: Icons.groups_outlined,
-                        label: 'Tim Layanan SDM',
-                        value: user.tim!,
+                        label: 'Tim Kerja Layanan',
+                        value: currentUser.tim!,
                       ),
                     ],
                   ],
@@ -216,43 +381,29 @@ class ProfileScreen extends StatelessWidget {
 
                 const SizedBox(height: 16),
 
-                // Role Scope / Tupoksi Info
-                _buildRoleScopeCard(user, roleColor),
+                // Role Scope & Permissions
+                _buildRoleScopeCard(currentUser, roleColor),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
-                // App Info Card
-                _buildSectionCard(
-                  title: 'Tentang Aplikasi',
-                  icon: Icons.info_outline,
-                  iconColor: AppColors.primaryBlue,
-                  children: [
-                    _buildInfoRow(
-                      icon: Icons.smartphone_outlined,
-                      label: 'Aplikasi',
-                      value: AppConstants.appTitle,
+                // Tombol Keluar Akun
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                      side: const BorderSide(color: AppColors.error, width: 1.2),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                     ),
-                    const Divider(height: 1, color: AppColors.border),
-                    _buildInfoRow(
-                      icon: Icons.verified_outlined,
-                      label: 'Versi System',
-                      value: 'v1.0.0 (BOSDM Connect)',
+                    onPressed: () => _handleLogout(context),
+                    icon: const Icon(Icons.logout_rounded, size: 18),
+                    label: const Text(
+                      'Keluar dari Akun',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                     ),
-                  ],
+                  ),
                 ),
-
-                const SizedBox(height: 28),
-
-                // Logout Action Button
-                CustomButton(
-                  text: 'Keluar dari Akun',
-                  onPressed: () => _handleLogout(context),
-                  variant: CustomButtonVariant.outlined,
-                  borderColor: AppColors.error,
-                  textColor: AppColors.error,
-                  icon: const Icon(Icons.logout_rounded, color: AppColors.error),
-                ),
-
                 const SizedBox(height: 24),
               ],
             ),
@@ -269,12 +420,12 @@ class ProfileScreen extends StatelessWidget {
     required List<Widget> children,
   }) {
     return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: AppColors.border, width: 1),
       ),
-      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -284,11 +435,15 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(width: 10),
               Text(
                 title,
-                style: AppTypography.heading3,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.slate900,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           ...children,
         ],
       ),
@@ -459,5 +614,131 @@ class ProfileScreen extends StatelessWidget {
       case UserRole.superAdmin:
         return 'SUPER ADMIN';
     }
+  }
+}
+
+/// Dialog Penyesuaian Posisi & Zoom Foto Profil Bergaya WhatsApp
+class _PhotoRepositionDialog extends StatelessWidget {
+  final Uint8List imageBytes;
+  final String fileName;
+
+  const _PhotoRepositionDialog({
+    required this.imageBytes,
+    required this.fileName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: const Color(0xEB000000),
+      surfaceTintColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 380),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Atur Posisi Foto Profil',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70, size: 20),
+                    onPressed: () => Navigator.pop(context, false),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Viewport Lingkaran Potong Interaktif
+              Container(
+                width: 240,
+                height: 240,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x80000000),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ClipOval(
+                  child: InteractiveViewer(
+                    minScale: 0.8,
+                    maxScale: 3.5,
+                    panEnabled: true,
+                    scaleEnabled: true,
+                    child: Image.memory(
+                      imageBytes,
+                      fit: BoxFit.cover,
+                      width: 240,
+                      height: 240,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.touch_app_outlined, size: 14, color: Colors.white70),
+                  SizedBox(width: 6),
+                  Text(
+                    'Geser & cubit layar untuk menyesuaikan posisi',
+                    style: TextStyle(fontSize: 11, color: Colors.white70),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white70,
+                        side: const BorderSide(color: Colors.white30),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Batal'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryRed,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Gunakan Foto Ini', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

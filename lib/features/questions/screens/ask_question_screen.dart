@@ -233,41 +233,6 @@ class _AskQuestionViewState extends State<AskQuestionView> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Intro Card
-                              Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surface,
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
-                                  border: Border.all(color: AppColors.border, width: 1),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.slate100,
-                                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                                      ),
-                                      child: const Icon(
-                                        Icons.support_agent_rounded,
-                                        size: 20,
-                                        color: AppColors.primaryRed,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    const Expanded(
-                                      child: Text(
-                                        'Silakan pilih kawasan LKSDM dan sampaikan konsultasi kepegawaian Anda di bawah ini.',
-                                        style: AppTypography.bodySmall,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              const SizedBox(height: 16),
-
                               if (activeTicket != null && !dismissActiveBanner) ...[
                                 Container(
                                   padding: const EdgeInsets.all(14),

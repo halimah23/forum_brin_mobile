@@ -7,6 +7,8 @@ import '../../auth/models/user_model.dart';
 import '../../questions/models/question_model.dart';
 import '../../questions/models/ticket_status.dart';
 import '../../questions/services/question_service.dart';
+import '../services/performance_analytics_service.dart';
+import '../widgets/performance_analytics_widgets.dart';
 import '../widgets/trending_chart_widget.dart';
 
 class EksekutifDashboardScreen extends StatefulWidget {
@@ -56,6 +58,10 @@ class _EksekutifDashboardScreenState extends State<EksekutifDashboardScreen> {
     final lksdmCount = totalCount - escalatedCount;
     final lksdmRatio = totalCount > 0 ? ((lksdmCount / totalCount) * 100).toStringAsFixed(1) : '0';
     final escalatedRatio = totalCount > 0 ? ((escalatedCount / totalCount) * 100).toStringAsFixed(1) : '0';
+
+    final csatOverview = PerformanceAnalyticsService.calculateCsatOverview(allQuestions);
+    final topStaff = PerformanceAnalyticsService.getStaffPerformanceLeaderboard(allQuestions, limit: 5);
+    final topMembers = PerformanceAnalyticsService.getTopActiveMembers(allQuestions, limit: 5);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -266,6 +272,33 @@ class _EksekutifDashboardScreenState extends State<EksekutifDashboardScreen> {
                           ),
                         ],
                       ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // INDEKS KEPUASAN LAYANAN NASIONAL (CSAT)
+                    CsatScoreCardWidget(
+                      overview: csatOverview,
+                      title: 'Indeks Kepuasan Layanan Nasional BRIN (CSAT)',
+                      subtitle: 'Hasil evaluasi kepuasan pegawai terhadap staf, kualitas jawaban, dan aplikasi BOSDM',
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // KINERJA STAF & KETUA TIM TERBAIK
+                    StaffLeaderboardCardWidget(
+                      staffList: topStaff,
+                      title: 'Petugas & Staf Berkinerja Terbaik',
+                      subtitle: 'Petugas paling rutin, cepat merespons (gercep), dan ber-rating kepuasan tinggi',
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // PEGAWAI PALING AKTIF BERKONSULTASI
+                    TopMembersCardWidget(
+                      memberList: topMembers,
+                      title: 'Top Pegawai Paling Aktif Berkonsultasi',
+                      subtitle: 'Pegawai yang paling sering mengajukan konsultasi & kendala kepegawaian',
                     ),
 
                     const SizedBox(height: 24),
