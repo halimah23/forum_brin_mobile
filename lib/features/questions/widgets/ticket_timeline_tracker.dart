@@ -93,28 +93,37 @@ class _TicketTimelineTrackerState extends State<TicketTimelineTracker> {
                         fontWeight: FontWeight.bold,
                         color: AppColors.slate900,
                       ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: slaBadgeColor,
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(slaIcon, size: 13, color: slaTextColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          slaText,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: slaTextColor,
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: slaBadgeColor,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(slaIcon, size: 13, color: slaTextColor),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              slaText,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: slaTextColor,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(width: 6),
@@ -264,9 +273,12 @@ class _TicketTimelineTrackerState extends State<TicketTimelineTracker> {
                                 ? AppColors.slate900
                                 : AppColors.slate400,
                           ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
-                      if (time != null)
+                      if (time != null) ...[
+                        const SizedBox(width: 6),
                         Text(
                           time,
                           style: AppTypography.caption.copyWith(
@@ -274,6 +286,7 @@ class _TicketTimelineTrackerState extends State<TicketTimelineTracker> {
                             color: AppColors.slate500,
                           ),
                         ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 2),

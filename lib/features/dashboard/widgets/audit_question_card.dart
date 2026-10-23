@@ -77,80 +77,87 @@ class AuditQuestionCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Baris Atas: Nomor Tiket, Badge Privasi, Status Badge
-                Row(
+                // Baris Atas: Nomor Tiket, Badge Privasi, Status Badge (Responsif)
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  runSpacing: 6,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF512DA8).withAlpha(18),
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                        border: Border.all(color: const Color(0xFF512DA8).withAlpha(40)),
-                      ),
-                      child: Text(
-                        question.ticketNumber ?? '#TKT-${question.id ?? 0}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF512DA8),
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
-                      decoration: BoxDecoration(
-                        color: question.isPublic ? AppColors.primaryBlue.withAlpha(15) : AppColors.slate200,
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            question.isPublic ? Icons.public : Icons.lock_outline,
-                            size: 11,
-                            color: question.isPublic ? AppColors.primaryBlue : AppColors.slate700,
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF512DA8).withAlpha(18),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                            border: Border.all(color: const Color(0xFF512DA8).withAlpha(40)),
                           ),
-                          const SizedBox(width: 3),
-                          Text(
-                            question.isPublic ? 'PUBLIK' : 'PRIVAT',
-                            style: TextStyle(
-                              fontSize: 9.5,
+                          child: Text(
+                            question.ticketNumber ?? '#TKT-${question.id ?? 0}',
+                            style: const TextStyle(
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: question.isPublic ? AppColors.primaryBlue : AppColors.slate700,
+                              color: Color(0xFF512DA8),
+                              letterSpacing: 0.3,
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    if (question.isStandardized) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF512DA8).withAlpha(18),
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
                         ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.auto_fix_high_rounded, size: 10, color: Color(0xFF512DA8)),
-                            SizedBox(width: 3),
-                            Text(
-                              'DIBAKUKAN',
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF512DA8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                          decoration: BoxDecoration(
+                            color: question.isPublic ? AppColors.primaryBlue.withAlpha(15) : AppColors.slate200,
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                question.isPublic ? Icons.public : Icons.lock_outline,
+                                size: 11,
+                                color: question.isPublic ? AppColors.primaryBlue : AppColors.slate700,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 3),
+                              Text(
+                                question.isPublic ? 'PUBLIK' : 'PRIVAT',
+                                style: TextStyle(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: question.isPublic ? AppColors.primaryBlue : AppColors.slate700,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                    const Spacer(),
-                    StatusBadge(status: question.status),
+                        if (question.isStandardized)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF512DA8).withAlpha(18),
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.auto_fix_high_rounded, size: 10, color: Color(0xFF512DA8)),
+                                SizedBox(width: 3),
+                                Text(
+                                  'DIBAKUKAN',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF512DA8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    StatusBadge(status: question.status, useShortLabel: true),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -261,23 +268,32 @@ class AuditQuestionCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.support_agent_rounded, size: 14, color: AppColors.slate500),
-                        const SizedBox(width: 4),
-                        Text(
-                          question.assignedTo != null && question.assignedTo!.isNotEmpty
-                              ? 'PIC: ${question.assignedTo}'
-                              : 'PIC: Belum Ditugaskan',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: question.assignedTo != null ? AppColors.slate800 : AppColors.slate500,
+                    Expanded(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.support_agent_rounded, size: 14, color: AppColors.slate500),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              question.assignedTo != null && question.assignedTo!.isNotEmpty
+                                  ? 'PIC: ${question.assignedTo}'
+                                  : 'PIC: Belum Ditugaskan',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: question.assignedTo != null ? AppColors.slate800 : AppColors.slate500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(Icons.forum_outlined, size: 13, color: AppColors.slate500),
                         const SizedBox(width: 4),

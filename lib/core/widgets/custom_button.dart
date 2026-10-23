@@ -78,9 +78,13 @@ class CustomButton extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
               ],
-              Text(
-                text,
-                style: AppTypography.button.copyWith(color: fg),
+              Flexible(
+                child: Text(
+                  text,
+                  style: AppTypography.button.copyWith(color: fg),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
             ],
           );

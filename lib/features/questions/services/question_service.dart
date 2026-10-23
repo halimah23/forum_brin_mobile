@@ -414,7 +414,7 @@ class QuestionService {
       final users = await _client
           .from('users')
           .select('id_user, role, kawasan, teams:id_tim(id_tim, tim, eskalasi)')
-          .or('role.ilike.%admin%,role.ilike.%ketua%');
+          .or('role.ilike.%admin%,role.ilike.%ketua%,role.ilike.%lksdm%,role.ilike.%pusat%');
 
       final matchedIds = <String>[];
       for (var u in users) {
@@ -430,7 +430,9 @@ class QuestionService {
             isMatch = true;
           }
         } else {
-          if (uTeam == cleanTarget || uTeam.contains(cleanTarget) || cleanTarget.contains(uTeam)) {
+          if (uTeam == cleanTarget ||
+              (uTeam.isNotEmpty && cleanTarget.contains(uTeam)) ||
+              (cleanTarget.isNotEmpty && uTeam.contains(cleanTarget))) {
             isMatch = true;
           }
         }
@@ -441,7 +443,7 @@ class QuestionService {
       }
 
       if (matchedIds.isNotEmpty) {
-        final futures = matchedIds.take(5).map((id) => NotificationService.createNotification(
+        final futures = matchedIds.map((id) => NotificationService.createNotification(
           userId: id,
           questionId: questionId,
           title: title,
@@ -1093,24 +1095,40 @@ class QuestionService {
   /// Buka Kembali (Reopen) Tiket yang Telah Selesai oleh Superadmin
   static Future<bool> reopenTicket({
     required int questionId,
-    required String targetStatus, // 'ditangani_lksdm' atau 'dialihkan_ke_pusat'
+    required String targetStatus, // 'menunggu_lksdm', 'ditangani_lksdm', atau 'dialihkan_ke_pusat'
     required String reason,
     required String superAdminName,
     String? authorUserId,
     String? ticketNumber,
+    String? targetLksdmKawasan,
+    String? targetTimPusat,
   }) async {
     try {
       final now = DateTime.now().toIso8601String();
-      final destinationLabel = (targetStatus == 'dialihkan_ke_pusat')
-          ? 'Staf Layanan SDM Pusat'
-          : 'Staf Layanan Kawasan SDM (LKSDM)';
+      final bool isCentral = targetStatus == 'dialihkan_ke_pusat';
+      final destinationLabel = isCentral
+          ? 'Staf Layanan SDM Pusat${targetTimPusat != null && targetTimPusat.isNotEmpty ? " ($targetTimPusat)" : ""}'
+          : 'Staf Layanan Kawasan SDM${targetLksdmKawasan != null && targetLksdmKawasan.isNotEmpty ? " ($targetLksdmKawasan)" : ""}';
 
-      // 1. Update status pertanyaan menjadi aktif kembali dan reset closed_at
-      await _safeUpdateQuestion(questionId, {
+      // 1. Update status pertanyaan menjadi aktif kembali dan reset closed_at & resolved_at
+      final Map<String, dynamic> updateFields = {
         'status': targetStatus,
         'closed_at': null,
+        'resolved_at': null,
         'updated_at': now,
-      });
+      };
+
+      if (isCentral) {
+        if (targetTimPusat != null && targetTimPusat.isNotEmpty) {
+          updateFields['target_tim_pusat'] = targetTimPusat;
+        }
+      } else {
+        if (targetLksdmKawasan != null && targetLksdmKawasan.isNotEmpty) {
+          updateFields['lksdm_kawasan'] = targetLksdmKawasan;
+        }
+      }
+
+      await _safeUpdateQuestion(questionId, updateFields);
 
       // 2. Catat jejak audit aktivasi kembali di percakapan (answers)
       await _safeInsertAnswer({
@@ -1135,6 +1153,18 @@ class QuestionService {
           title: 'Tiket ${ticketNumber ?? "#$questionId"} Diaktifkan Kembali',
           message: 'Tiket Anda telah dibuka kembali oleh Superadmin: "$reason"',
           type: 'status_update',
+        );
+      }
+
+      // 4. Kirim notifikasi ke tim penanganan yang dituju (LKSDM atau Tim Pusat)
+      final notifyTarget = isCentral ? targetTimPusat : targetLksdmKawasan;
+      if (notifyTarget != null && notifyTarget.isNotEmpty) {
+        await notifyTeamMembers(
+          targetTeam: notifyTarget,
+          questionId: questionId,
+          title: 'Tiket ${ticketNumber ?? "#$questionId"} Masuk (Diaktifkan Kembali)',
+          message: 'Tiket telah diaktifkan kembali oleh Superadmin ($superAdminName) untuk $destinationLabel: "$reason"',
+          type: 'ticket_reopened',
         );
       }
 

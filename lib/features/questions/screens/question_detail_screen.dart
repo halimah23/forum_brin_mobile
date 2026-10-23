@@ -1058,10 +1058,14 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            Wrap(
+                              alignment: WrapAlignment.spaceBetween,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 8,
+                              runSpacing: 6,
                               children: [
                                 Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
                                       question.ticketNumber ?? '#TIKET',
@@ -1097,7 +1101,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                     ),
                                   ],
                                 ),
-                                StatusBadge(status: question.status),
+                                StatusBadge(status: question.status, useShortLabel: true),
                               ],
                             ),
                             const SizedBox(height: 10),
@@ -1226,8 +1230,11 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                           fontWeight: FontWeight.bold,
                                           color: Color(0xFF512DA8),
                                         ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
                                       ),
                                     ),
+                                    const SizedBox(width: 8),
                                     InkWell(
                                       onTap: () => setState(() => _showOriginalText = !_showOriginalText),
                                       child: Text(
@@ -1322,11 +1329,17 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                  if (question.assignedTo != null && question.assignedTo!.isNotEmpty)
-                                    Text(
-                                      'Petugas: ${question.assignedTo}',
-                                      style: AppTypography.caption.copyWith(color: AppColors.slate700, fontWeight: FontWeight.w600),
+                                  if (question.assignedTo != null && question.assignedTo!.isNotEmpty) ...[
+                                    if (tusiText.isNotEmpty) const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Text(
+                                        'Petugas: ${question.assignedTo}',
+                                        style: AppTypography.caption.copyWith(color: AppColors.slate700, fontWeight: FontWeight.w600),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
                                     ),
+                                  ],
                                 ],
                               ),
                             ],
@@ -1362,9 +1375,13 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Text(
-                                        authorDisplayName,
-                                        style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                                      Flexible(
+                                        child: Text(
+                                          authorDisplayName,
+                                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
                                       ),
                                       const SizedBox(width: 6),
                                       Container(
@@ -1466,8 +1483,11 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                                 ? '$authorDisplayName (Asal: ${question.authorAsalLksdm})'
                                                 : authorDisplayName,
                                             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
                                           ),
                                         ),
+                                        const SizedBox(width: 6),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                           decoration: BoxDecoration(
@@ -1714,8 +1734,11 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                           child: Text(
                                             ans.penjawabNama,
                                             style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: headerBg),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
                                           ),
                                         ),
+                                        const SizedBox(width: 6),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                           decoration: BoxDecoration(

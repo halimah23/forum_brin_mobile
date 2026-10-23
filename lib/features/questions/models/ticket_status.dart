@@ -16,6 +16,26 @@ enum TicketStatus {
 
   const TicketStatus(this.dbKey, this.label, this.color, this.icon);
 
+  /// Label ringkas responsif untuk badge pada layar ponsel berbagai ukuran
+  String get shortLabel {
+    switch (this) {
+      case TicketStatus.open:
+        return 'Antrean LKSDM';
+      case TicketStatus.inProgress:
+        return 'Ditangani LKSDM';
+      case TicketStatus.waitingUser:
+        return 'Konfirmasi Pegawai';
+      case TicketStatus.escalated:
+        return 'Dialihkan ke Pusat';
+      case TicketStatus.inProgressCenter:
+        return 'Ditangani Pusat';
+      case TicketStatus.resolved:
+        return 'Solusi Diberikan';
+      case TicketStatus.closed:
+        return 'Selesai';
+    }
+  }
+
   /// Parse dari string status database (kompatibel 100% data lama & baru PRD)
   static TicketStatus fromString(String? rawStatus) {
     if (rawStatus == null || rawStatus.isEmpty) return TicketStatus.open;

@@ -234,9 +234,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 10),
-                                  const Text(
-                                    'Akses Pengujian Cepat (Database Supabase)',
-                                    style: AppTypography.heading3,
+                                  const Expanded(
+                                    child: Text(
+                                      'Akses Pengujian Cepat (Database Supabase)',
+                                      style: AppTypography.heading3,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -395,11 +397,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                roleName,
-                style: AppTypography.bodySmall.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+              Flexible(
+                child: Text(
+                  roleName,
+                  style: AppTypography.bodySmall.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
             ],

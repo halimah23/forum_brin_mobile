@@ -167,9 +167,12 @@ class _EksekutifDashboardScreenState extends State<EksekutifDashboardScreen> {
                             children: [
                               Icon(Icons.analytics_outlined, color: primaryIndigo),
                               SizedBox(width: 8),
-                              Text(
-                                'Ringkasan KPI Layanan Kepegawaian',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              Expanded(
+                                child: Text(
+                                  'Ringkasan KPI Layanan Kepegawaian',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             ],
                           ),
