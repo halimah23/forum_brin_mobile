@@ -80,7 +80,7 @@ class QuestionService {
     return TusiCatalogData.allTugasFungsi;
   }
 
-  /// Ambil seluruh pertanyaan / tiket dengan filter opsional (Tim, Status, Sifat Publik/Privat, dsb)
+  /// Ambil seluruh pertanyaan / tiket dengan filter opsional (Tim, Status, dsb)
   static Future<List<QuestionModel>> getQuestions({
     String? teamFilter,
     String? statusFilter,
@@ -148,7 +148,18 @@ class QuestionService {
               'ESCALATED',
               'IN_PROGRESS_CENTER',
               'escalated',
-              'in_progress_center'
+              'in_progress_center',
+              'tiket_mandiri_lksdm',
+              'TIKET_MANDIRI_LKSDM',
+            ]);
+          } else if (normalizedStatus == 'tiket_mandiri_lksdm' ||
+              normalizedStatus == 'konsultasi_lksdm' ||
+              normalizedStatus == 'mandiri_lksdm') {
+            q = q.inFilter('status', [
+              'tiket_mandiri_lksdm',
+              'konsultasi_lksdm',
+              'mandiri_lksdm',
+              'TIKET_MANDIRI_LKSDM',
             ]);
           } else if (normalizedStatus == 'selesai' ||
               normalizedStatus == 'closed' ||
@@ -457,7 +468,7 @@ class QuestionService {
     }
   }
 
-  /// Buat Tiket Pertanyaan Baru (Awal alur: Menunggu penanganan Staf Admin LKSDM Kawasan)
+  /// Buat Tiket Pertanyaan Baru (Mendukung Tiket Pegawai & Konsultasi Mandiri LKSDM ke Pusat)
   static Future<QuestionModel> createQuestion({
     required String token,
     required String judul,
@@ -466,9 +477,10 @@ class QuestionService {
     String? selectedTeam,
     String? lksdmKawasan,
     String? targetTimPusat,
-    bool isPublic = true,
+    bool isPublic = false,
     String? attachmentUrl,
     String? attachmentName,
+    bool isLksdmConsultation = false,
   }) async {
     final currentUser = _client.auth.currentUser;
     String? resolvedId = currentUser?.id;
@@ -511,6 +523,7 @@ class QuestionService {
     final effectiveTargetPusat = targetTimPusat ?? (targetTeam.contains('LKSDM') ? null : targetTeam);
 
     try {
+      final initialStatus = isLksdmConsultation ? 'tiket_mandiri_lksdm' : 'menunggu_lksdm';
       final insertPayload = <String, dynamic>{
         'user_id': userId,
         'ticket_number': ticketNumber,
@@ -519,8 +532,8 @@ class QuestionService {
         'tugas_fungsi_nama': tusiNama,
         'lksdm_kawasan': effectiveLksdm,
         if (effectiveTargetPusat != null) 'target_tim_pusat': effectiveTargetPusat,
-        'is_public': isPublic,
-        'status': 'menunggu_lksdm', // Status awal tiket
+        'is_public': false,
+        'status': initialStatus, // Status awal tiket
       };
       if (attachmentUrl != null) {
         insertPayload['attachment_url'] = attachmentUrl;
@@ -591,23 +604,44 @@ class QuestionService {
 
       // Trigger notifikasi tiket berhasil dibuat
       try {
-        await NotificationService.createNotification(
-          userId: userId,
-          questionId: questionId,
-          title: 'Tiket Berhasil Diajukan',
-          message:
-              'Tiket #$ticketNumber Anda sedang menunggu verifikasi oleh Staf Layanan Kawasan SDM ($effectiveLksdm).',
-          type: 'tiket_diajukan',
-        );
+        if (isLksdmConsultation) {
+          await NotificationService.createNotification(
+            userId: userId,
+            questionId: questionId,
+            title: 'Konsultasi LKSDM Diajukan',
+            message:
+                'Tiket #$ticketNumber Anda telah berhasil diteruskan langsung ke $effectiveTargetPusat.',
+            type: 'tiket_diajukan',
+          );
 
-        // Notifikasi ke seluruh Staf Admin & Ketua Tim Kawasan LKSDM
-        await notifyTeamMembers(
-          targetTeam: effectiveLksdm,
-          questionId: questionId,
-          title: 'Tiket Baru Masuk (#$ticketNumber)',
-          message: 'Ada tiket baru dari pegawai di $effectiveLksdm: "$judul".',
-          type: 'tiket_baru',
-        );
+          if (effectiveTargetPusat != null && effectiveTargetPusat.isNotEmpty) {
+            await notifyTeamMembers(
+              targetTeam: effectiveTargetPusat,
+              questionId: questionId,
+              title: 'Konsultasi Baru dari $effectiveLksdm (#$ticketNumber)',
+              message: 'Staf/Ketua $effectiveLksdm mengajukan konsultasi ke $effectiveTargetPusat: "$judul".',
+              type: 'tiket_baru',
+            );
+          }
+        } else {
+          await NotificationService.createNotification(
+            userId: userId,
+            questionId: questionId,
+            title: 'Tiket Berhasil Diajukan',
+            message:
+                'Tiket #$ticketNumber Anda sedang menunggu verifikasi oleh Staf Layanan Kawasan SDM ($effectiveLksdm).',
+            type: 'tiket_diajukan',
+          );
+
+          // Notifikasi ke seluruh Staf Admin & Ketua Tim Kawasan LKSDM
+          await notifyTeamMembers(
+            targetTeam: effectiveLksdm,
+            questionId: questionId,
+            title: 'Tiket Baru Masuk (#$ticketNumber)',
+            message: 'Ada tiket baru dari pegawai di $effectiveLksdm: "$judul".',
+            type: 'tiket_baru',
+          );
+        }
       } catch (e) {
         debugPrint('Warning: Notification creation failed: $e');
       }
@@ -932,7 +966,7 @@ class QuestionService {
       await _safeInsertAnswer({
         'question_id': questionId,
         'user_id': userId,
-        'sender_name': 'Sistem Forum',
+        'sender_name': 'Sistem',
         'sender_role': 'system',
         'isi_pesan': eventText,
       });

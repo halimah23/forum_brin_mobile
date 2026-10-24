@@ -491,7 +491,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String description = '';
     switch (user.userRole) {
       case UserRole.member:
-        description = '• Konsultasi tiket layanan kepegawaian ke LKSDM Kawasan\n• Partisipasi diskusi di Forum Kepegawaian BRIN\n• Pemantauan riwayat status pertanyaan & tanggapan Staf';
+        description = '• Konsultasi tiket layanan kepegawaian ke LKSDM Kawasan\n• Pengajuan & pelacakan tiket layanan mandiri\n• Pemantauan riwayat status pertanyaan & tanggapan Staf';
         break;
       case UserRole.adminLksdm:
         description = '• Penanganan awal & verifikasi layanan kepegawaian kawasan (${user.effectiveLksdm})\n• Disiplin tingkat ringan-sedang & monitoring tugas belajar\n• Penanganan eskalasi percakapan tripartit ke Pusat';

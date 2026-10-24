@@ -273,9 +273,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                     email: 'raisya.qianisa.nabilla@brin.go.id',
                                   ),                                  
                                   _buildRoleTile(
-                                    roleName: 'Abisakha SA (Admin PDIS)',
+                                    roleName: 'Abid Omar Tusta (Admin PDIS)',
                                     roleTag: 'Admin Pusat',
-                                    email: 'abisakha.saif.alfath@brin.go.id',
+                                    email: 'abid.omar.tusta@brin.go.id',
                                   ),
                                   _buildRoleTile(
                                     roleName: 'Rizka FL (Member LK6)',

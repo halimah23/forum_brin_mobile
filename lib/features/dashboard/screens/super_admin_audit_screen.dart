@@ -34,7 +34,6 @@ class _SuperAdminAuditScreenState extends State<SuperAdminAuditScreen>
   String _searchQuery = '';
   String _selectedLksdm = 'Semua LKSDM';
   String _selectedTimPusat = 'Semua Tim Pusat';
-  String _selectedVisibility = 'semua'; // 'semua', 'privat', 'publik'
 
   final List<String> _statusFilters = [
     'semua',
@@ -139,11 +138,7 @@ class _SuperAdminAuditScreenState extends State<SuperAdminAuditScreen>
         }
       }
 
-      // 2. Visibility Filter
-      if (_selectedVisibility == 'privat' && q.isPublic) return false;
-      if (_selectedVisibility == 'publik' && !q.isPublic) return false;
-
-      // 3. LKSDM Kawasan Filter
+      // 2. LKSDM Kawasan Filter
       if (_selectedLksdm != 'Semua LKSDM') {
         final lk = (q.lksdmKawasan ?? q.lksdmWilayah ?? '').toLowerCase();
         if (!lk.contains(_selectedLksdm.toLowerCase())) return false;
@@ -217,7 +212,6 @@ class _SuperAdminAuditScreenState extends State<SuperAdminAuditScreen>
                               setModalState(() {
                                 _selectedLksdm = 'Semua LKSDM';
                                 _selectedTimPusat = 'Semua Tim Pusat';
-                                _selectedVisibility = 'semua';
                               });
                               setState(() {});
                             },
@@ -226,33 +220,6 @@ class _SuperAdminAuditScreenState extends State<SuperAdminAuditScreen>
                         ],
                       ),
                       const Divider(height: 16),
-
-                      // Filter Visibilitas
-                      const Text(
-                        'Visibilitas Tiket',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          _buildChoiceChip('Semua', 'semua', _selectedVisibility, (v) {
-                            setModalState(() => _selectedVisibility = v);
-                            setState(() {});
-                          }),
-                          const SizedBox(width: 8),
-                          _buildChoiceChip('Privat Saja', 'privat', _selectedVisibility, (v) {
-                            setModalState(() => _selectedVisibility = v);
-                            setState(() {});
-                          }),
-                          const SizedBox(width: 8),
-                          _buildChoiceChip('Publik Saja', 'publik', _selectedVisibility, (v) {
-                            setModalState(() => _selectedVisibility = v);
-                            setState(() {});
-                          }),
-                        ],
-                      ),
-
-                      const SizedBox(height: 18),
 
                       // Filter Kawasan LKSDM
                       const Text(
@@ -333,17 +300,6 @@ class _SuperAdminAuditScreenState extends State<SuperAdminAuditScreen>
     );
   }
 
-  Widget _buildChoiceChip(String label, String value, String current, Function(String) onSelect) {
-    final bool isSelected = current == value;
-    return ChoiceChip(
-      label: Text(label, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : AppColors.slate700)),
-      selected: isSelected,
-      selectedColor: const Color(0xFF512DA8),
-      backgroundColor: AppColors.slate100,
-      onSelected: (_) => onSelect(value),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final filteredQuestions = _getFilteredQuestions();
@@ -353,8 +309,7 @@ class _SuperAdminAuditScreenState extends State<SuperAdminAuditScreen>
     final escalatedCount = _allQuestions.where((q) => q.isEscalated).length;
 
     final bool hasActiveFilter = _selectedLksdm != 'Semua LKSDM' ||
-        _selectedTimPusat != 'Semua Tim Pusat' ||
-        _selectedVisibility != 'semua';
+        _selectedTimPusat != 'Semua Tim Pusat';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -478,7 +433,7 @@ class _SuperAdminAuditScreenState extends State<SuperAdminAuditScreen>
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              'Filter: ${_selectedVisibility != "semua" ? "[${_selectedVisibility.toUpperCase()}] " : ""}$_selectedLksdm • $_selectedTimPusat',
+                              'Filter: $_selectedLksdm • $_selectedTimPusat',
                               style: const TextStyle(fontSize: 11, color: Color(0xFF512DA8), fontWeight: FontWeight.w600),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -488,7 +443,6 @@ class _SuperAdminAuditScreenState extends State<SuperAdminAuditScreen>
                               setState(() {
                                 _selectedLksdm = 'Semua LKSDM';
                                 _selectedTimPusat = 'Semua Tim Pusat';
-                                _selectedVisibility = 'semua';
                               });
                             },
                             child: const Text('Hapus Filter', style: TextStyle(fontSize: 11, color: AppColors.error)),

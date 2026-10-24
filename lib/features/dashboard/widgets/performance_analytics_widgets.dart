@@ -105,10 +105,15 @@ class CsatScoreCardWidget extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Tingkat Kepuasan',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.slate700),
+                        const Expanded(
+                          child: Text(
+                            'Tingkat Kepuasan',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.slate700),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
+                        const SizedBox(width: 4),
                         Text(
                           '${satRate.toStringAsFixed(1)}%',
                           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF16A34A)),

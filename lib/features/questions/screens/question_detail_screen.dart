@@ -14,7 +14,6 @@ import '../models/question_model.dart';
 import '../models/ticket_status.dart';
 import '../services/question_service.dart';
 import '../widgets/csat_rating_card.dart';
-import '../widgets/publish_and_standardize_dialog.dart';
 import '../widgets/reopen_ticket_dialog.dart';
 import '../widgets/sender_profile_dialog.dart';
 import '../widgets/ticket_timeline_tracker.dart';
@@ -532,7 +531,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
       if (mounted) {
         final newSystemAnswer = AnswerModel(
           questionId: question.id ?? 0,
-          penjawabNama: 'Sistem Forum',
+          penjawabNama: 'Sistem',
           penjawabRole: 'Sistem',
           senderRoleType: 'system_event',
           isiJawaban: 'Pertanyaan telah dieskalasikan ke $result. Ruang percakapan bertransformasi menjadi Tripartit (Pegawai + Staf LKSDM + Tim Pusat).',
@@ -567,9 +566,8 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
     final user = widget.currentUser;
     if (user == null) return false;
     if (!isMatchingTeam) return false;
-    // Hanya Ketua Tim & Super Admin yang bisa mendelegasikan tiket Publik ke Admin Tim
-    return question.isPublic &&
-        (user.userRole == UserRole.superAdmin || user.userRole == UserRole.ketuaTim);
+    // Hanya Ketua Tim & Super Admin yang bisa mendelegasikan tiket ke Admin Tim
+    return user.userRole == UserRole.superAdmin || user.userRole == UserRole.ketuaTim;
   }
 
   void _sendFollowUpReply() async {
@@ -927,51 +925,12 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
         actions: [
           if (widget.currentUser?.userRole == UserRole.superAdmin || widget.currentUser?.isSuperAdmin == true) ...[
             IconButton(
-              tooltip: question.isPublic ? 'Bakukan Struktur Pertanyaan' : 'Up ke Publik & Bakukan',
-              icon: const Icon(Icons.auto_fix_high_rounded, color: Colors.amber),
-              onPressed: () async {
-                final messenger = ScaffoldMessenger.of(context);
-                final updated = await PublishAndStandardizeDialog.show(context, question);
-                if (!mounted) return;
-                if (updated != null) {
-                  setState(() {
-                    question = updated;
-                  });
-                  messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Pertanyaan berhasil dibakukan & dipublikasikan ke Forum! Identitas disamarkan menjadi Pegawai.'),
-                      backgroundColor: Color(0xFF16A34A),
-                    ),
-                  );
-                }
-              },
-            ),
-            IconButton(
-              tooltip: question.isPinned ? 'Lepas Pin / Up Tiket' : 'Up / Pin Pertanyaan Banyak Ditanyakan',
+              tooltip: question.isPinned ? 'Lepas Pin / Prioritas Tiket' : 'Sematkan / Pin Tiket Prioritas',
               icon: Icon(
                 question.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
                 color: question.isPinned ? Colors.amber : Colors.white,
               ),
               onPressed: () async {
-                // Jika belum dipublikasikan ke publik, lakukan proses pembakuan & penyamaran identitas terlebih dahulu
-                if (!question.isPublic) {
-                  final messenger = ScaffoldMessenger.of(context);
-                  final updated = await PublishAndStandardizeDialog.show(context, question);
-                  if (!mounted) return;
-                  if (updated != null) {
-                    setState(() {
-                      question = updated;
-                    });
-                    messenger.showSnackBar(
-                      const SnackBar(
-                        content: Text('Pertanyaan berhasil dibakukan & dipublikasikan ke Forum! Identitas disamarkan menjadi Pegawai.'),
-                        backgroundColor: Color(0xFF16A34A),
-                      ),
-                    );
-                  }
-                  return;
-                }
-
                 final newStatus = !question.isPinned;
                 final success = await QuestionService.togglePinQuestion(
                   questionId: question.id ?? 0,
@@ -985,8 +944,8 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                     SnackBar(
                       content: Text(
                         newStatus
-                            ? 'Pertanyaan berhasil di-Up / Dipin sebagai isu utama yang sering ditanyakan.'
-                            : 'Status Pin / Up pertanyaan dicabut.',
+                            ? 'Tiket berhasil di-Pin sebagai tiket prioritas.'
+                            : 'Status Pin tiket dicabut.',
                       ),
                       backgroundColor: newStatus ? Colors.amber.shade900 : Colors.grey.shade800,
                     ),
@@ -1071,37 +1030,40 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                       question.ticketNumber ?? '#TIKET',
                                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryRed),
                                     ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.slate100,
-                                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                                        border: Border.all(color: AppColors.slate300, width: 1),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            question.isPublic ? Icons.public : Icons.lock_outline,
-                                            size: 10,
-                                            color: AppColors.slate700,
-                                          ),
-                                          const SizedBox(width: 3),
-                                          Text(
-                                            question.isPublic ? 'Publik' : 'Privat',
-                                            style: const TextStyle(
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppColors.slate700,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
                                   ],
                                 ),
-                                StatusBadge(status: question.status, useShortLabel: true),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    StatusBadge(status: question.status, useShortLabel: true),
+                                    if (question.isMandiriLksdm) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.purple.shade50,
+                                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                                          border: Border.all(color: Colors.purple.shade300, width: 0.8),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.badge_outlined, size: 10, color: Colors.purple.shade700),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              'KONSULTASI LKSDM',
+                                              style: TextStyle(
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.purple.shade800,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
                               ],
                             ),
                             const SizedBox(height: 10),
@@ -1124,9 +1086,9 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                         question.getAuthorDisplayName(widget.currentUser),
                                         style: AppTypography.labelMedium,
                                       ),
-                                      if ((question.isPublic || question.isAnonymized) && canViewAuthorFullIdentity && question.user?.name != null)
+                                      if (question.isAnonymized && canViewAuthorFullIdentity && question.user?.name != null)
                                         Text(
-                                          'Identitas Asli: ${question.user!.name} (Disamarkan di Publik)',
+                                          'Identitas Asli: ${question.user!.name}',
                                           style: const TextStyle(fontSize: 10, color: AppColors.slate500),
                                         ),
                                     ],
@@ -1158,9 +1120,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                         const SizedBox(width: 6),
                                         Expanded(
                                           child: Text(
-                                            (question.isPublic || question.isAnonymized)
-                                                ? 'Pegawai Pengaju (Disamarkan di Publik): ${question.officialAuthorName}'
-                                                : 'Pegawai Pengaju: ${question.officialAuthorName}',
+                                            'Pegawai Pengaju: ${question.officialAuthorName}',
                                             style: const TextStyle(
                                               fontSize: 12,
                                               fontWeight: FontWeight.bold,
@@ -1282,38 +1242,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                 ),
                               ],
                             ],
-                            if (widget.currentUser?.isSuperAdmin == true) ...[
-                              const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton.icon(
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    visualDensity: VisualDensity.compact,
-                                  ),
-                                  icon: const Icon(Icons.auto_fix_high_rounded, size: 14, color: Color(0xFF512DA8)),
-                                  label: Text(
-                                    question.isPublic ? 'Bakukan Ulang Struktur' : 'Up ke Publik & Bakukan',
-                                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF512DA8)),
-                                  ),
-                                  onPressed: () async {
-                                    final messenger = ScaffoldMessenger.of(context);
-                                    final updated = await PublishAndStandardizeDialog.show(context, question);
-                                    if (updated != null && mounted) {
-                                      setState(() {
-                                        question = updated;
-                                      });
-                                      messenger.showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Pertanyaan berhasil dibakukan & dipublikasikan ke Forum! Identitas disamarkan menjadi Pegawai.'),
-                                          backgroundColor: Color(0xFF16A34A),
-                                        ),
-                                      );
-                                    }
-                                  },
-                                ),
-                              ),
-                            ],
+
                             if (tusiText.isNotEmpty || (question.assignedTo != null && question.assignedTo!.isNotEmpty)) ...[
                               const SizedBox(height: 10),
                               const Divider(height: 1, color: AppColors.border),
@@ -1470,7 +1399,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                         jabatan: question.user?.jabatan,
                                         unit: question.user?.unit,
                                         lksdm: question.authorAsalLksdm,
-                                        isAnonymized: (question.isPublic || question.isAnonymized) && !canViewAuthorFullIdentity,
+                                        isAnonymized: question.isAnonymized && !canViewAuthorFullIdentity,
                                       );
                                     },
                                     child: Row(

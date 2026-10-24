@@ -46,6 +46,11 @@ class QuestionModel {
   bool get isClosed => ticketStatus.isClosed;
   bool get isActive => ticketStatus.isActive;
 
+  /// Apakah tiket ini merupakan konsultasi mandiri dari staf/ketua LKSDM ke Tim Pusat
+  bool get isMandiriLksdm =>
+      status.toLowerCase().contains('mandiri') ||
+      ticketStatus == TicketStatus.mandiriLksdm;
+
   /// Penanda apakah pertanyaan telah dibakukan dari teks aslinya
   bool get isStandardized =>
       (originalJudul != null && originalJudul!.isNotEmpty && originalJudul != judul) ||
@@ -121,6 +126,16 @@ class QuestionModel {
 
   DateTime? get createdDateTime =>
       createdAt != null ? DateTime.tryParse(createdAt!) : null;
+
+  String get formattedDate {
+    if (createdAt == null) return '';
+    try {
+      final dt = DateTime.parse(createdAt!).toLocal();
+      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return createdAt!;
+    }
+  }
 
   DateTime? get resolvedDateTime =>
       resolvedAt != null ? DateTime.tryParse(resolvedAt!) : null;

@@ -37,11 +37,6 @@ class _KetuaTimMainTabPageState extends State<KetuaTimMainTabPage> {
         initialTeamFilter: teamFilter,
         title: 'Tiket & Disposisi ($teamName)',
       ),
-      QuestionListScreen(
-        user: widget.user,
-        isPublicOnly: true,
-        title: 'Forum Kepegawaian BRIN',
-      ),
       ProfileScreen(
         user: widget.user,
       ),

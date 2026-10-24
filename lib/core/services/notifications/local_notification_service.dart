@@ -60,7 +60,15 @@ class LocalNotificationService {
     try {
       final dynamic decoded = jsonDecode(payload);
       if (decoded is! Map) return;
-      final data = Map<String, dynamic>.from(decoded);
+      handlePayloadData(Map<String, dynamic>.from(decoded));
+    } catch (e) {
+      debugPrint('Error handling notification tap: $e');
+    }
+  }
+
+  /// Penanganan payload data untuk membuka detail tiket
+  static void handlePayloadData(Map<String, dynamic> data) async {
+    try {
       final questionIdRaw = data['question_id'];
       if (questionIdRaw != null) {
         final qId = questionIdRaw is int
@@ -82,7 +90,7 @@ class LocalNotificationService {
         }
       }
     } catch (e) {
-      debugPrint('Error handling notification tap: $e');
+      debugPrint('Error handling payload navigation: $e');
     }
   }
 

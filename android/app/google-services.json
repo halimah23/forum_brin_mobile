@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "585991995358",
+    "project_id": "bosdm-connect",
+    "storage_bucket": "bosdm-connect.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:585991995358:android:56f3012df47ad54c63e74f",
+        "android_client_info": {
+          "package_name": "com.example.forum_brin_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMVF2TTRwS8a6WSG55gPBJUmE8rT4WHU0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

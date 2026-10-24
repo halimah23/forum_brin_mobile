@@ -130,34 +130,32 @@ class QuestionCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         StatusBadge(status: question.status, useShortLabel: true),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.slate100,
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                            border: Border.all(color: AppColors.slate300, width: 1),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                question.isPublic ? Icons.public : Icons.lock_outline,
-                                size: 10,
-                                color: AppColors.slate700,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                question.isPublic ? 'Publik' : 'Privat',
-                                style: const TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.slate700,
+                        if (question.isMandiriLksdm) ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.shade50,
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              border: Border.all(color: Colors.purple.shade300, width: 0.8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.badge_outlined, size: 10, color: Colors.purple.shade700),
+                                const SizedBox(width: 3),
+                                Text(
+                                  'KONSULTASI LKSDM',
+                                  style: TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.purple.shade800,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ],

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/services/notifications/fcm_service.dart';
 import '../../../core/services/notifications/local_notification_service.dart';
 import '../models/notification_model.dart';
 
@@ -15,9 +16,13 @@ class NotificationService {
   /// Notifier untuk update realtime badge lonceng di UI
   static final ValueNotifier<int> unreadCountNotifier = ValueNotifier<int>(0);
 
-  /// Mulai berlangganan notifikasi realtime Supabase untuk user aktif
+  /// Mulai berlangganan notifikasi realtime Supabase & sinkronisasi token FCM untuk user aktif
   static void startRealtimeSubscription(String userId) {
     if (userId.isEmpty) return;
+
+    // Sinkronisasikan token FCM perangkat ke database
+    FcmService.syncTokenWithUser(userId);
+
     if (_activeSubscribedUserId == userId && _notificationChannel != null) {
       return;
     }

@@ -3,8 +3,11 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_typography.dart';
+import '../../../core/widgets/custom_fab.dart';
 import '../../auth/models/user_model.dart';
 import '../../questions/models/question_model.dart';
+import '../../questions/screens/ask_question_screen.dart';
+import '../../questions/screens/lksdm_consultation_tickets_screen.dart';
 import '../../questions/screens/question_detail_screen.dart';
 import '../../questions/services/question_service.dart';
 import '../../questions/widgets/question_card.dart';
@@ -171,6 +174,11 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
                       ],
                     ),
 
+                    if (widget.user.isKetuaTimLksdm) ...[
+                      const SizedBox(height: 16),
+                      _buildLksdmConsultationCard(context),
+                    ],
+
                     const SizedBox(height: 24),
 
                     // Antrean Perlu Disposisi
@@ -274,6 +282,153 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
             ),
           ),
         ),
+      ),
+      floatingActionButton: widget.user.isKetuaTimLksdm
+          ? CustomFab(
+              label: 'Konsultasi ke Pusat',
+              backgroundColor: Colors.purple.shade800,
+              icon: const Icon(Icons.add, color: Colors.white, size: 20),
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AskQuestionScreen(
+                      token: widget.user.token ?? '',
+                      user: widget.user,
+                      isLksdmConsultation: true,
+                    ),
+                  ),
+                );
+                _loadData();
+              },
+            )
+          : null,
+    );
+  }
+
+  Widget _buildLksdmConsultationCard(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.purple.shade50,
+            Colors.purple.shade100.withAlpha(120),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: Colors.purple.shade200, width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.purple.shade700,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: const Icon(
+                  Icons.send_and_archive_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Konsultasi Mandiri ke Pusat',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color(0xFF581C87),
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Ajukan konsultasi regulasi atau kendala teknis langsung ke Tim Pusat BOSDM',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF6B21A8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.purple.shade900,
+                    side: BorderSide(color: Colors.purple.shade400),
+                    backgroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                  ),
+                  icon: const Icon(Icons.inbox_outlined, size: 16),
+                  label: const Text(
+                    'Tiket Saya',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            LksdmConsultationTicketsScreen(user: widget.user),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple.shade800,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                  ),
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text(
+                    'Konsultasi Baru',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AskQuestionScreen(
+                          token: widget.user.token ?? '',
+                          user: widget.user,
+                          isLksdmConsultation: true,
+                        ),
+                      ),
+                    );
+                    _loadData();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -4,7 +4,6 @@ import 'package:forum_brin_mobile/features/questions/models/question_model.dart'
 import 'package:forum_brin_mobile/features/questions/widgets/question_card.dart';
 import 'package:forum_brin_mobile/features/dashboard/widgets/audit_question_card.dart';
 import 'package:forum_brin_mobile/features/questions/widgets/ticket_timeline_tracker.dart';
-import 'package:forum_brin_mobile/features/questions/widgets/forum_discussion_card.dart';
 import 'package:forum_brin_mobile/features/questions/screens/question_detail_screen.dart';
 import 'package:forum_brin_mobile/features/auth/screens/login_screen.dart';
 import 'package:forum_brin_mobile/features/auth/cubits/auth_cubit.dart';
@@ -112,32 +111,6 @@ void main() {
     );
 
     expect(find.textContaining('TKT-2026-00031'), findsOneWidget);
-  });
-
-  testWidgets('Test ForumDiscussionCard on 360px device without overflow', (tester) async {
-    tester.view.physicalSize = const Size(360, 800);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Padding(
-            padding: const EdgeInsets.all(16),
-            child: ForumDiscussionCard(
-              question: sampleQuestion,
-              onTap: () {},
-              onTogglePin: () {},
-            ),
-          ),
-        ),
-      ),
-    );
-
-    expect(find.textContaining('Telah Dibakukan'), findsOneWidget);
   });
 
   testWidgets('Test LoginScreen on 360px device without overflow', (tester) async {

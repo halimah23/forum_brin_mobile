@@ -75,6 +75,8 @@ class UserModel {
     return false;
   }
 
+  bool get isLksdmMember => isAdminLksdm || isKetuaTimLksdm;
+
   String? get satuanKerja => unit;
 
   String get effectiveLksdm {

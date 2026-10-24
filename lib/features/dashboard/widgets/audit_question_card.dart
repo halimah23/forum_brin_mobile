@@ -106,32 +106,6 @@ class AuditQuestionCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
-                          decoration: BoxDecoration(
-                            color: question.isPublic ? AppColors.primaryBlue.withAlpha(15) : AppColors.slate200,
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                question.isPublic ? Icons.public : Icons.lock_outline,
-                                size: 11,
-                                color: question.isPublic ? AppColors.primaryBlue : AppColors.slate700,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                question.isPublic ? 'PUBLIK' : 'PRIVAT',
-                                style: TextStyle(
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.bold,
-                                  color: question.isPublic ? AppColors.primaryBlue : AppColors.slate700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                         if (question.isStandardized)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
@@ -219,13 +193,9 @@ class AuditQuestionCard extends StatelessWidget {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        (question.isPublic || question.isAnonymized)
-                            ? (pelaporUnit != null && pelaporUnit.isNotEmpty
-                                ? '$pelaporNama ($pelaporUnit) • Publik: Pegawai'
-                                : '$pelaporNama • Publik: Pegawai')
-                            : (pelaporUnit != null && pelaporUnit.isNotEmpty
-                                ? '$pelaporNama ($pelaporUnit)'
-                                : pelaporNama),
+                        (pelaporUnit != null && pelaporUnit.isNotEmpty)
+                            ? '$pelaporNama ($pelaporUnit)'
+                            : pelaporNama,
                         style: const TextStyle(fontSize: 11.5, color: AppColors.slate600),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -295,7 +265,7 @@ class AuditQuestionCard extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.forum_outlined, size: 13, color: AppColors.slate500),
+                        const Icon(Icons.chat_bubble_outline_rounded, size: 13, color: AppColors.slate500),
                         const SizedBox(width: 4),
                         Text(
                           '$answerCount respon',

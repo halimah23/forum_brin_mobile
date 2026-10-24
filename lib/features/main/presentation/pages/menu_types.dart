@@ -9,10 +9,10 @@ enum MemberMenuType {
     _homeIcon,
     _homeIcon,
   ),
-  forum(
-    'Forum',
-    _forumIcon,
-    _forumIcon,
+  tickets(
+    'Tiket Saya',
+    _inboxIcon,
+    _inboxIcon,
   ),
   profile(
     'Profil',
@@ -27,7 +27,7 @@ enum MemberMenuType {
   const MemberMenuType(this.label, this.unselectedIconBuilder, this.selectedIconBuilder);
 
   static Widget _homeIcon(Color color, double size) => Home(color: color, width: size, height: size);
-  static Widget _forumIcon(Color color, double size) => ChatLines(color: color, width: size, height: size);
+  static Widget _inboxIcon(Color color, double size) => MailIn(color: color, width: size, height: size);
   static Widget _profileIcon(Color color, double size) => User(color: color, width: size, height: size);
 }
 
@@ -41,11 +41,6 @@ enum AdminMenuType {
     'Layanan SDM',
     _inboxIcon,
     _inboxIcon,
-  ),
-  forum(
-    'Forum',
-    _forumIcon,
-    _forumIcon,
   ),
   profile(
     'Profil',
@@ -61,7 +56,6 @@ enum AdminMenuType {
 
   static Widget _homeIcon(Color color, double size) => Home(color: color, width: size, height: size);
   static Widget _inboxIcon(Color color, double size) => MailIn(color: color, width: size, height: size);
-  static Widget _forumIcon(Color color, double size) => ChatLines(color: color, width: size, height: size);
   static Widget _profileIcon(Color color, double size) => User(color: color, width: size, height: size);
 }
 
@@ -72,14 +66,9 @@ enum KetuaTimMenuType {
     _homeIcon,
   ),
   disposition(
-    'Tiket SDM',
+    'Tiket & Disposisi',
     _sendIcon,
     _sendIcon,
-  ),
-  forum(
-    'Forum',
-    _forumIcon,
-    _forumIcon,
   ),
   profile(
     'Profil',
@@ -95,7 +84,6 @@ enum KetuaTimMenuType {
 
   static Widget _homeIcon(Color color, double size) => Home(color: color, width: size, height: size);
   static Widget _sendIcon(Color color, double size) => Send(color: color, width: size, height: size);
-  static Widget _forumIcon(Color color, double size) => ChatLines(color: color, width: size, height: size);
   static Widget _profileIcon(Color color, double size) => User(color: color, width: size, height: size);
 }
 
@@ -109,11 +97,6 @@ enum EksekutifMenuType {
     'Monitoring',
     _graphIcon,
     _graphIcon,
-  ),
-  forum(
-    'Forum',
-    _forumIcon,
-    _forumIcon,
   ),
   profile(
     'Profil',
@@ -129,7 +112,6 @@ enum EksekutifMenuType {
 
   static Widget _homeIcon(Color color, double size) => Home(color: color, width: size, height: size);
   static Widget _graphIcon(Color color, double size) => GraphUp(color: color, width: size, height: size);
-  static Widget _forumIcon(Color color, double size) => ChatLines(color: color, width: size, height: size);
   static Widget _profileIcon(Color color, double size) => User(color: color, width: size, height: size);
 }
 
@@ -139,15 +121,15 @@ enum SuperAdminMenuType {
     _homeIcon,
     _homeIcon,
   ),
+  tickets(
+    'Kelola Tiket',
+    _inboxIcon,
+    _inboxIcon,
+  ),
   audit(
     'Audit Tiket',
     _analyticsIcon,
     _analyticsIcon,
-  ),
-  forum(
-    'Forum',
-    _forumIcon,
-    _forumIcon,
   ),
   profile(
     'Profil',
@@ -162,7 +144,7 @@ enum SuperAdminMenuType {
   const SuperAdminMenuType(this.label, this.unselectedIconBuilder, this.selectedIconBuilder);
 
   static Widget _homeIcon(Color color, double size) => Home(color: color, width: size, height: size);
+  static Widget _inboxIcon(Color color, double size) => MailIn(color: color, width: size, height: size);
   static Widget _analyticsIcon(Color color, double size) => StatsReport(color: color, width: size, height: size);
-  static Widget _forumIcon(Color color, double size) => ChatLines(color: color, width: size, height: size);
   static Widget _profileIcon(Color color, double size) => User(color: color, width: size, height: size);
 }

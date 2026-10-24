@@ -184,7 +184,7 @@ class _EksekutifDashboardScreenState extends State<EksekutifDashboardScreen> {
                               children: [
                                 _buildStatCard('Total Pertanyaan', '$totalCount', Colors.blue, Icons.help_outline_rounded),
                                 const SizedBox(width: 8),
-                                _buildStatCard('Total Jawaban/Respon', '$totalAnswersCount', const Color(0xFF7C3AED), Icons.forum_outlined),
+                                _buildStatCard('Total Jawaban/Respon', '$totalAnswersCount', const Color(0xFF7C3AED), Icons.chat_bubble_outline_rounded),
                               ],
                             ),
                             const SizedBox(height: 8),
