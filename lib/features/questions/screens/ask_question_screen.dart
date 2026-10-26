@@ -8,11 +8,11 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/services/storage/session_manager.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
-import '../../../core/widgets/status_badge.dart';
 import '../../auth/models/user_model.dart';
 import '../cubits/ask_question_cubit.dart';
 import '../cubits/ask_question_state.dart';
 import '../data/lksdm_catalog_data.dart';
+import '../data/tusi_catalog_data.dart';
 import '../models/question_model.dart';
 import '../services/question_service.dart';
 import '../widgets/attachment_picker_widget.dart';
@@ -23,6 +23,7 @@ class AskQuestionScreen extends StatelessWidget {
   final bool isTab;
   final VoidCallback? onSuccess;
   final UserModel? user;
+  final bool isLksdmConsultation;
 
   const AskQuestionScreen({
     super.key,
@@ -30,6 +31,7 @@ class AskQuestionScreen extends StatelessWidget {
     this.isTab = false,
     this.onSuccess,
     this.user,
+    this.isLksdmConsultation = false,
   });
 
   @override
@@ -41,6 +43,7 @@ class AskQuestionScreen extends StatelessWidget {
         isTab: isTab,
         onSuccess: onSuccess,
         user: user,
+        isLksdmConsultation: isLksdmConsultation,
       ),
     );
   }
@@ -51,6 +54,7 @@ class AskQuestionView extends StatefulWidget {
   final bool isTab;
   final VoidCallback? onSuccess;
   final UserModel? user;
+  final bool isLksdmConsultation;
 
   const AskQuestionView({
     super.key,
@@ -58,6 +62,7 @@ class AskQuestionView extends StatefulWidget {
     this.isTab = false,
     this.onSuccess,
     this.user,
+    this.isLksdmConsultation = false,
   });
 
   @override
@@ -73,6 +78,7 @@ class _AskQuestionViewState extends State<AskQuestionView> {
 
   final List<LksdmItem> lksdmList = LksdmCatalogData.allLksdm;
   late LksdmItem selectedLksdm;
+  late String selectedPusatTeam;
 
   QuestionModel? activeTicket;
   bool dismissActiveBanner = false;
@@ -85,6 +91,7 @@ class _AskQuestionViewState extends State<AskQuestionView> {
     super.initState();
     currentUser = widget.user;
     selectedLksdm = lksdmList.first;
+    selectedPusatTeam = TusiCatalogData.centralTeams.first;
     _resolveUserAndLksdm();
   }
 
@@ -102,7 +109,9 @@ class _AskQuestionViewState extends State<AskQuestionView> {
       setState(() {
         selectedLksdm = matched;
       });
-      _checkActiveTicket();
+      if (!widget.isLksdmConsultation) {
+        _checkActiveTicket();
+      }
     }
   }
 
@@ -132,17 +141,20 @@ class _AskQuestionViewState extends State<AskQuestionView> {
   void submitQuestion() async {
     if (_formKey.currentState?.validate() ?? false) {
       final lksdmClean = selectedLksdm.shortName;
+      final isConsultation = widget.isLksdmConsultation;
 
       context.read<AskQuestionCubit>().submitQuestion(
             token: widget.token,
             judul: titleController.text.trim(),
             isi: questionController.text.trim(),
-            selectedTeam: lksdmClean,
+            selectedTeam: isConsultation ? selectedPusatTeam : lksdmClean,
             lksdmKawasan: lksdmClean,
+            targetTimPusat: isConsultation ? selectedPusatTeam : null,
             tugasFungsiIds: const [],
             isPublic: false,
             attachmentUrl: attachedFileUrl,
             attachmentName: attachedFileName,
+            isLksdmConsultation: isConsultation,
           );
     }
   }
@@ -161,6 +173,7 @@ class _AskQuestionViewState extends State<AskQuestionView> {
   @override
   Widget build(BuildContext context) {
     final lksdmClean = selectedLksdm.shortName;
+    final isConsultation = widget.isLksdmConsultation;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -173,12 +186,14 @@ class _AskQuestionViewState extends State<AskQuestionView> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Tanya Kepegawaian',
+            Text(
+              isConsultation ? 'Konsultasi ke Tim Pusat' : 'Tanya Kepegawaian',
               style: AppTypography.heading3,
             ),
             Text(
-              'Ruang Pengajuan Pertanyaan ($lksdmClean)',
+              isConsultation
+                  ? 'Konsultasi Teknis & Regulasi ($lksdmClean ➔ Pusat)'
+                  : 'Ruang Pengajuan Pertanyaan ($lksdmClean)',
               style: AppTypography.caption,
               overflow: TextOverflow.ellipsis,
             ),
@@ -195,10 +210,14 @@ class _AskQuestionViewState extends State<AskQuestionView> {
             titleController.clear();
             questionController.clear();
             
+            final successMsg = isConsultation
+                ? 'Konsultasi berhasil diteruskan langsung ke $selectedPusatTeam.'
+                : 'Pertanyaan berhasil dikirim ke Staf Admin $lksdmClean.';
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  'Pertanyaan berhasil dikirim ke Staf Admin $lksdmClean.',
+                  successMsg,
                   style: AppTypography.bodyMedium.copyWith(color: Colors.white),
                 ),
                 backgroundColor: AppColors.success,
@@ -210,7 +229,7 @@ class _AskQuestionViewState extends State<AskQuestionView> {
             if (widget.onSuccess != null) {
               widget.onSuccess!();
             } else if (!widget.isTab && Navigator.canPop(context)) {
-              Navigator.pop(context);
+              Navigator.pop(context, true);
             }
           } else if (state is AskQuestionError) {
             showMessage(state.message);
@@ -233,62 +252,68 @@ class _AskQuestionViewState extends State<AskQuestionView> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (activeTicket != null && !dismissActiveBanner) ...[
+                              if (activeTicket != null && !dismissActiveBanner && !isConsultation) ...[
                                 Container(
                                   padding: const EdgeInsets.all(14),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFFFFBEB),
                                     borderRadius: BorderRadius.circular(AppRadius.md),
-                                    border: Border.all(color: const Color(0xFFFCD34D), width: 1.2),
+                                    border: Border.all(color: const Color(0xFFFDE68A)),
                                   ),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
-                                          const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 20),
+                                          const Icon(Icons.info_outline, color: Color(0xFFD97706), size: 18),
                                           const SizedBox(width: 8),
                                           const Expanded(
                                             child: Text(
-                                              'Anda Memiliki Tiket Aktif Berjalan',
-                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF92400E)),
+                                              'Anda Memiliki Tiket Aktif di Kawasan Ini',
+                                              style: TextStyle(
+                                                fontSize: 12.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF92400E),
+                                              ),
                                             ),
                                           ),
-                                          InkWell(
-                                            onTap: () => setState(() => dismissActiveBanner = true),
-                                            child: const Icon(Icons.close, size: 18, color: Color(0xFF92400E)),
+                                          IconButton(
+                                            icon: const Icon(Icons.close, size: 16, color: Color(0xFF92400E)),
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
+                                            onPressed: () => setState(() => dismissActiveBanner = true),
                                           ),
                                         ],
                                       ),
-                                      const SizedBox(height: 8),
+                                      const SizedBox(height: 6),
                                       Text(
-                                        '${activeTicket!.ticketNumber} - ${activeTicket!.judul}',
-                                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.slate900),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
+                                        'Tiket #${activeTicket!.ticketNumber ?? activeTicket!.id}: "${activeTicket!.judul}" saat ini masih berjalan.',
+                                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF78350F)),
                                       ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          StatusBadge(status: activeTicket!.status),
-                                          const Spacer(),
-                                          TextButton.icon(
-                                            style: TextButton.styleFrom(
-                                              visualDensity: VisualDensity.compact,
-                                              padding: const EdgeInsets.symmetric(horizontal: 10),
-                                            ),
-                                            onPressed: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) => QuestionDetailScreen(question: activeTicket!),
-                                                ),
-                                              );
-                                            },
-                                            icon: const Icon(Icons.arrow_forward_rounded, size: 14),
-                                            label: const Text('Lanjutkan Chat', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                      const SizedBox(height: 10),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: OutlinedButton.icon(
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: const Color(0xFF92400E),
+                                            side: const BorderSide(color: Color(0xFFD97706)),
+                                            padding: const EdgeInsets.symmetric(vertical: 8),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
                                           ),
-                                        ],
+                                          icon: const Icon(Icons.chat_bubble_outline, size: 14),
+                                          label: const Text('Buka Percakapan Tiket Berjalan', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => QuestionDetailScreen(
+                                                  question: activeTicket!,
+                                                  currentUser: currentUser,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -296,9 +321,9 @@ class _AskQuestionViewState extends State<AskQuestionView> {
                                 const SizedBox(height: 16),
                               ],
 
-                              // 1. Wilayah Kerja LKSDM (Terdeteksi Otomatis)
-                              const Text(
-                                '1. Wilayah Penanganan Kawasan SDM',
+                              // 1. Wilayah Asal Pengajuan LKSDM
+                              Text(
+                                isConsultation ? '1. Asal Kawasan LKSDM Pengaju' : '1. Wilayah Penanganan Kawasan SDM',
                                 style: AppTypography.labelMedium,
                               ),
                               const SizedBox(height: 6),
@@ -314,13 +339,13 @@ class _AskQuestionViewState extends State<AskQuestionView> {
                                     Container(
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: AppColors.slate100,
+                                        color: isConsultation ? Colors.purple.shade50 : AppColors.slate100,
                                         borderRadius: BorderRadius.circular(AppRadius.sm),
                                       ),
-                                      child: const Icon(
-                                        Icons.location_on_rounded,
+                                      child: Icon(
+                                        isConsultation ? Icons.badge_outlined : Icons.location_on_rounded,
                                         size: 22,
-                                        color: AppColors.primaryRed,
+                                        color: isConsultation ? Colors.purple.shade700 : AppColors.primaryRed,
                                       ),
                                     ),
                                     const SizedBox(width: 12),
@@ -342,21 +367,28 @@ class _AskQuestionViewState extends State<AskQuestionView> {
                                               Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                                 decoration: BoxDecoration(
-                                                  color: Colors.teal.shade50,
+                                                  color: isConsultation ? Colors.purple.shade50 : Colors.teal.shade50,
                                                   borderRadius: BorderRadius.circular(AppRadius.sm),
-                                                  border: Border.all(color: Colors.teal.shade300, width: 0.8),
+                                                  border: Border.all(
+                                                    color: isConsultation ? Colors.purple.shade300 : Colors.teal.shade300,
+                                                    width: 0.8,
+                                                  ),
                                                 ),
                                                 child: Row(
                                                   mainAxisSize: MainAxisSize.min,
                                                   children: [
-                                                    Icon(Icons.check_circle_rounded, size: 10, color: Colors.teal.shade700),
+                                                    Icon(
+                                                      Icons.verified_user_rounded,
+                                                      size: 10,
+                                                      color: isConsultation ? Colors.purple.shade700 : Colors.teal.shade700,
+                                                    ),
                                                     const SizedBox(width: 3),
                                                     Text(
-                                                      'Otomatis dari Profil',
+                                                      isConsultation ? 'Tim LKSDM' : 'Otomatis dari Profil',
                                                       style: TextStyle(
                                                         fontSize: 9,
                                                         fontWeight: FontWeight.bold,
-                                                        color: Colors.teal.shade800,
+                                                        color: isConsultation ? Colors.purple.shade800 : Colors.teal.shade800,
                                                       ),
                                                     ),
                                                   ],
@@ -384,43 +416,116 @@ class _AskQuestionViewState extends State<AskQuestionView> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: AppColors.slate50,
-                                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                                  border: Border.all(color: AppColors.border, width: 1),
+
+                              // Jika Konsultasi LKSDM -> Tampilkan Dropdown Pemilihan Tim Pusat
+                              if (isConsultation) ...[
+                                const SizedBox(height: 20),
+                                const Text(
+                                  '2. Tim Pusat yang Dituju *',
+                                  style: AppTypography.labelMedium,
                                 ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.info_outline, size: 14, color: AppColors.slate500),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        'Pertanyaan Anda akan otomatis ditujukan ke Staf Admin dan Ketua Tim ${selectedLksdm.shortName}.',
-                                        style: AppTypography.caption.copyWith(color: AppColors.slate600),
-                                      ),
+                                const SizedBox(height: 6),
+                                DropdownButtonFormField<String>(
+                                  initialValue: selectedPusatTeam,
+                                  isExpanded: true,
+                                  style: const TextStyle(fontSize: 12.5, color: AppColors.slate900),
+                                  decoration: InputDecoration(
+                                    filled: true,
+                                    fillColor: Colors.white,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(AppRadius.md),
+                                      borderSide: const BorderSide(color: AppColors.border),
                                     ),
-                                  ],
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(AppRadius.md),
+                                      borderSide: const BorderSide(color: AppColors.border),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(AppRadius.md),
+                                      borderSide: const BorderSide(color: Colors.purple, width: 1.5),
+                                    ),
+                                  ),
+                                  items: TusiCatalogData.centralTeams.map((team) {
+                                    return DropdownMenuItem<String>(
+                                      value: team,
+                                      child: Text(
+                                        team,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      setState(() => selectedPusatTeam = val);
+                                    }
+                                  },
                                 ),
-                              ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.purple.shade50,
+                                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                                    border: Border.all(color: Colors.purple.shade200, width: 1),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.shield_outlined, size: 14, color: Colors.purple.shade700),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Tiket ini bersifat privat internal: hanya Anda dan Staf/Ketua $selectedPusatTeam yang dapat berbalas pesan.',
+                                          style: TextStyle(fontSize: 10.5, color: Colors.purple.shade900),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ] else ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.slate50,
+                                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                                    border: Border.all(color: AppColors.border, width: 1),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.info_outline, size: 14, color: AppColors.slate500),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'Pertanyaan Anda akan otomatis ditujukan ke Staf Admin dan Ketua Tim ${selectedLksdm.shortName}.',
+                                          style: AppTypography.caption.copyWith(color: AppColors.slate600),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
 
                               const SizedBox(height: 20),
 
-                              // 2. Judul Pertanyaan Input
+                              // Judul Input
                               CustomTextField(
                                 controller: titleController,
                                 focusNode: titleFocusNode,
-                                label: '2. Judul Pertanyaan',
-                                hintText: 'Contoh: Prosedur Uji Kompetensi Kenaikan Jabatan...',
+                                label: isConsultation ? '3. Topik / Judul Konsultasi' : '2. Judul Pertanyaan',
+                                hintText: isConsultation
+                                    ? 'Contoh: Permohonan Arahan Penetapan Hukuman Disiplin Pegawai...'
+                                    : 'Contoh: Prosedur Uji Kompetensi Kenaikan Jabatan...',
                                 textInputAction: TextInputAction.next,
                                 onFieldSubmitted: (_) {
                                   questionFocusNode.requestFocus();
                                 },
                                 validator: (value) {
                                   if (value == null || value.trim().isEmpty) {
-                                    return 'Judul pertanyaan wajib diisi';
+                                    return isConsultation
+                                        ? 'Topik konsultasi wajib diisi'
+                                        : 'Judul pertanyaan wajib diisi';
                                   }
                                   return null;
                                 },
@@ -428,17 +533,21 @@ class _AskQuestionViewState extends State<AskQuestionView> {
 
                               const SizedBox(height: 20),
 
-                              // 3. Detail Pertanyaan Input
+                              // Detail Pertanyaan Input
                               CustomTextField(
                                 controller: questionController,
                                 focusNode: questionFocusNode,
-                                label: '3. Uraian Pertanyaan Lengkap',
-                                hintText: 'Jelaskan pertanyaan atau kendala yang Anda hadapi secara rinci...',
+                                label: isConsultation ? '4. Rincian Kendala / Permohonan Arahan' : '3. Uraian Pertanyaan Lengkap',
+                                hintText: isConsultation
+                                    ? 'Jelaskan kronologi kendala atau regulasi yang memerlukan penegasan dari kantor pusat...'
+                                    : 'Jelaskan pertanyaan atau kendala yang Anda hadapi secara rinci...',
                                 maxLines: 5,
                                 textInputAction: TextInputAction.newline,
                                 validator: (value) {
                                   if (value == null || value.trim().isEmpty) {
-                                    return 'Isi pertanyaan wajib diisi';
+                                    return isConsultation
+                                        ? 'Rincian kendala konsultasi wajib diisi'
+                                        : 'Isi pertanyaan wajib diisi';
                                   }
                                   return null;
                                 },
@@ -446,9 +555,9 @@ class _AskQuestionViewState extends State<AskQuestionView> {
 
                               const SizedBox(height: 20),
 
-                              // 4. Lampiran Berkas Bukti (Opsional)
-                              const Text(
-                                '4. Lampiran Dokumen Bukti (Opsional)',
+                              // Lampiran Berkas Bukti (Opsional)
+                              Text(
+                                isConsultation ? '5. Lampiran Berkas Dukung (Opsional)' : '4. Lampiran Dokumen Bukti (Opsional)',
                                 style: AppTypography.labelMedium,
                               ),
                               const SizedBox(height: 8),
@@ -478,7 +587,8 @@ class _AskQuestionViewState extends State<AskQuestionView> {
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 440),
                         child: CustomButton(
-                          text: 'Kirim Pertanyaan',
+                          text: isConsultation ? 'Kirim Konsultasi ke Tim Pusat' : 'Kirim Pertanyaan',
+                          backgroundColor: isConsultation ? Colors.purple.shade800 : AppColors.primaryRed,
                           onPressed: submitQuestion,
                           isLoading: isSubmitting,
                           icon: const Icon(Icons.send_rounded),

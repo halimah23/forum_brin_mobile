@@ -155,7 +155,14 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Administrasi & Monitoring', style: AppTypography.heading3),
+                        const Expanded(
+                          child: Text(
+                            'Administrasi & Monitoring',
+                            style: AppTypography.heading3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(

@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../notifications/services/notification_service.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import 'auth_state.dart';
@@ -11,6 +12,9 @@ class AuthCubit extends Cubit<AuthState> {
     try {
       final user = await AuthService.getCurrentUser();
       if (user != null) {
+        if (user.id != null && user.id!.isNotEmpty) {
+          NotificationService.startRealtimeSubscription(user.id!);
+        }
         emit(Authenticated(user));
       } else {
         emit(Unauthenticated());
@@ -25,6 +29,9 @@ class AuthCubit extends Cubit<AuthState> {
     emit(AuthLoading());
     try {
       final user = await AuthService.login(email: email, password: password);
+      if (user.id != null && user.id!.isNotEmpty) {
+        NotificationService.startRealtimeSubscription(user.id!);
+      }
       emit(Authenticated(user));
     } catch (e) {
       emit(AuthError(e.toString().replaceFirst('Exception: ', '')));
@@ -33,6 +40,9 @@ class AuthCubit extends Cubit<AuthState> {
 
   /// Set user langsung jika sudah tersedia
   void setUser(UserModel user) {
+    if (user.id != null && user.id!.isNotEmpty) {
+      NotificationService.startRealtimeSubscription(user.id!);
+    }
     emit(Authenticated(user));
   }
 
@@ -40,6 +50,7 @@ class AuthCubit extends Cubit<AuthState> {
   Future<void> logout() async {
     emit(AuthLoading());
     try {
+      NotificationService.stopRealtimeSubscription();
       await AuthService.logout();
     } catch (_) {}
     emit(Unauthenticated());

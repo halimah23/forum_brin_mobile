@@ -3,7 +3,7 @@ import '../../../auth/models/user_model.dart';
 import '../../../dashboard/screens/super_admin_audit_screen.dart';
 import '../../../dashboard/screens/super_admin_dashboard_screen.dart';
 import '../../../profile/screens/profile_screen.dart';
-import '../../../questions/screens/super_admin_forum_screen.dart';
+import '../../../questions/screens/question_list_screen.dart';
 import '../widgets/app_bottom_navigation_bar.dart';
 import 'menu_types.dart';
 
@@ -30,10 +30,11 @@ class _SuperAdminMainTabPageState extends State<SuperAdminMainTabPage> {
       SuperAdminDashboardScreen(
         user: widget.user,
       ),
-      SuperAdminAuditScreen(
+      QuestionListScreen(
         user: widget.user,
+        title: 'Kelola Seluruh Tiket',
       ),
-      SuperAdminForumScreen(
+      SuperAdminAuditScreen(
         user: widget.user,
       ),
       ProfileScreen(

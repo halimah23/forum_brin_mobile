@@ -16,6 +16,7 @@ class AskQuestionCubit extends Cubit<AskQuestionState> {
     bool isPublic = true,
     String? attachmentUrl,
     String? attachmentName,
+    bool isLksdmConsultation = false,
   }) async {
     emit(AskQuestionSubmitting());
     try {
@@ -30,6 +31,7 @@ class AskQuestionCubit extends Cubit<AskQuestionState> {
         isPublic: isPublic,
         attachmentUrl: attachmentUrl,
         attachmentName: attachmentName,
+        isLksdmConsultation: isLksdmConsultation,
       );
       emit(AskQuestionSuccess());
     } catch (e) {

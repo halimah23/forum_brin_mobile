@@ -307,7 +307,7 @@ class _MemberTicketsScreenState extends State<MemberTicketsScreen>
                     context,
                     MaterialPageRoute(
                       builder: (context) => QuestionDetailScreen(
-                        question: question,
+                        question: question.user == null ? question.copyWith(user: widget.user) : question,
                         currentUser: widget.user,
                       ),
                     ),

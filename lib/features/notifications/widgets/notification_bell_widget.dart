@@ -25,12 +25,35 @@ class _NotificationBellWidgetState extends State<NotificationBellWidget> {
   void initState() {
     super.initState();
     _fetchUnreadCount();
+    final uid = widget.user.id?.toString();
+    if (uid != null && uid.isNotEmpty) {
+      NotificationService.startRealtimeSubscription(uid);
+    }
+    NotificationService.unreadCountNotifier.addListener(_onRealtimeCountChanged);
+  }
+
+  void _onRealtimeCountChanged() {
+    if (mounted) {
+      setState(() {
+        _unreadCount = NotificationService.unreadCountNotifier.value;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    NotificationService.unreadCountNotifier.removeListener(_onRealtimeCountChanged);
+    super.dispose();
   }
 
   @override
   void didUpdateWidget(covariant NotificationBellWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.user.id != widget.user.id) {
+      final uid = widget.user.id?.toString();
+      if (uid != null && uid.isNotEmpty) {
+        NotificationService.startRealtimeSubscription(uid);
+      }
       _fetchUnreadCount();
     }
   }

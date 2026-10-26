@@ -33,11 +33,6 @@ class _EksekutifMainTabPageState extends State<EksekutifMainTabPage> {
         user: widget.user,
         title: 'Monitoring Obrolan & Tiket',
       ),
-      QuestionListScreen(
-        user: widget.user,
-        isPublicOnly: true,
-        title: 'Forum Kepegawaian BRIN',
-      ),
       ProfileScreen(
         user: widget.user,
       ),

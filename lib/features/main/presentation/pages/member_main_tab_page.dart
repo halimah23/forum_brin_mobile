@@ -3,7 +3,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../auth/models/user_model.dart';
 import '../../../dashboard/screens/member_dashboard_screen.dart';
 import '../../../profile/screens/profile_screen.dart';
-import '../../../questions/screens/question_list_screen.dart';
+import '../../../questions/screens/member_tickets_screen.dart';
 import '../widgets/app_bottom_navigation_bar.dart';
 import 'menu_types.dart';
 
@@ -28,10 +28,8 @@ class _MemberMainTabPageState extends State<MemberMainTabPage> {
       MemberDashboardScreen(
         user: widget.user,
       ),
-      QuestionListScreen(
+      MemberTicketsScreen(
         user: widget.user,
-        title: 'Forum Kepegawaian',
-        isPublicOnly: true,
       ),
       ProfileScreen(
         user: widget.user,

@@ -81,9 +81,17 @@ class _AttachmentPickerWidgetState extends State<AttachmentPickerWidget> {
           publicUrl = file.path ?? 'storage://local/${file.name}';
         }
       } catch (uploadError) {
-        debugPrint('Supabase storage upload fallback: $uploadError');
+        debugPrint('Supabase storage upload error: $uploadError');
         // Fallback: gunakan path lokal perangkat atau fallback pseudo URL
         publicUrl = file.path ?? 'storage://local/${file.name}';
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Catatan: Berkas disimpan sementara secara lokal karena unggahan Cloud gagal ($uploadError).'),
+              backgroundColor: Colors.orange.shade800,
+            ),
+          );
+        }
       }
 
       if (mounted) {

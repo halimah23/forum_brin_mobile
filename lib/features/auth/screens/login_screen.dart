@@ -234,9 +234,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 10),
-                                  const Text(
-                                    'Akses Pengujian Cepat (Database Supabase)',
-                                    style: AppTypography.heading3,
+                                  const Expanded(
+                                    child: Text(
+                                      'Akses Pengujian Cepat (Database Supabase)',
+                                      style: AppTypography.heading3,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -271,9 +273,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                     email: 'raisya.qianisa.nabilla@brin.go.id',
                                   ),                                  
                                   _buildRoleTile(
-                                    roleName: 'Abisakha SA (Admin PDIS)',
+                                    roleName: 'Abid Omar Tusta (Admin PDIS)',
                                     roleTag: 'Admin Pusat',
-                                    email: 'abisakha.saif.alfath@brin.go.id',
+                                    email: 'abid.omar.tusta@brin.go.id',
                                   ),
                                   _buildRoleTile(
                                     roleName: 'Rizka FL (Member LK6)',
@@ -395,11 +397,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                roleName,
-                style: AppTypography.bodySmall.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+              Flexible(
+                child: Text(
+                  roleName,
+                  style: AppTypography.bodySmall.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
             ],

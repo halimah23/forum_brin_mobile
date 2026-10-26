@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../core/constants/app_colors.dart';
 import '../core/constants/app_constants.dart';
+import '../core/services/notifications/local_notification_service.dart';
 import '../features/auth/cubits/auth_cubit.dart';
 import '../features/auth/screens/splash_screen.dart';
 
@@ -14,6 +15,7 @@ class ForumBrinApp extends StatelessWidget {
     return BlocProvider(
       create: (context) => AuthCubit(),
       child: MaterialApp(
+        navigatorKey: LocalNotificationService.navigatorKey,
         debugShowCheckedModeBanner: false,
         title: AppConstants.appTitle,
         theme: ThemeData(

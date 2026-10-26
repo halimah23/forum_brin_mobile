@@ -38,11 +38,6 @@ class _AdminMainTabPageState extends State<AdminMainTabPage> {
         initialTeamFilter: isAdminLksdm ? lksdmName : teamName,
         title: isAdminLksdm ? 'Layanan SDM ($lksdmName)' : 'Layanan SDM ($teamName)',
       ),
-      QuestionListScreen(
-        user: widget.user,
-        isPublicOnly: true,
-        title: 'Forum Kepegawaian BRIN',
-      ),
       ProfileScreen(
         user: widget.user,
       ),

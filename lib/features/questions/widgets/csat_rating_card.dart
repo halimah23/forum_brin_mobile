@@ -7,11 +7,13 @@ import '../services/question_service.dart';
 class CsatRatingCard extends StatefulWidget {
   final QuestionModel question;
   final VoidCallback? onRatingSubmitted;
+  final bool isReadOnly;
 
   const CsatRatingCard({
     super.key,
     required this.question,
     this.onRatingSubmitted,
+    this.isReadOnly = false,
   });
 
   @override
@@ -96,6 +98,11 @@ class _CsatRatingCardState extends State<CsatRatingCard> {
   Widget build(BuildContext context) {
     final existingRating = widget.question.rating;
 
+    // Jika mode read-only dan tiket belum dinilai oleh pengaju, jangan tampilkan form survei
+    if (widget.isReadOnly && (existingRating == null || existingRating <= 0)) {
+      return const SizedBox.shrink();
+    }
+
     // Jika sudah pernah dinilai oleh user
     if (existingRating != null && existingRating > 0) {
       final tags = widget.question.ratingTagsList;
@@ -130,9 +137,9 @@ class _CsatRatingCardState extends State<CsatRatingCard> {
                     color: const Color(0xFFDCFCE7),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Text(
-                    'Telah Dinilai',
-                    style: TextStyle(
+                  child: Text(
+                    widget.isReadOnly ? 'Dinilai Pengaju' : 'Telah Dinilai',
+                    style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF15803D),

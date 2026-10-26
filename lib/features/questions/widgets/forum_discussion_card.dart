@@ -163,8 +163,10 @@ class ForumDiscussionCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
 
-                // Kategori Topik Tag & Badge Pembakuan
-                Row(
+                // Kategori Topik Tag & Badge Pembakuan (Responsif)
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
@@ -183,8 +185,7 @@ class ForumDiscussionCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (question.isStandardized) ...[
-                      const SizedBox(width: 6),
+                    if (question.isStandardized)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
                         decoration: BoxDecoration(
@@ -207,7 +208,6 @@ class ForumDiscussionCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                    ],
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -265,27 +265,36 @@ class ForumDiscussionCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.chat_bubble_outline_rounded,
-                          size: 13,
-                          color: AppColors.slate500,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          answerCount > 0
-                              ? '$answerCount Diskusi'
-                              : 'Belum ada tanggapan',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: answerCount > 0 ? FontWeight.w600 : FontWeight.normal,
-                            color: answerCount > 0 ? AppColors.slate800 : AppColors.slate500,
+                    Expanded(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            size: 13,
+                            color: AppColors.slate500,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: Text(
+                              answerCount > 0
+                                  ? '$answerCount Diskusi'
+                                  : 'Belum ada tanggapan',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: answerCount > 0 ? FontWeight.w600 : FontWeight.normal,
+                                color: answerCount > 0 ? AppColors.slate800 : AppColors.slate500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     const Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           'Buka Diskusi',

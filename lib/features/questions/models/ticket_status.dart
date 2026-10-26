@@ -6,6 +6,7 @@ enum TicketStatus {
   waitingUser('WAITING_USER', 'Menunggu Konfirmasi Pegawai', Color(0xFF0284C7), Icons.mark_chat_unread_outlined),
   escalated('ESCALATED', 'Dialihkan ke Pusat', Color(0xFFC2410C), Icons.alt_route_rounded),
   inProgressCenter('IN_PROGRESS_CENTER', 'Ditangani Staf Pusat', Color(0xFF7C3AED), Icons.engineering_outlined),
+  mandiriLksdm('TIKET_MANDIRI_LKSDM', 'Konsultasi LKSDM ke Pusat', Color(0xFF9333EA), Icons.badge_outlined),
   resolved('RESOLVED', 'Solusi Diberikan', Color(0xFF16A34A), Icons.task_alt_rounded),
   closed('CLOSED', 'Selesai (Closed)', Color(0xFF475569), Icons.check_circle_outline_rounded);
 
@@ -15,6 +16,28 @@ enum TicketStatus {
   final IconData icon;
 
   const TicketStatus(this.dbKey, this.label, this.color, this.icon);
+
+  /// Label ringkas responsif untuk badge pada layar ponsel berbagai ukuran
+  String get shortLabel {
+    switch (this) {
+      case TicketStatus.open:
+        return 'Antrean LKSDM';
+      case TicketStatus.inProgress:
+        return 'Ditangani LKSDM';
+      case TicketStatus.waitingUser:
+        return 'Konfirmasi Pegawai';
+      case TicketStatus.escalated:
+        return 'Dialihkan ke Pusat';
+      case TicketStatus.inProgressCenter:
+        return 'Ditangani Pusat';
+      case TicketStatus.mandiriLksdm:
+        return 'Konsultasi LKSDM';
+      case TicketStatus.resolved:
+        return 'Solusi Diberikan';
+      case TicketStatus.closed:
+        return 'Selesai';
+    }
+  }
 
   /// Parse dari string status database (kompatibel 100% data lama & baru PRD)
   static TicketStatus fromString(String? rawStatus) {
@@ -48,6 +71,11 @@ enum TicketStatus {
       case 'IN_PROGRESS_CENTER':
       case 'DITANGANI_PUSAT':
         return TicketStatus.inProgressCenter;
+
+      case 'TIKET_MANDIRI_LKSDM':
+      case 'KONSULTASI_LKSDM':
+      case 'MANDIRI_LKSDM':
+        return TicketStatus.mandiriLksdm;
 
       case 'RESOLVED':
       case 'DIJAWAB':

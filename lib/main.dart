@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app/app.dart';
+import 'core/services/notifications/fcm_service.dart';
+import 'core/services/notifications/local_notification_service.dart';
 
 export 'app/app.dart';
 
@@ -21,6 +23,18 @@ void main() async {
     url: supabaseUrl,
     publishableKey: supabaseAnonKey,
   );
+
+  try {
+    await LocalNotificationService.initialize();
+  } catch (e) {
+    debugPrint('Warning: Inisialisasi notifikasi lokal gagal: $e');
+  }
+
+  try {
+    await FcmService.initialize();
+  } catch (e) {
+    debugPrint('Warning: Inisialisasi FCM gagal: $e');
+  }
 
   runApp(const ForumBrinApp());
 }

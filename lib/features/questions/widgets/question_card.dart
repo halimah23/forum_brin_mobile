@@ -63,6 +63,7 @@ class QuestionCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     CircleAvatar(
                       radius: 16,
@@ -85,11 +86,14 @@ class QuestionCard extends StatelessWidget {
                             isPrivilegedRole ? question.officialAuthorName : namaUser,
                             style: AppTypography.labelMedium,
                             overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                           if (question.ticketNumber != null)
                             Text(
                               question.ticketNumber!,
                               style: AppTypography.caption,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           if (isPrivilegedRole)
                             Padding(
@@ -111,6 +115,7 @@ class QuestionCard extends StatelessWidget {
                                         color: AppColors.slate700,
                                       ),
                                       overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                     ),
                                   ),
                                 ],
@@ -119,38 +124,38 @@ class QuestionCard extends StatelessWidget {
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        StatusBadge(status: question.status),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.slate100,
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                            border: Border.all(color: AppColors.slate300, width: 1),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                question.isPublic ? Icons.public : Icons.lock_outline,
-                                size: 10,
-                                color: AppColors.slate700,
-                              ),
-                              const SizedBox(width: 3),
-                              Text(
-                                question.isPublic ? 'Publik' : 'Privat',
-                                style: const TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.slate700,
+                        StatusBadge(status: question.status, useShortLabel: true),
+                        if (question.isMandiriLksdm) ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.shade50,
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                              border: Border.all(color: Colors.purple.shade300, width: 0.8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.badge_outlined, size: 10, color: Colors.purple.shade700),
+                                const SizedBox(width: 3),
+                                Text(
+                                  'KONSULTASI LKSDM',
+                                  style: TextStyle(
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.purple.shade800,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ],
@@ -172,6 +177,8 @@ class QuestionCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         fontSize: 10.5,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 Text(
@@ -191,33 +198,47 @@ class QuestionCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.chat_bubble_outline_rounded,
-                          size: 13,
-                          color: AppColors.slate500,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          answerCount > 0
-                              ? '$answerCount Tanggapan'
-                              : 'Belum ada tanggapan',
+                    Expanded(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            size: 13,
+                            color: AppColors.slate500,
+                          ),
+                          const SizedBox(width: 5),
+                          Flexible(
+                            child: Text(
+                              answerCount > 0
+                                  ? '$answerCount Tanggapan'
+                                  : 'Belum ada tanggapan',
+                              style: AppTypography.caption.copyWith(
+                                color: answerCount > 0 ? AppColors.slate700 : AppColors.slate500,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (question.assignedTo != null && question.assignedTo!.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          'Petugas: ${question.assignedTo}',
                           style: AppTypography.caption.copyWith(
-                            color: answerCount > 0 ? AppColors.slate700 : AppColors.slate500,
+                            color: AppColors.slate600,
                             fontWeight: FontWeight.w500,
                           ),
-                        ),
-                      ],
-                    ),
-                    if (question.assignedTo != null && question.assignedTo!.isNotEmpty)
-                      Text(
-                        'Petugas: ${question.assignedTo}',
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.slate600,
-                          fontWeight: FontWeight.w500,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          textAlign: TextAlign.end,
                         ),
                       ),
+                    ],
                   ],
                 ),
               ],

@@ -19,6 +19,7 @@ class QuestionModel {
   final String? tugasFungsiNama;
   final bool isPublic;
   final bool isPinned;
+  final String? rawUserId;
   final UserModel? user;
   final List<CategoryModel>? tugasFungsi;
   final List<AnswerModel>? answers;
@@ -41,11 +42,55 @@ class QuestionModel {
   String? get lksdmKawasan => lksdmWilayah;
   String? get escalatedToTeam => targetTimPusat;
   UserModel? get author => user;
-  String? get userId => user?.id;
+  String? get userId => user?.id ?? rawUserId;
 
   TicketStatus get ticketStatus => TicketStatus.fromString(status);
   bool get isClosed => ticketStatus.isClosed;
   bool get isActive => ticketStatus.isActive;
+
+  /// Memeriksa apakah pengguna tertentu (currentUser) adalah pihak yang mengajukan pertanyaan ini.
+  /// Mendukung identifikasi Pegawai pengaju, maupun Staf/Ketua LKSDM yang mengajukan tiket konsultasi ke Pusat.
+  bool isCreatedBy(UserModel? currentUser) {
+    if (currentUser == null) return false;
+
+    // 1. Cek User ID
+    final currentId = currentUser.id?.toString().trim();
+    final qUserId = userId?.toString().trim() ?? user?.id?.toString().trim() ?? rawUserId?.toString().trim();
+    if (currentId != null && currentId.isNotEmpty && qUserId != null && qUserId.isNotEmpty) {
+      if (currentId == qUserId) return true;
+    }
+
+    // 2. Cek Email
+    final currentEmail = currentUser.email.trim().toLowerCase();
+    final qEmail = user?.email.trim().toLowerCase();
+    if (currentEmail.isNotEmpty && qEmail != null && qEmail.isNotEmpty && currentEmail != '-' && qEmail != '-') {
+      if (currentEmail == qEmail) return true;
+    }
+
+    // 3. Cek Nama Lengkap (hindari nama generik 'pegawai')
+    final currentName = currentUser.name.trim().toLowerCase();
+    final qName = user?.name.trim().toLowerCase();
+    if (currentName.isNotEmpty && qName != null && qName.isNotEmpty &&
+        qName != 'pegawai' && qName != 'pegawai brin' && qName != '-') {
+      if (currentName == qName) return true;
+    }
+
+    // 4. Jika tiket konsultasi mandiri LKSDM dan staf/ketua LKSDM asal kawasan membuka tiket
+    if (isMandiriLksdm && (currentUser.isAdminLksdm || currentUser.isKetuaTimLksdm)) {
+      if (qUserId == null || qUserId.isEmpty) {
+        if (lksdmKawasan != null && currentUser.effectiveLksdm.toLowerCase().contains(lksdmKawasan!.toLowerCase())) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /// Apakah tiket ini merupakan konsultasi mandiri dari staf/ketua LKSDM ke Tim Pusat
+  bool get isMandiriLksdm =>
+      status.toLowerCase().contains('mandiri') ||
+      ticketStatus == TicketStatus.mandiriLksdm;
 
   /// Penanda apakah pertanyaan telah dibakukan dari teks aslinya
   bool get isStandardized =>
@@ -108,6 +153,8 @@ class QuestionModel {
     this.isAnonymized = false,
     this.originalJudul,
     this.originalIsi,
+    String? rawUserId,
+    String? userId,
     this.user,
     this.tugasFungsi,
     this.answers,
@@ -121,7 +168,8 @@ class QuestionModel {
     this.resolvedAt,
     this.summaryJawaban,
   })  : lksdmWilayah = lksdmWilayah ?? lksdmKawasan,
-        targetTimPusat = targetTimPusat ?? escalatedToTeam;
+        targetTimPusat = targetTimPusat ?? escalatedToTeam,
+        rawUserId = rawUserId ?? userId;
 
   bool get isEscalated =>
       status == 'dialihkan_ke_pusat' ||
@@ -136,6 +184,16 @@ class QuestionModel {
 
   DateTime? get createdDateTime =>
       createdAt != null ? DateTime.tryParse(createdAt!) : null;
+
+  String get formattedDate {
+    if (createdAt == null) return '';
+    try {
+      final dt = DateTime.parse(createdAt!).toLocal();
+      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return createdAt!;
+    }
+  }
 
   DateTime? get resolvedDateTime =>
       resolvedAt != null ? DateTime.tryParse(resolvedAt!) : null;
@@ -210,6 +268,7 @@ class QuestionModel {
   }
 
   factory QuestionModel.fromJson(Map<String, dynamic> json) {
+    final String? parsedUserId = json['user_id']?.toString() ?? json['userId']?.toString();
     UserModel? author;
     if (json['users'] is Map<String, dynamic>) {
       author = UserModel.fromJson(Map<String, dynamic>.from(json['users']));
@@ -220,7 +279,13 @@ class QuestionModel {
     } else if (json['user'] is Map<String, dynamic>) {
       author = UserModel.fromJson(Map<String, dynamic>.from(json['user']));
     } else if (json['user'] != null) {
-      author = UserModel(name: json['user'].toString(), email: '');
+      author = UserModel(id: parsedUserId, name: json['user'].toString(), email: '');
+    }
+
+    if (author != null && (author.id == null || author.id!.isEmpty) && parsedUserId != null) {
+      author = author.copyWith(id: parsedUserId);
+    } else if (author == null && parsedUserId != null) {
+      author = UserModel(id: parsedUserId, name: json['user_name']?.toString() ?? 'Pegawai BRIN', email: '');
     }
 
     List<CategoryModel>? categories;
@@ -289,6 +354,7 @@ class QuestionModel {
       isAnonymized: json['is_anonymized'] == true || json['is_anonymized'] == 1,
       originalJudul: json['original_judul']?.toString(),
       originalIsi: json['original_isi']?.toString(),
+      rawUserId: parsedUserId,
       user: author,
       tugasFungsi: categories,
       answers: answersList,
@@ -359,6 +425,8 @@ class QuestionModel {
     bool? isAnonymized,
     String? originalJudul,
     String? originalIsi,
+    String? rawUserId,
+    String? userId,
     UserModel? user,
     List<CategoryModel>? tugasFungsi,
     List<AnswerModel>? answers,
@@ -390,6 +458,7 @@ class QuestionModel {
       isAnonymized: isAnonymized ?? this.isAnonymized,
       originalJudul: originalJudul ?? this.originalJudul,
       originalIsi: originalIsi ?? this.originalIsi,
+      rawUserId: rawUserId ?? userId ?? this.rawUserId,
       user: user ?? this.user,
       tugasFungsi: tugasFungsi ?? this.tugasFungsi,
       answers: answers ?? this.answers,

@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/services/notifications/fcm_service.dart';
+import '../../../core/services/notifications/local_notification_service.dart';
 import '../models/notification_model.dart';
 
 class NotificationService {
@@ -7,6 +9,78 @@ class NotificationService {
 
   // Fallback in-memory jika tabel notifications belum dibuat di Supabase
   static final List<NotificationModel> _fallbackNotifications = [];
+
+  static RealtimeChannel? _notificationChannel;
+  static String? _activeSubscribedUserId;
+
+  /// Notifier untuk update realtime badge lonceng di UI
+  static final ValueNotifier<int> unreadCountNotifier = ValueNotifier<int>(0);
+
+  /// Mulai berlangganan notifikasi realtime Supabase & sinkronisasi token FCM untuk user aktif
+  static void startRealtimeSubscription(String userId) {
+    if (userId.isEmpty) return;
+
+    // Sinkronisasikan token FCM perangkat ke database
+    FcmService.syncTokenWithUser(userId);
+
+    if (_activeSubscribedUserId == userId && _notificationChannel != null) {
+      return;
+    }
+    stopRealtimeSubscription();
+    _activeSubscribedUserId = userId;
+
+    // Refresh unread count awal
+    getUnreadCount(userId).then((count) {
+      unreadCountNotifier.value = count;
+    });
+
+    try {
+      _notificationChannel = _client
+          .channel('public:notifications:$userId')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.insert,
+            schema: 'public',
+            table: 'notifications',
+            filter: PostgresChangeFilter(
+              type: PostgresChangeFilterType.eq,
+              column: 'user_id',
+              value: userId,
+            ),
+            callback: (payload) {
+              final record = payload.newRecord;
+              final title = record['title']?.toString() ?? 'Pemberitahuan Layanan';
+              final message =
+                  record['message']?.toString() ?? 'Terdapat informasi tiket baru.';
+              final questionId = record['question_id'];
+
+              LocalNotificationService.showNotification(
+                title: title,
+                body: message,
+                payload: questionId != null ? {'question_id': questionId} : null,
+              );
+
+              // Update badge lonceng secara realtime
+              getUnreadCount(userId).then((count) {
+                unreadCountNotifier.value = count;
+              });
+            },
+          )
+          .subscribe();
+    } catch (e) {
+      debugPrint('Realtime notification subscription error: $e');
+    }
+  }
+
+  /// Berhenti berlangganan realtime (misal saat logout)
+  static void stopRealtimeSubscription() {
+    if (_notificationChannel != null) {
+      try {
+        _client.removeChannel(_notificationChannel!);
+      } catch (_) {}
+      _notificationChannel = null;
+      _activeSubscribedUserId = null;
+    }
+  }
 
   /// Ambil daftar seluruh notifikasi milik user
   static Future<List<NotificationModel>> getNotifications(String userId) async {
