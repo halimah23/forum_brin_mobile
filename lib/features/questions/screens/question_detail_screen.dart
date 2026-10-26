@@ -14,6 +14,7 @@ import '../models/question_model.dart';
 import '../models/ticket_status.dart';
 import '../services/question_service.dart';
 import '../widgets/csat_rating_card.dart';
+import '../widgets/attachment_viewer_helper.dart';
 import '../widgets/reopen_ticket_dialog.dart';
 import '../widgets/sender_profile_dialog.dart';
 import '../widgets/ticket_timeline_tracker.dart';
@@ -92,8 +93,16 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
           publicUrl = file.path ?? 'storage://local_chat/${file.name}';
         }
       } catch (uploadErr) {
-        debugPrint('Upload chat attachment fallback: $uploadErr');
+        debugPrint('Upload chat attachment error: $uploadErr');
         publicUrl = file.path ?? 'storage://local_chat/${file.name}';
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Catatan: Berkas disimpan sementara secara lokal karena unggahan Cloud belum siap ($uploadErr).'),
+              backgroundColor: Colors.orange.shade800,
+            ),
+          );
+        }
       }
 
       if (mounted) {
@@ -145,16 +154,35 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
   }) {
     if (attachmentUrl == null || attachmentUrl.isEmpty) return const SizedBox.shrink();
 
-    final urlLow = attachmentUrl.toLowerCase();
-    final nameLow = (attachmentName ?? '').toLowerCase();
-    final isImg = urlLow.contains('.jpg') ||
-        urlLow.contains('.jpeg') ||
-        urlLow.contains('.png') ||
-        nameLow.endsWith('.jpg') ||
-        nameLow.endsWith('.jpeg') ||
-        nameLow.endsWith('.png');
+    final isImg = AttachmentViewerHelper.isImageFile(attachmentUrl, attachmentName);
+    final displayName = attachmentName != null && attachmentName.isNotEmpty
+        ? attachmentName
+        : (isImg ? 'Gambar Lampiran' : 'Dokumen Pendukung');
 
     if (isImg) {
+      final isNetwork = attachmentUrl.startsWith('http://') || attachmentUrl.startsWith('https://');
+      Widget imageContent;
+      if (isNetwork) {
+        imageContent = Image.network(
+          attachmentUrl,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          errorBuilder: (_, __, ___) => _buildAttachmentErrorTile(displayName, Icons.image_not_supported_outlined),
+        );
+      } else {
+        final localFile = File(attachmentUrl);
+        if (localFile.existsSync()) {
+          imageContent = Image.file(
+            localFile,
+            fit: BoxFit.cover,
+            width: double.infinity,
+            errorBuilder: (_, __, ___) => _buildAttachmentErrorTile(displayName, Icons.image_not_supported_outlined),
+          );
+        } else {
+          imageContent = _buildAttachmentErrorTile(displayName, Icons.cloud_off_rounded);
+        }
+      }
+
       return Container(
         margin: const EdgeInsets.only(top: 6, bottom: 4),
         constraints: const BoxConstraints(maxHeight: 180, maxWidth: 260),
@@ -165,36 +193,23 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.sm),
           child: InkWell(
-            onTap: () => _showAttachmentPreviewDialog(attachmentName ?? 'Gambar Lampiran', attachmentUrl),
-            child: Image.network(
-              attachmentUrl,
-              fit: BoxFit.cover,
-              width: double.infinity,
-              errorBuilder: (_, __, ___) => Container(
-                padding: const EdgeInsets.all(12),
-                color: AppColors.slate100,
-                child: Row(
-                  children: [
-                    const Icon(Icons.image_not_supported_outlined, size: 20, color: AppColors.slate500),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        attachmentName ?? 'Gambar Lampiran',
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            onTap: () => AttachmentViewerHelper.openAttachment(
+              context,
+              url: attachmentUrl,
+              fileName: displayName,
             ),
+            child: imageContent,
           ),
         ),
       );
     }
 
     return InkWell(
-      onTap: () => _showAttachmentPreviewDialog(attachmentName ?? 'Dokumen Pendukung', attachmentUrl),
+      onTap: () => AttachmentViewerHelper.openAttachment(
+        context,
+        url: attachmentUrl,
+        fileName: displayName,
+      ),
       borderRadius: BorderRadius.circular(AppRadius.sm),
       child: Container(
         margin: const EdgeInsets.only(top: 6, bottom: 4),
@@ -211,7 +226,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
             const SizedBox(width: 8),
             Flexible(
               child: Text(
-                attachmentName ?? 'Dokumen Pendukung',
+                displayName,
                 style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.slate900),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -220,6 +235,26 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
             const Icon(Icons.open_in_new_rounded, size: 14, color: AppColors.slate600),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAttachmentErrorTile(String name, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      color: AppColors.slate100,
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppColors.slate500),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              name,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -319,15 +354,12 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
     return user.isAdminLksdm || user.userRole == UserRole.superAdmin || user.userRole == UserRole.ketuaTim;
   }
 
-  /// Hanya Pegawai (pemilik pertanyaan) yang berhak mengakhiri dan menyelesaikan tiket
-  bool get isAuthorPegawai {
-    final user = widget.currentUser;
-    if (user == null) return false;
-    if (question.userId != null && user.id != null && question.userId == user.id) return true;
-    if (question.user?.id != null && user.id == question.user!.id) return true;
-    if (question.user?.email != null && user.email == question.user!.email) return true;
-    return user.isPegawai;
-  }
+  /// Penanda apakah pengguna saat ini adalah penanya / pengaju pertanyaan tiket ini.
+  /// Berlaku untuk Pegawai, Staf LKSDM, maupun Ketua LKSDM yang mengajukan pertanyaan.
+  bool get isQuestionOwner => question.isCreatedBy(widget.currentUser);
+
+  /// Alias kompatibilitas untuk isQuestionOwner
+  bool get isAuthorPegawai => isQuestionOwner;
 
   /// Penanda apakah role pengguna berhak melihat identitas penuh pegawai & asal LKSDM
   bool get canViewAuthorFullIdentity {
@@ -369,11 +401,22 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Terima kasih! Tiket pertanyaan dinyatakan SELESAI.'),
+          content: Text('Terima kasih! Tiket pertanyaan dinyatakan SELESAI. Silakan isi survei kepuasan layanan di bawah ini.'),
           backgroundColor: Colors.green,
         ),
       );
       _loadFreshDetails();
+
+      // Scroll ke bagian bawah agar kartu survei kepuasan langsung terlihat oleh pengaju tiket
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOut,
+          );
+        }
+      });
     }
   }
 
@@ -798,86 +841,6 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
       );
       _loadFreshDetails();
     }
-  }
-
-  void _showAttachmentPreviewDialog(String fileName, String fileUrl) {
-    final isImg = fileName.toLowerCase().endsWith('.png') ||
-        fileName.toLowerCase().endsWith('.jpg') ||
-        fileName.toLowerCase().endsWith('.jpeg');
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
-        title: Row(
-          children: [
-            Icon(
-              isImg ? Icons.image_rounded : Icons.picture_as_pdf_rounded,
-              color: AppColors.primaryRed,
-              size: 22,
-            ),
-            const SizedBox(width: 8),
-            const Expanded(
-              child: Text(
-                'Berkas Lampiran Tiket',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.slate100,
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    isImg ? Icons.image_outlined : Icons.description_outlined,
-                    color: AppColors.slate700,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          fileName,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                        ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          'Dokumen Bukti Kepegawaian',
-                          style: TextStyle(fontSize: 11, color: AppColors.slate500),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Lokasi Penyimpanan / URL:\n$fileUrl',
-              style: const TextStyle(fontSize: 11, color: AppColors.slate600),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Tutup', style: TextStyle(color: AppColors.primaryRed)),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -1717,8 +1680,8 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                         }
                       }),
 
-                      // KARTU KONFIRMASI KEPUASAN PEGAWAI (FEEDBACK LOOP - HANYA UNTUK PEGAWAI)
-                      if (isAuthorPegawai && answers.isNotEmpty && !question.isClosed) ...[
+                      // KARTU KONFIRMASI KEPUASAN (FEEDBACK LOOP - HANYA UNTUK PENANYA TIKET)
+                      if (isQuestionOwner && answers.isNotEmpty && !question.isClosed) ...[
                         const SizedBox(height: 12),
                         Container(
                           padding: const EdgeInsets.all(14),
@@ -1792,8 +1755,8 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                         ),
                       ],
 
-                      // EVENT PILL INFO STATUS UNTUK ADMIN/STAF (JIKA BUKAN PEGAWAI PENGAJU)
-                      if (!isAuthorPegawai && answers.isNotEmpty && !question.isClosed) ...[
+                      // EVENT PILL INFO STATUS (JIKA BUKAN PENANYA TIKET)
+                      if (!isQuestionOwner && answers.isNotEmpty && !question.isClosed) ...[
                         const SizedBox(height: 10),
                         Container(
                           margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -1803,15 +1766,17 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                             borderRadius: BorderRadius.circular(AppRadius.sm),
                             border: Border.all(color: AppColors.slate300, width: 1),
                           ),
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.lock_clock_outlined, size: 13, color: AppColors.slate700),
-                              SizedBox(width: 6),
+                              const Icon(Icons.lock_clock_outlined, size: 13, color: AppColors.slate700),
+                              const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
-                                  'Menunggu konfirmasi penyelesaian dari Pegawai (pemilik pertanyaan).',
-                                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.slate800),
+                                  question.isMandiriLksdm
+                                      ? 'Menunggu konfirmasi penyelesaian dari Tim LKSDM (penanya).'
+                                      : 'Menunggu konfirmasi penyelesaian dari penanya tiket.',
+                                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.slate800),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -1846,11 +1811,22 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 14),
-                        CsatRatingCard(
-                          question: question,
-                          onRatingSubmitted: _loadFreshDetails,
-                        ),
+                        // Survei Kepuasan Layanan (CSAT):
+                        // Cukup tampil pada user yang mengajukan pertanyaan (pemilik tiket, baik Pegawai maupun Staf/Ketua LKSDM).
+                        // Jika bukan pengaju tiket (admin/penjawab/eksekutif), kartu survei hanya tampil sebagai laporan evaluasi jika sudah dinilai oleh pengaju.
+                        if (isQuestionOwner) ...[
+                          const SizedBox(height: 14),
+                          CsatRatingCard(
+                            question: question,
+                            onRatingSubmitted: _loadFreshDetails,
+                          ),
+                        ] else if (question.rating != null && question.rating! > 0 && canViewAuthorFullIdentity) ...[
+                          const SizedBox(height: 14),
+                          CsatRatingCard(
+                            question: question,
+                            isReadOnly: true,
+                          ),
+                        ],
                       ],
 
                       // EVENT PILL MENUNGGU DISPOSISI (Hanya jika belum selesai dan belum ada jawaban)

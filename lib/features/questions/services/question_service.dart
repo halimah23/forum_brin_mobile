@@ -227,6 +227,7 @@ class QuestionService {
           debugPrint('Fallback question query basic fields: $err2');
           response = await buildQuery('''
             id,
+            user_id,
             ticket_number,
             judul,
             isi,
@@ -242,6 +243,7 @@ class QuestionService {
             rating,
             rating_feedback,
             rating_submitted_at,
+            rating_tags,
             resolved_at
           ''').order('created_at', ascending: false);
         }
@@ -343,6 +345,7 @@ class QuestionService {
         } catch (_) {
           final res = await _client.from('questions').select('''
             id,
+            user_id,
             ticket_number,
             judul,
             isi,
@@ -358,6 +361,7 @@ class QuestionService {
             rating,
             rating_feedback,
             rating_submitted_at,
+            rating_tags,
             resolved_at
           ''').eq('id', questionId).single();
           qResponse = Map<String, dynamic>.from(res);

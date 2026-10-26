@@ -309,7 +309,7 @@ class _LksdmConsultationTicketsScreenState
                 context,
                 MaterialPageRoute(
                   builder: (_) => QuestionDetailScreen(
-                    question: q,
+                    question: q.user == null ? q.copyWith(user: widget.user) : q,
                     currentUser: widget.user,
                   ),
                 ),

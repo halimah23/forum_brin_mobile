@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../storage/session_manager.dart';
 import 'local_notification_service.dart';
 
 /// Handler level atas yang dipanggil saat notifikasi FCM tiba di latar belakang (background / terminated)
@@ -32,15 +33,20 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 class FcmService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   static bool _isInitialized = false;
+  static bool get isInitialized => _isInitialized;
+
+  /// Token FCM perangkat saat ini (dapat diakses untuk pengujian atau pengiriman)
+  static String? currentToken;
 
   /// Inisialisasi Firebase & Firebase Cloud Messaging
   static Future<void> initialize() async {
     try {
       await Firebase.initializeApp();
       _isInitialized = true;
+      debugPrint('>>> Firebase.initializeApp() BERHASIL!');
     } catch (e) {
       debugPrint(
-        'Warning: Firebase.initializeApp() gagal (kemungkinan google-services.json belum dimasukkan): $e',
+        'Warning: Firebase.initializeApp() gagal (kemungkinan google-services.json belum terbaca): $e',
       );
       return;
     }
@@ -107,6 +113,28 @@ class FcmService {
           LocalNotificationService.handlePayloadData(initialMessage.data);
         });
       }
+
+      // 4. Ambil token perangkat langsung saat startup
+      try {
+        // ignore: deprecated_member_use
+        final token = await _messaging.getToken();
+        if (token != null && token.isNotEmpty) {
+          currentToken = token;
+          debugPrint('======================================================');
+          debugPrint('>>> [BERHASIL] FCM DEVICE TOKEN HP:');
+          debugPrint(token);
+          debugPrint('======================================================');
+
+          // Jika user sudah memiliki sesi login aktif sebelumnya, otomatis simpan ke Supabase
+          final user = await SessionManager.getUser();
+          final uid = user?.id;
+          if (uid != null && uid.isNotEmpty) {
+            await _saveTokenToSupabase(uid, token);
+          }
+        }
+      } catch (tokenErr) {
+        debugPrint('Warning fetching initial FCM token: $tokenErr');
+      }
     } catch (e) {
       debugPrint('Error configuring FCM listeners: $e');
     }
@@ -114,21 +142,26 @@ class FcmService {
 
   /// Sinkronisasikan FCM Token perangkat dengan database Supabase user
   static Future<void> syncTokenWithUser(String userId) async {
-    if (!_isInitialized || userId.isEmpty) return;
+    if (userId.isEmpty) return;
     try {
-      _messaging.onRegistered.listen((token) {
-        debugPrint('FCM Token registered: $token');
-        _saveTokenToSupabase(userId, token);
-      });
-
-      await _messaging.register();
-
       // ignore: deprecated_member_use
       final token = await _messaging.getToken();
       if (token != null && token.isNotEmpty) {
-        debugPrint('FCM Device Token for user $userId: $token');
+        currentToken = token;
+        debugPrint('======================================================');
+        debugPrint('>>> FCM DEVICE TOKEN UNTUK USER $userId:');
+        debugPrint(token);
+        debugPrint('======================================================');
         await _saveTokenToSupabase(userId, token);
       }
+
+      // Dengarkan jika ada token refresh
+      // ignore: deprecated_member_use
+      _messaging.onTokenRefresh.listen((newToken) {
+        currentToken = newToken;
+        debugPrint('FCM Token refreshed: $newToken');
+        _saveTokenToSupabase(userId, newToken);
+      });
     } catch (e) {
       debugPrint('Error syncing FCM token: $e');
     }
@@ -138,27 +171,38 @@ class FcmService {
   static Future<void> _saveTokenToSupabase(String userId, String token) async {
     try {
       final client = Supabase.instance.client;
-      await client.from('user_fcm_tokens').upsert(
-        {
+      // Periksa apakah token sudah ada untuk user ini agar tidak terjadi bentrok duplikasi
+      final existing = await client
+          .from('user_fcm_tokens')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('fcm_token', token)
+          .maybeSingle();
+
+      if (existing == null) {
+        await client.from('user_fcm_tokens').insert({
           'user_id': userId,
           'fcm_token': token,
           'device_type': defaultTargetPlatform.name,
           'updated_at': DateTime.now().toIso8601String(),
-        },
-        onConflict: 'user_id,fcm_token',
-      );
-      debugPrint('FCM token successfully registered in Supabase.');
+        });
+        debugPrint('>>> [SUKSES] Token FCM berhasil didaftarkan di Supabase untuk user $userId');
+      } else {
+        await client
+            .from('user_fcm_tokens')
+            .update({'updated_at': DateTime.now().toIso8601String()})
+            .eq('id', existing['id']);
+        debugPrint('>>> [SUKSES] Token FCM diperbarui di Supabase untuk user $userId');
+      }
     } catch (e) {
-      // Fallback jika tabel user_fcm_tokens belum dibuat di Supabase
       debugPrint(
-        'Catatan: Tabel user_fcm_tokens belum tersedia di Supabase atau gagal simpan token: $e',
+        'Catatan: Gagal simpan token ke Supabase (pastikan tabel user_fcm_tokens sudah ada): $e',
       );
     }
   }
 
   /// Hapus token saat logout
   static Future<void> deleteToken(String userId) async {
-    if (!_isInitialized) return;
     try {
       // ignore: deprecated_member_use
       final token = await _messaging.getToken();
@@ -169,7 +213,8 @@ class FcmService {
             .delete()
             .match({'user_id': userId, 'fcm_token': token});
       }
-      await _messaging.unregister();
+      // ignore: deprecated_member_use
+      await _messaging.deleteToken();
     } catch (_) {}
   }
 }
