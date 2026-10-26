@@ -15,6 +15,8 @@ import '../../questions/widgets/question_card.dart';
 import '../services/performance_analytics_service.dart';
 import '../widgets/performance_analytics_widgets.dart';
 import '../widgets/trending_chart_widget.dart';
+import 'staff_leaderboard_screen.dart';
+import 'staff_performance_detail_screen.dart';
 
 class SuperAdminDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -304,6 +306,24 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                       staffList: staffLeaderboard,
                       title: 'Leaderboard Kinerja Petugas & Staf Admin',
                       subtitle: 'Penilaian kuantitatif dan kualitatif penanganan tiket seluruh kawasan',
+                      onViewAll: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => StaffLeaderboardScreen(questions: questions),
+                          ),
+                        );
+                      },
+                      onStaffTap: (staff, rank) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => StaffPerformanceDetailScreen(
+                              staff: staff,
+                              allQuestions: questions,
+                              rank: rank,
+                            ),
+                          ),
+                        );
+                      },
                     ),
 
                     const SizedBox(height: 20),

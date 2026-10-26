@@ -214,6 +214,7 @@ class StaffLeaderboardCardWidget extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback? onViewAll;
+  final void Function(StaffPerformanceStat staff, int rank)? onStaffTap;
 
   const StaffLeaderboardCardWidget({
     super.key,
@@ -221,6 +222,7 @@ class StaffLeaderboardCardWidget extends StatelessWidget {
     this.title = 'Kinerja Staf & Tim Penanganan (Gercep)',
     this.subtitle = 'Staf dan Ketua Tim yang rutin, cepat, dan ber-rating tinggi',
     this.onViewAll,
+    this.onStaffTap,
   });
 
   @override
@@ -259,6 +261,28 @@ class StaffLeaderboardCardWidget extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onViewAll != null) ...[
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: onViewAll,
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor: AppColors.primaryRed,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Lihat Semua',
+                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(width: 2),
+                      Icon(Icons.chevron_right, size: 16),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 14),
@@ -287,116 +311,127 @@ class StaffLeaderboardCardWidget extends StatelessWidget {
                 if (rank == 2) rankColor = const Color(0xFF475569);
                 if (rank == 3) rankColor = const Color(0xFFB45309);
 
-                return Row(
-                  children: [
-                    // Rank Badge
-                    Container(
-                      width: 24,
-                      height: 24,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: rank <= 3 ? rankColor.withAlpha(30) : AppColors.slate100,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: rank <= 3 ? rankColor : AppColors.slate300,
-                          width: 1,
-                        ),
-                      ),
-                      child: Text(
-                        '$rank',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: rankColor,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-
-                    // Staff Name & Details
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            staff.name,
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.slate900,
+                return InkWell(
+                  onTap: onStaffTap != null ? () => onStaffTap!(staff, rank) : null,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        // Rank Badge
+                        Container(
+                          width: 24,
+                          height: 24,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: rank <= 3 ? rankColor.withAlpha(30) : AppColors.slate100,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: rank <= 3 ? rankColor : AppColors.slate300,
+                              width: 1,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 2),
-                          Row(
+                          child: Text(
+                            '$rank',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: rankColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+
+                        // Staff Name & Details
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: AppColors.slate100,
-                                  borderRadius: BorderRadius.circular(4),
+                              Text(
+                                staff.name,
+                                style: const TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.slate900,
                                 ),
-                                child: Text(
-                                  staff.role,
-                                  style: const TextStyle(fontSize: 9.5, color: AppColors.slate700, fontWeight: FontWeight.w600),
-                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  staff.teamOrLksdm,
-                                  style: const TextStyle(fontSize: 9.5, color: AppColors.slate500),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.slate100,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      staff.role,
+                                      style: const TextStyle(fontSize: 9.5, color: AppColors.slate700, fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      staff.teamOrLksdm,
+                                      style: const TextStyle(fontSize: 9.5, color: AppColors.slate500),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 10),
+                        ),
+                        const SizedBox(width: 10),
 
-                    // Performance Stats Pills
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
+                        // Performance Stats Pills
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            const Icon(Icons.star_rounded, size: 14, color: Color(0xFFF59E0B)),
-                            const SizedBox(width: 2),
-                            Text(
-                              staff.averageRating > 0 ? staff.averageRating.toStringAsFixed(1) : '-',
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.slate900),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.star_rounded, size: 14, color: Color(0xFFF59E0B)),
+                                const SizedBox(width: 2),
+                                Text(
+                                  staff.averageRating > 0 ? staff.averageRating.toStringAsFixed(1) : '-',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.slate900),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF3C7),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '? ${staff.gercepCount} Gercep',
+                                    style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${staff.ticketsHandledCount} tiket',
+                                  style: const TextStyle(fontSize: 10, color: AppColors.slate600),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                        const SizedBox(height: 2),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFEF3C7),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                '⚡ ${staff.gercepCount} Gercep',
-                                style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${staff.ticketsHandledCount} tiket',
-                              style: const TextStyle(fontSize: 10, color: AppColors.slate600),
-                            ),
-                          ],
-                        ),
+                        if (onStaffTap != null) ...[
+                          const SizedBox(width: 4),
+                          const Icon(Icons.chevron_right, size: 16, color: AppColors.slate400),
+                        ],
                       ],
                     ),
-                  ],
+                  ),
                 );
               },
             ),

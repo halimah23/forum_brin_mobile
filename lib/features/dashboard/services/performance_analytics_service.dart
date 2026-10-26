@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../questions/models/question_model.dart';
 
 class StaffPerformanceStat {
@@ -11,6 +13,10 @@ class StaffPerformanceStat {
   int gercepCount;
   final Map<String, int> tagCounts;
 
+  final int? _ticketsHandledOverride;
+  final double? _averageRatingOverride;
+  final int? _ratingCountOverride;
+
   StaffPerformanceStat({
     required this.key,
     required this.name,
@@ -21,19 +27,56 @@ class StaffPerformanceStat {
     List<int>? ratings,
     this.gercepCount = 0,
     Map<String, int>? tagCounts,
+    int? ticketsHandledOverride,
+    double? averageRatingOverride,
+    int? ratingCountOverride,
   })  : ticketIdsHandled = ticketIdsHandled ?? {},
         ratings = ratings ?? [],
-        tagCounts = tagCounts ?? {};
+        tagCounts = tagCounts ?? {},
+        _ticketsHandledOverride = ticketsHandledOverride,
+        _averageRatingOverride = averageRatingOverride,
+        _ratingCountOverride = ratingCountOverride;
 
-  int get ticketsHandledCount => ticketIdsHandled.length;
-  int get ratingCount => ratings.length;
-  double get averageRating => ratings.isEmpty
-      ? 0.0
-      : ratings.reduce((a, b) => a + b) / ratings.length;
+  int get ticketsHandledCount =>
+      _ticketsHandledOverride ?? ticketIdsHandled.length;
+  int get ratingCount => _ratingCountOverride ?? ratings.length;
+  double get averageRating =>
+      _averageRatingOverride ??
+      (ratings.isEmpty
+          ? 0.0
+          : ratings.reduce((a, b) => a + b) / ratings.length);
 
   double get gercepRate => ticketsHandledCount == 0
       ? 0.0
       : (gercepCount / ticketsHandledCount).clamp(0.0, 1.0);
+
+  factory StaffPerformanceStat.fromSupabase(Map<String, dynamic> json) {
+    final name = json['staff_name']?.toString() ?? 'Petugas';
+    final rawRole = json['role']?.toString() ?? 'Staf Layanan SDM';
+    final team = json['team_or_lksdm']?.toString() ?? 'Layanan SDM BRIN';
+    final totalTickets =
+        int.tryParse(json['total_tickets_handled']?.toString() ?? '0') ?? 0;
+    final totalAnswers =
+        int.tryParse(json['total_answers']?.toString() ?? '0') ?? 0;
+    final avgRating =
+        double.tryParse(json['avg_rating']?.toString() ?? '0') ?? 0.0;
+    final ratingCount =
+        int.tryParse(json['rating_count']?.toString() ?? '0') ?? 0;
+    final gercepCount =
+        int.tryParse(json['gercep_count']?.toString() ?? '0') ?? 0;
+
+    return StaffPerformanceStat(
+      key: json['staff_id']?.toString() ?? name,
+      name: name,
+      role: rawRole,
+      teamOrLksdm: team,
+      answerCount: totalAnswers,
+      gercepCount: gercepCount,
+      ticketsHandledOverride: totalTickets,
+      averageRatingOverride: avgRating,
+      ratingCountOverride: ratingCount,
+    );
+  }
 }
 
 class MemberActivityStat {
@@ -98,29 +141,61 @@ class CsatOverview {
 }
 
 class PerformanceAnalyticsService {
-  /// Ringkasan Makro CSAT & Kepuasan Layanan dari sekumpulan pertanyaan
-  static CsatOverview calculateCsatOverview(List<QuestionModel> questions) {
-    if (questions.isEmpty) return CsatOverview.empty();
+  static SupabaseClient get _client => Supabase.instance.client;
 
+  /// Ambil data Leaderboard Kinerja Petugas langsung dari Supabase View `view_staff_performance_leaderboard`
+  /// Dengan fallback dinamis ke kalkulasi in-memory jika koneksi offline / view belum dieksekusi
+  static Future<List<StaffPerformanceStat>> fetchStaffLeaderboardFromSupabase({
+    List<QuestionModel>? fallbackQuestions,
+    String? teamFilter,
+    int limit = 50,
+  }) async {
+    try {
+      var query = _client.from('view_staff_performance_leaderboard').select();
+      if (teamFilter != null && teamFilter.isNotEmpty && teamFilter != 'Semua Tim') {
+        query = query.ilike('team_or_lksdm', '%$teamFilter%');
+      }
+      final response = await query.limit(limit);
+      final rawList = List<Map<String, dynamic>>.from(response);
+      if (rawList.isNotEmpty) {
+        return rawList.map((item) => StaffPerformanceStat.fromSupabase(item)).toList();
+      }
+    } catch (e) {
+      debugPrint('Notice: fetchStaffLeaderboardFromSupabase fallback to local memory: $e');
+    }
+
+    if (fallbackQuestions != null && fallbackQuestions.isNotEmpty) {
+      return getStaffPerformanceLeaderboard(
+        fallbackQuestions,
+        teamFilter: teamFilter,
+        limit: limit,
+      );
+    }
+    return [];
+  }
+
+  /// Menghitung ringkasan survei kepuasan layanan (CSAT Overview)
+  static CsatOverview calculateCsatOverview(List<QuestionModel> questions) {
+    int totalTickets = questions.length;
     int totalRated = 0;
     int sumRating = 0;
-    int satisfiedCount = 0; // >= 4
+    int satisfiedCount = 0;
 
-    final Map<int, int> starBreakdown = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
-    final Map<String, int> tagCounts = {
+    final starMap = <int, int>{5: 0, 4: 0, 3: 0, 2: 0, 1: 0};
+    final tagCounts = <String, int>{
       'Staf Ramah & Solutif': 0,
       'Jawaban Jelas & Akurat': 0,
       'Respon Cepat (Gercep)': 0,
       'Aplikasi Mudah Digunakan': 0,
     };
-    final List<Map<String, dynamic>> recentFeedbacks = [];
+    final List<Map<String, dynamic>> feedbacks = [];
 
     for (var q in questions) {
-      if (q.rating != null && q.rating! > 0) {
-        final r = q.rating!.clamp(1, 5);
+      if (q.rating != null && q.rating! >= 1 && q.rating! <= 5) {
         totalRated++;
+        final r = q.rating!;
         sumRating += r;
-        starBreakdown[r] = (starBreakdown[r] ?? 0) + 1;
+        starMap[r] = (starMap[r] ?? 0) + 1;
         if (r >= 4) satisfiedCount++;
 
         for (var tag in q.ratingTagsList) {
@@ -128,33 +203,37 @@ class PerformanceAnalyticsService {
         }
 
         if (q.ratingFeedback != null && q.ratingFeedback!.trim().isNotEmpty) {
-          recentFeedbacks.add({
-            'ticketNumber': q.ticketNumber ?? '#${q.id}',
-            'authorName': q.displayAuthorName,
+          feedbacks.add({
+            'ticket_id': q.id,
+            'ticket_number': q.ticketNumber,
+            'user_name': q.displayAuthorName,
+            'user_kawasan': q.lksdmKawasan ?? q.authorAsalLksdm,
             'rating': r,
             'feedback': q.ratingFeedback!.trim(),
             'tags': q.ratingTagsList,
-            'date': q.ratingSubmittedAt ?? q.resolvedAt ?? q.createdAt ?? '',
+            'submitted_at': q.ratingSubmittedAt ?? q.resolvedAt ?? q.createdAt,
           });
         }
       }
     }
 
-    final double avg = totalRated > 0 ? (sumRating / totalRated) : 0.0;
-    final double satRate = totalRated > 0 ? ((satisfiedCount / totalRated) * 100) : 0.0;
+    feedbacks.sort((a, b) => (b['submitted_at'] ?? '').compareTo(a['submitted_at'] ?? ''));
+
+    final avgRating = totalRated == 0 ? 0.0 : (sumRating / totalRated);
+    final satRate = totalRated == 0 ? 0.0 : ((satisfiedCount / totalRated) * 100);
 
     return CsatOverview(
-      totalTickets: questions.length,
+      totalTickets: totalTickets,
       totalRated: totalRated,
-      averageRating: avg,
+      averageRating: avgRating,
       satisfactionRate: satRate,
-      starBreakdown: starBreakdown,
+      starBreakdown: starMap,
       tagCounts: tagCounts,
-      recentFeedbacks: recentFeedbacks,
+      recentFeedbacks: feedbacks.take(10).toList(),
     );
   }
 
-  /// Daftar Pegawai/Member yang paling sering mengajukan pertanyaan (Top Frequent Askers)
+  /// Leaderboard pegawai yang paling aktif mengajukan pertanyaan
   static List<MemberActivityStat> getTopActiveMembers(
     List<QuestionModel> questions, {
     int limit = 5,
@@ -162,10 +241,11 @@ class PerformanceAnalyticsService {
     final Map<String, MemberActivityStat> membersMap = {};
 
     for (var q in questions) {
-      final name = q.user?.name ?? (q.isPublic ? 'Pegawai' : q.auditAuthorName);
-      final userId = q.user?.id ?? q.user?.email ?? name;
-      final kawasan = q.user?.kawasan ?? q.lksdmKawasan ?? '-';
-      final satker = q.user?.satuanKerja ?? '-';
+      final user = q.user;
+      final userId = user?.id ?? q.displayAuthorName;
+      final name = user?.name ?? q.displayAuthorName;
+      final kawasan = q.lksdmKawasan ?? user?.effectiveLksdm ?? 'Layanan Kawasan SDM';
+      final satker = user?.unit ?? 'Unit Kerja BRIN';
 
       final stat = membersMap.putIfAbsent(
         userId,
