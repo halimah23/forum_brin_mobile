@@ -12,7 +12,7 @@ import '../../questions/screens/question_detail_screen.dart';
 import '../../questions/services/question_service.dart';
 import '../../questions/widgets/question_card.dart';
 import '../../notifications/widgets/notification_bell_widget.dart';
-import '../widgets/trending_chart_widget.dart';
+import '../widgets/dashboard_faq_widget.dart';
 
 class MemberDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -329,12 +329,8 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                   const SizedBox(height: 24),
 
                   // 5. Section Pertanyaan Populer / FAQ
-                  const Text(
-                    'Pertanyaan Populer / FAQ',
-                    style: AppTypography.heading3,
-                  ),
-                  const SizedBox(height: 12),
-                  const TrendingChartWidget(),
+                  
+                  DashboardFaqWidget(currentUser: widget.user),
 
                   const SizedBox(height: 24),
                 ],

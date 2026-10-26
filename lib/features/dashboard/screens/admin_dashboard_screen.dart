@@ -12,7 +12,7 @@ import '../../questions/services/question_service.dart';
 import '../../questions/widgets/question_card.dart';
 import '../services/performance_analytics_service.dart';
 import '../widgets/performance_analytics_widgets.dart';
-import '../widgets/trending_chart_widget.dart';
+import '../widgets/dashboard_faq_widget.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -364,7 +364,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     const SizedBox(height: 24),
 
                     // CHART TOPIK PERTANYAAN PALING BANYAK DITANYAKAN
-                    const TrendingChartWidget(),
+                    DashboardFaqWidget(currentUser: widget.user),
 
                     const SizedBox(height: 20),
                   ],

@@ -30,6 +30,7 @@ class PublishAndStandardizeDialog extends StatefulWidget {
 class _PublishAndStandardizeDialogState extends State<PublishAndStandardizeDialog> {
   late final TextEditingController _judulController;
   late final TextEditingController _isiController;
+  late final TextEditingController _summaryController;
   late final NormalizedQuestionResult _normalizerResult;
 
   bool _showOriginal = false;
@@ -46,12 +47,15 @@ class _PublishAndStandardizeDialogState extends State<PublishAndStandardizeDialo
 
     _judulController = TextEditingController(text: _normalizerResult.normalizedJudul);
     _isiController = TextEditingController(text: _normalizerResult.normalizedIsi);
+    final initialSummary = widget.question.summaryJawaban ?? _generateInitialSummary();
+    _summaryController = TextEditingController(text: initialSummary);
   }
 
   @override
   void dispose() {
     _judulController.dispose();
     _isiController.dispose();
+    _summaryController.dispose();
     super.dispose();
   }
 
@@ -69,9 +73,47 @@ class _PublishAndStandardizeDialogState extends State<PublishAndStandardizeDialo
     });
   }
 
+  String _generateInitialSummary() {
+    final officialAnswers = widget.question.answers
+            ?.where((a) => a.isOfficial && !a.isSystemEvent)
+            .toList() ??
+        [];
+    if (officialAnswers.isEmpty) {
+      return '';
+    }
+    final buffer = StringBuffer();
+    for (var a in officialAnswers) {
+      buffer.writeln('• Tanggapan ${a.penjawabRole}: ${a.isiJawaban.trim()}');
+    }
+    return buffer.toString().trim();
+  }
+
+  void _draftFromAnswers() {
+    final draft = _generateInitialSummary();
+    if (draft.isNotEmpty) {
+      setState(() {
+        _summaryController.text = draft;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Draf berhasil dirangkum dari jawaban staf.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Belum ada tanggapan staf pada tiket ini untuk dirangkum.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   Future<void> _handleSubmit() async {
     final finalJudul = _judulController.text.trim();
     final finalIsi = _isiController.text.trim();
+    final finalSummary = _summaryController.text.trim();
 
     if (finalJudul.isEmpty || finalIsi.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -88,6 +130,7 @@ class _PublishAndStandardizeDialogState extends State<PublishAndStandardizeDialo
       standardizedIsi: finalIsi,
       originalJudul: widget.question.originalJudul ?? widget.question.judul,
       originalIsi: widget.question.originalIsi ?? widget.question.isi,
+      summaryJawaban: finalSummary.isNotEmpty ? finalSummary : null,
       makePublic: true,
       makePinned: _pinAsFaq,
     );
@@ -100,6 +143,7 @@ class _PublishAndStandardizeDialogState extends State<PublishAndStandardizeDialo
           isi: finalIsi,
           originalJudul: widget.question.originalJudul ?? widget.question.judul,
           originalIsi: widget.question.originalIsi ?? widget.question.isi,
+          summaryJawaban: finalSummary.isNotEmpty ? finalSummary : null,
           isPublic: true,
           isPinned: _pinAsFaq,
           isAnonymized: true,
@@ -318,6 +362,54 @@ class _PublishAndStandardizeDialogState extends State<PublishAndStandardizeDialo
               maxLines: 4,
               decoration: InputDecoration(
                 hintText: 'Uraian pertanyaan formal...',
+                filled: true,
+                fillColor: AppColors.surface,
+                contentPadding: const EdgeInsets.all(12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+              ),
+              style: const TextStyle(fontSize: 13, height: 1.4),
+            ),
+
+            const SizedBox(height: 14),
+
+            // Header Field Rangkuman Solusi Resmi
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.verified_rounded, size: 16, color: Color(0xFF16A34A)),
+                    SizedBox(width: 6),
+                    Text(
+                      'Rangkuman Solusi Resmi (Summary)',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.slate800),
+                    ),
+                  ],
+                ),
+                InkWell(
+                  onTap: _draftFromAnswers,
+                  child: const Row(
+                    children: [
+                      Icon(Icons.auto_awesome, size: 13, color: Color(0xFF16A34A)),
+                      SizedBox(width: 4),
+                      Text(
+                        'Draf dari Jawaban Staf',
+                        style: TextStyle(fontSize: 11, color: Color(0xFF16A34A), fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _summaryController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: 'Tuliskan satu rangkuman respon solusi tuntas dari staf LKSDM, pusat, atau arahan ketua tim...',
                 filled: true,
                 fillColor: AppColors.surface,
                 contentPadding: const EdgeInsets.all(12),

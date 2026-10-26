@@ -9,7 +9,7 @@ import '../../questions/models/ticket_status.dart';
 import '../../questions/services/question_service.dart';
 import '../services/performance_analytics_service.dart';
 import '../widgets/performance_analytics_widgets.dart';
-import '../widgets/trending_chart_widget.dart';
+import '../widgets/dashboard_faq_widget.dart';
 
 class EksekutifDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -304,9 +304,7 @@ class _EksekutifDashboardScreenState extends State<EksekutifDashboardScreen> {
                     const SizedBox(height: 24),
 
                     // CHART TOPIK PERTANYAAN PALING BANYAK DITANYAKAN
-                    const Text('Tren Topik Layanan Kepegawaian', style: AppTypography.heading3),
-                    const SizedBox(height: 10),
-                    const TrendingChartWidget(),
+                    DashboardFaqWidget(currentUser: widget.user),
 
                     const SizedBox(height: 20),
 

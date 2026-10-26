@@ -33,6 +33,7 @@ class QuestionModel {
   final String? ratingSubmittedAt;
   final String? ratingTags;
   final String? resolvedAt;
+  final String? summaryJawaban;
 
   List<String> get ratingTagsList =>
       ratingTags?.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList() ?? [];
@@ -50,6 +51,19 @@ class QuestionModel {
   bool get isStandardized =>
       (originalJudul != null && originalJudul!.isNotEmpty && originalJudul != judul) ||
       (originalIsi != null && originalIsi!.isNotEmpty && originalIsi != isi);
+
+  /// Menandakan apakah tiket telah memiliki rangkuman solusi resmi yang dibuat oleh Superadmin
+  bool get hasSummary => summaryJawaban != null && summaryJawaban!.trim().isNotEmpty;
+
+  /// Mengambil solusi resmi: jika summaryJawaban diisi gunakan itu, jika belum gunakan sintesis dari jawaban staf resmi
+  String get effectiveOfficialSummary {
+    if (hasSummary) return summaryJawaban!;
+    final officialAnswers = answers?.where((a) => a.isOfficial && !a.isSystemEvent).toList() ?? [];
+    if (officialAnswers.isNotEmpty) {
+      return officialAnswers.map((a) => '[${a.penjawabRole}] ${a.isiJawaban}').join('\n\n');
+    }
+    return 'Belum ada rangkuman solusi resmi yang dicantumkan.';
+  }
 
   /// Nama yang ditampilkan di ruang publik (disamarkan menjadi Pegawai demi privasi saat dipublikasikan)
   String get displayAuthorName {
@@ -105,6 +119,7 @@ class QuestionModel {
     this.ratingSubmittedAt,
     this.ratingTags,
     this.resolvedAt,
+    this.summaryJawaban,
   })  : lksdmWilayah = lksdmWilayah ?? lksdmKawasan,
         targetTimPusat = targetTimPusat ?? escalatedToTeam;
 
@@ -285,6 +300,7 @@ class QuestionModel {
       ratingSubmittedAt: json['rating_submitted_at']?.toString(),
       ratingTags: json['rating_tags']?.toString(),
       resolvedAt: json['resolved_at']?.toString(),
+      summaryJawaban: json['summary_jawaban']?.toString() ?? json['official_summary']?.toString(),
     );
   }
 
@@ -319,6 +335,7 @@ class QuestionModel {
       'rating_submitted_at': ratingSubmittedAt,
       'rating_tags': ratingTags,
       'resolved_at': resolvedAt,
+      if (summaryJawaban != null) 'summary_jawaban': summaryJawaban,
     };
   }
 
@@ -353,6 +370,7 @@ class QuestionModel {
     String? ratingSubmittedAt,
     String? ratingTags,
     String? resolvedAt,
+    String? summaryJawaban,
   }) {
     return QuestionModel(
       id: id ?? this.id,
@@ -383,6 +401,7 @@ class QuestionModel {
       ratingSubmittedAt: ratingSubmittedAt ?? this.ratingSubmittedAt,
       ratingTags: ratingTags ?? this.ratingTags,
       resolvedAt: resolvedAt ?? this.resolvedAt,
+      summaryJawaban: summaryJawaban ?? this.summaryJawaban,
     );
   }
 }

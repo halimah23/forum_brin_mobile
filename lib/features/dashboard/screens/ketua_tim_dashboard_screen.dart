@@ -11,7 +11,7 @@ import '../../questions/widgets/question_card.dart';
 import '../../notifications/widgets/notification_bell_widget.dart';
 import '../services/performance_analytics_service.dart';
 import '../widgets/performance_analytics_widgets.dart';
-import '../widgets/trending_chart_widget.dart';
+import '../widgets/dashboard_faq_widget.dart';
 
 class KetuaTimDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -260,12 +260,7 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
                     const SizedBox(height: 24),
 
                     // Trending Chart Widget
-                    const Text(
-                      'Topik Pertanyaan Populer Tim',
-                      style: AppTypography.heading3,
-                    ),
-                    const SizedBox(height: 10),
-                    const TrendingChartWidget(),
+                    DashboardFaqWidget(currentUser: widget.user),
 
                     const SizedBox(height: 20),
                   ],

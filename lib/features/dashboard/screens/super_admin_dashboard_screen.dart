@@ -14,7 +14,7 @@ import '../../questions/services/question_service.dart';
 import '../../questions/widgets/question_card.dart';
 import '../services/performance_analytics_service.dart';
 import '../widgets/performance_analytics_widgets.dart';
-import '../widgets/trending_chart_widget.dart';
+import '../widgets/dashboard_faq_widget.dart';
 import 'staff_leaderboard_screen.dart';
 import 'staff_performance_detail_screen.dart';
 
@@ -338,9 +338,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                     const SizedBox(height: 24),
 
                     // CHART TOPIK PERTANYAAN PALING BANYAK DITANYAKAN
-                    const Text('Analisis Topik Populer FAQ', style: AppTypography.heading3),
-                    const SizedBox(height: 10),
-                    const TrendingChartWidget(),
+                    DashboardFaqWidget(currentUser: widget.user, preloadedQuestions: questions),
 
                     const SizedBox(height: 20),
                   ],

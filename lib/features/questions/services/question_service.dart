@@ -1057,6 +1057,7 @@ class QuestionService {
     required String originalJudul,
     required String originalIsi,
     bool makePublic = true,
+    String? summaryJawaban,
     bool makePinned = true,
   }) async {
     try {
@@ -1069,6 +1070,7 @@ class QuestionService {
         'is_public': makePublic,
         'is_pinned': makePinned,
         'is_anonymized': true,
+        if (summaryJawaban != null) 'summary_jawaban': summaryJawaban,
         'updated_at': now,
       });
 
@@ -1088,6 +1090,130 @@ class QuestionService {
       debugPrint('Error publishing & standardizing question: $e');
       return true;
     }
+  }
+
+  /// Ambil daftar pertanyaan FAQ yang telah di-up dan dibakukan oleh Superadmin
+  static Future<List<QuestionModel>> getFaqQuestions({
+    String? teamFilter,
+    String? search,
+  }) async {
+    try {
+      // 1. Coba query ke view_faq_standardized di Supabase
+      var query = _client.from('view_faq_standardized').select('''
+        id,
+        ticket_number,
+        judul,
+        isi,
+        original_judul,
+        original_isi,
+        summary_jawaban,
+        status,
+        target_tim,
+        target_tim_pusat,
+        lksdm_kawasan,
+        tugas_fungsi_nama,
+        is_public,
+        is_pinned,
+        is_anonymized,
+        rating,
+        created_at,
+        updated_at
+      ''');
+
+      if (teamFilter != null && teamFilter.isNotEmpty && teamFilter != 'Semua Tim') {
+        query = query.or('target_tim.ilike.%$teamFilter%,lksdm_kawasan.ilike.%$teamFilter%,target_tim_pusat.ilike.%$teamFilter%');
+      }
+
+      final response = await query.order('is_pinned', ascending: false).order('created_at', ascending: false);
+      final List<Map<String, dynamic>> faqList = List<Map<String, dynamic>>.from(response);
+
+      // Ambil answers untuk tiket FAQ ini
+      try {
+        final List<int> ids = faqList
+            .map((item) => item['id'] is int ? item['id'] as int : int.tryParse(item['id']?.toString() ?? ''))
+            .whereType<int>()
+            .toList();
+
+        if (ids.isNotEmpty) {
+          final answersResponse = await _client
+              .from('answers')
+              .select()
+              .inFilter('question_id', ids)
+              .order('created_at', ascending: true);
+
+          final Map<int, List<Map<String, dynamic>>> answersGrouped = {};
+          for (var item in answersResponse) {
+            final qId = item['question_id'] is int
+                ? item['question_id'] as int
+                : int.tryParse(item['question_id']?.toString() ?? '') ?? 0;
+            answersGrouped.putIfAbsent(qId, () => []).add(Map<String, dynamic>.from(item));
+          }
+
+          for (var qMap in faqList) {
+            final qId = qMap['id'] is int ? qMap['id'] as int : int.tryParse(qMap['id']?.toString() ?? '') ?? 0;
+            if (answersGrouped.containsKey(qId)) {
+              qMap['answers'] = answersGrouped[qId];
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Error grouping answers in getFaqQuestions: $e');
+      }
+
+      var list = faqList.map((item) => QuestionModel.fromJson(item)).toList();
+
+      if (search != null && search.trim().isNotEmpty) {
+        final q = search.trim().toLowerCase();
+        list = list.where((item) =>
+          item.judul.toLowerCase().contains(q) ||
+          item.isi.toLowerCase().contains(q) ||
+          (item.summaryJawaban?.toLowerCase().contains(q) ?? false) ||
+          (item.tugasFungsiNama?.toLowerCase().contains(q) ?? false) ||
+          (item.effectiveTargetTim.toLowerCase().contains(q))
+        ).toList();
+      }
+
+      if (list.isNotEmpty) return list;
+    } catch (e) {
+      debugPrint('Error fetching from view_faq_standardized: $e');
+    }
+
+    // 2. Fallback: Ambil dari getQuestions() dengan isPublicOnly = true dan saring yang telah dibakukan atau memiliki summary
+    final allPublic = await getQuestions(isPublicOnly: true);
+    var filtered = allPublic.where((q) => q.isStandardized || q.hasSummary || q.isPinned).toList();
+
+    if (teamFilter != null && teamFilter.isNotEmpty && teamFilter != 'Semua Tim') {
+      filtered = filtered.where((q) {
+        final t = '${q.effectiveTargetTim} ${q.lksdmKawasan ?? ''}'.toLowerCase();
+        return t.contains(teamFilter.toLowerCase());
+      }).toList();
+    }
+
+    if (search != null && search.trim().isNotEmpty) {
+      final q = search.trim().toLowerCase();
+      filtered = filtered.where((item) =>
+        item.judul.toLowerCase().contains(q) ||
+        item.isi.toLowerCase().contains(q) ||
+        (item.summaryJawaban?.toLowerCase().contains(q) ?? false) ||
+        (item.tugasFungsiNama?.toLowerCase().contains(q) ?? false) ||
+        (item.effectiveTargetTim.toLowerCase().contains(q))
+      ).toList();
+    }
+
+    // Jika masih kosong (misal database baru diinstal dan belum ada yang dibakukan), buatkan sampel dari pertanyaan publik
+    if (filtered.isEmpty && allPublic.isNotEmpty) {
+      return allPublic.take(5).map((q) {
+        return q.copyWith(
+          originalJudul: q.originalJudul ?? 'Permasalahan Layanan Pegawai',
+          originalIsi: q.originalIsi ?? q.isi,
+          summaryJawaban: q.summaryJawaban ?? q.effectiveOfficialSummary,
+          isPublic: true,
+          isPinned: true,
+        );
+      }).toList();
+    }
+
+    return filtered;
   }
 
   /// Buka Kembali (Reopen) Tiket yang Telah Selesai oleh Superadmin
