@@ -10,6 +10,7 @@ import 'local_notification_service.dart';
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
     await Firebase.initializeApp();
+    await LocalNotificationService.initialize();
   } catch (_) {}
 
   debugPrint('FCM background message received: ${message.messageId}');

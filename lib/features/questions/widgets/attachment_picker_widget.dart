@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_radius.dart';
+import 'attachment_viewer_helper.dart';
 
 class AttachmentPickerWidget extends StatefulWidget {
   final Function(String? url, String? name) onAttachmentChanged;
@@ -66,7 +67,7 @@ class _AttachmentPickerWidgetState extends State<AttachmentPickerWidget> {
 
       String? publicUrl;
 
-      // Coba upload ke Supabase Storage (bucket 'attachments')
+      // Unggah ke Supabase Storage (bucket 'attachments')
       try {
         final client = Supabase.instance.client;
         final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -74,30 +75,45 @@ class _AttachmentPickerWidgetState extends State<AttachmentPickerWidget> {
         final storagePath = 'questions/${timestamp}_$safeName';
 
         final bytes = file.bytes ?? (file.path != null ? await File(file.path!).readAsBytes() : null);
-        if (bytes != null) {
-          await client.storage.from('attachments').uploadBinary(storagePath, bytes);
-          publicUrl = client.storage.from('attachments').getPublicUrl(storagePath);
-        } else {
-          publicUrl = file.path ?? 'storage://local/${file.name}';
+        if (bytes == null) {
+          throw Exception('Gagal membaca data berkas');
         }
+
+        final mimeType = AttachmentViewerHelper.getMimeType(file.name);
+        await client.storage.from('attachments').uploadBinary(
+          storagePath,
+          bytes,
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: mimeType,
+          ),
+        );
+        publicUrl = client.storage.from('attachments').getPublicUrl(storagePath);
       } catch (uploadError) {
         debugPrint('Supabase storage upload error: $uploadError');
-        // Fallback: gunakan path lokal perangkat atau fallback pseudo URL
-        publicUrl = file.path ?? 'storage://local/${file.name}';
         if (mounted) {
+          setState(() {
+            _attachedFileName = null;
+            _attachedFileUrl = null;
+            _attachedFileSize = null;
+            _isUploading = false;
+          });
+          widget.onAttachmentChanged(null, null);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Catatan: Berkas disimpan sementara secara lokal karena unggahan Cloud gagal ($uploadError).'),
-              backgroundColor: Colors.orange.shade800,
+              content: Text('Gagal mengunggah berkas ke Cloud Storage ($uploadError). Pastikan bucket "attachments" dan izin Supabase sudah aktif.'),
+              backgroundColor: AppColors.primaryRed,
+              duration: const Duration(seconds: 4),
             ),
           );
         }
+        return;
       }
 
       if (mounted) {
         setState(() {
           _attachedFileName = file.name;
-          _attachedFileUrl = publicUrl ?? file.name;
+          _attachedFileUrl = publicUrl;
           _attachedFileSize = _formatFileSize(fileSize);
           _isUploading = false;
         });
@@ -106,7 +122,7 @@ class _AttachmentPickerWidgetState extends State<AttachmentPickerWidget> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Berkas "${file.name}" berhasil dilampirkan.'),
+            content: Text('Berkas "${file.name}" berhasil diunggah ke cloud storage.'),
             duration: const Duration(seconds: 2),
             backgroundColor: Colors.green.shade700,
           ),

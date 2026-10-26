@@ -50,7 +50,25 @@ class LocalNotificationService {
             AndroidFlutterLocalNotificationsPlugin>();
     if (androidImpl != null) {
       await androidImpl.createNotificationChannel(_channel);
-      await androidImpl.requestNotificationsPermission();
+      final granted = await androidImpl.requestNotificationsPermission();
+      debugPrint('>>> Notification permission status on init: $granted');
+    }
+  }
+
+  /// Meminta atau mengecek izin notifikasi (Android 13+)
+  static Future<bool> requestPermission() async {
+    try {
+      final androidImpl = _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      if (androidImpl != null) {
+        final granted = await androidImpl.requestNotificationsPermission();
+        return granted ?? false;
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Error requesting notification permission: $e');
+      return false;
     }
   }
 
@@ -109,9 +127,13 @@ class LocalNotificationService {
         _channel.name,
         channelDescription: _channel.description,
         importance: Importance.max,
-        priority: Priority.high,
+        priority: Priority.max,
+        ticker: title,
         playSound: true,
         enableVibration: true,
+        fullScreenIntent: true,
+        channelShowBadge: true,
+        category: AndroidNotificationCategory.message,
         icon: '@mipmap/ic_launcher',
         styleInformation: BigTextStyleInformation(
           body,

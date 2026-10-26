@@ -74,6 +74,19 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
       setState(() => _isUploadingAttachment = true);
 
       final bytes = file.bytes ?? (file.path != null ? await File(file.path!).readAsBytes() : null);
+      if (bytes == null) {
+        if (mounted) {
+          setState(() => _isUploadingAttachment = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Gagal membaca berkas yang dipilih.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        return;
+      }
+
       String? publicUrl;
 
       try {
@@ -82,36 +95,50 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
         final safeName = file.name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
         final storagePath = 'chat/${question.id ?? 0}_${timestamp}_$safeName';
 
-        if (bytes != null) {
-          await client.storage.from('attachments').uploadBinary(
-                storagePath,
-                bytes,
-                fileOptions: const FileOptions(upsert: true),
-              );
-          publicUrl = client.storage.from('attachments').getPublicUrl(storagePath);
-        } else {
-          publicUrl = file.path ?? 'storage://local_chat/${file.name}';
-        }
+        final mimeType = AttachmentViewerHelper.getMimeType(file.name);
+        await client.storage.from('attachments').uploadBinary(
+              storagePath,
+              bytes,
+              fileOptions: FileOptions(
+                upsert: true,
+                contentType: mimeType,
+              ),
+            );
+        publicUrl = client.storage.from('attachments').getPublicUrl(storagePath);
       } catch (uploadErr) {
         debugPrint('Upload chat attachment error: $uploadErr');
-        publicUrl = file.path ?? 'storage://local_chat/${file.name}';
         if (mounted) {
+          setState(() {
+            _pendingAttachmentUrl = null;
+            _pendingAttachmentName = null;
+            _pendingAttachmentSize = null;
+            _isUploadingAttachment = false;
+          });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Catatan: Berkas disimpan sementara secara lokal karena unggahan Cloud belum siap ($uploadErr).'),
-              backgroundColor: Colors.orange.shade800,
+              content: Text('Gagal mengunggah berkas ke Cloud Storage ($uploadErr). Pastikan bucket "attachments" dan izin Supabase sudah aktif.'),
+              backgroundColor: AppColors.error,
+              duration: const Duration(seconds: 4),
             ),
           );
         }
+        return;
       }
 
       if (mounted) {
         setState(() {
-          _pendingAttachmentUrl = publicUrl ?? file.name;
+          _pendingAttachmentUrl = publicUrl;
           _pendingAttachmentName = file.name;
           _pendingAttachmentSize = file.size;
           _isUploadingAttachment = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Berkas "${file.name}" berhasil diunggah dan siap dikirim.'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.green.shade700,
+          ),
+        );
       }
     } catch (e) {
       debugPrint('Error picking reply attachment: $e');
@@ -351,7 +378,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
     final user = widget.currentUser;
     if (user == null) return false;
     if (question.isClosed || question.ticketStatus == TicketStatus.escalated || question.ticketStatus == TicketStatus.inProgressCenter) return false;
-    return user.isAdminLksdm || user.userRole == UserRole.superAdmin || user.userRole == UserRole.ketuaTim;
+    return user.isAdminLksdm || user.isKetuaTimLksdm || user.userRole == UserRole.superAdmin;
   }
 
   /// Penanda apakah pengguna saat ini adalah penanya / pengaju pertanyaan tiket ini.
@@ -379,44 +406,48 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
   }
 
   void _handleConfirmResolution(bool isResolved) async {
-    if (!isResolved) {
-      // Pemicu eskalasi cerdas ke 1 dari 14 Tim Pusat
-      _promptEscalationToCentral();
-      return;
-    }
-
     setState(() => isProcessing = true);
     final success = await QuestionService.confirmAnswerResolution(
       questionId: question.id ?? 0,
-      isResolved: true,
+      isResolved: isResolved,
     );
 
     if (mounted) {
       setState(() {
         isProcessing = false;
-        if (success) {
+        if (isResolved && success) {
           question = question.copyWith(status: 'selesai');
         }
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Terima kasih! Tiket pertanyaan dinyatakan SELESAI. Silakan isi survei kepuasan layanan di bawah ini.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      _loadFreshDetails();
+      if (isResolved) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Terima kasih! Tiket pertanyaan dinyatakan SELESAI. Silakan isi survei kepuasan layanan di bawah ini.'),
+            backgroundColor: Color(0xFF16A34A),
+          ),
+        );
+        _loadFreshDetails();
 
-      // Scroll ke bagian bawah agar kartu survei kepuasan langsung terlihat oleh pengaju tiket
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeOut,
-          );
-        }
-      });
+        // Scroll ke bagian bawah agar kartu survei kepuasan langsung terlihat oleh pengaju tiket
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Konfirmasi tersimpan. Tiket tetap aktif dan pemberitahuan telah dikirim ke tim penangan untuk tindak lanjut.'),
+            backgroundColor: Color(0xFFD97706),
+          ),
+        );
+        _loadFreshDetails();
+      }
     }
   }
 
@@ -618,6 +649,18 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
     final text = _replyController.text.trim();
     final hasAttachment = _pendingAttachmentUrl != null && _pendingAttachmentUrl!.isNotEmpty;
     if (text.isEmpty && !hasAttachment) return;
+
+    if (hasAttachment &&
+        !(_pendingAttachmentUrl!.startsWith('http://') ||
+            _pendingAttachmentUrl!.startsWith('https://'))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Berkas lampiran belum tersimpan di Cloud Storage. Silakan unggah ulang.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
 
     setState(() => isSendingReply = true);
     final user = widget.currentUser;
@@ -1683,75 +1726,111 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                       // KARTU KONFIRMASI KEPUASAN (FEEDBACK LOOP - HANYA UNTUK PENANYA TIKET)
                       if (isQuestionOwner && answers.isNotEmpty && !question.isClosed) ...[
                         const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(AppRadius.md),
-                            border: Border.all(color: AppColors.border, width: 1),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x0A000000),
-                                blurRadius: 4,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(Icons.help_outline_rounded, color: AppColors.slate700, size: 18),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Konfirmasi Penyelesaian',
-                                    style: AppTypography.labelMedium.copyWith(fontSize: 13),
+                        Builder(
+                          builder: (context) {
+                            final hasRecentDeclinedConfirmation = answers.isNotEmpty &&
+                                answers.last.senderRole == 'system' &&
+                                answers.last.isiPesan.contains('BELUM TERJAWAB');
+
+                            return Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                border: Border.all(color: AppColors.border, width: 1),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x0A000000),
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 6),
-                              const Text(
-                                'Apakah solusi dan penjelasan di atas telah menjawab pertanyaan Anda?',
-                                style: AppTypography.bodySmall,
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF16A34A),
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 10),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(AppRadius.md),
-                                        ),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.help_outline_rounded, color: AppColors.slate700, size: 18),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Konfirmasi Penyelesaian',
+                                        style: AppTypography.labelMedium.copyWith(fontSize: 13),
                                       ),
-                                      onPressed: isProcessing ? null : () => _handleConfirmResolution(true),
-                                      label: const Text('Ya, Sudah Terjawab', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                                    ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: AppColors.slate800,
-                                        side: const BorderSide(color: AppColors.slate300),
-                                        padding: const EdgeInsets.symmetric(vertical: 10),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(AppRadius.md),
-                                        ),
+                                  const SizedBox(height: 6),
+                                  if (hasRecentDeclinedConfirmation) ...[
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFFFBEB),
+                                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                                        border: Border.all(color: const Color(0xFFFCD34D), width: 1),
                                       ),
-                                      onPressed: isProcessing ? null : () => _handleConfirmResolution(false), 
-                                      label: const Text('Belum / Butuh Eskalasi', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600)),
+                                      child: const Row(
+                                        children: [
+                                          Icon(Icons.info_outline_rounded, color: Color(0xFFD97706), size: 18),
+                                          SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              'Anda telah mengonfirmasi bahwa pertanyaan belum terjawab. Tiket tetap aktif dan notifikasi tindak lanjut telah dikirimkan ke tim penangan.',
+                                              style: TextStyle(fontSize: 11, color: Color(0xFF92400E), height: 1.3),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
+                                  ] else ...[
+                                    const Text(
+                                      'Apakah solusi dan penjelasan di atas telah menjawab pertanyaan Anda?',
+                                      style: AppTypography.bodySmall,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            key: const ValueKey('confirm_resolution_yes'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(0xFF16A34A),
+                                              foregroundColor: Colors.white,
+                                              padding: const EdgeInsets.symmetric(vertical: 10),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                              ),
+                                            ),
+                                            onPressed: isProcessing ? null : () => _handleConfirmResolution(true),
+                                            icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
+                                            label: const Text('Ya, Terjawab', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: OutlinedButton.icon(
+                                            key: const ValueKey('confirm_resolution_no'),
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: const Color(0xFFD97706),
+                                              side: const BorderSide(color: Color(0xFFF59E0B)),
+                                              backgroundColor: const Color(0xFFFFFBEB),
+                                              padding: const EdgeInsets.symmetric(vertical: 10),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                              ),
+                                            ),
+                                            onPressed: isProcessing ? null : () => _handleConfirmResolution(false), 
+                                            icon: const Icon(Icons.pending_outlined, size: 16, color: Color(0xFFD97706)),
+                                            label: const Text('Belum Terjawab', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFB45309))),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                  _buildTimelineStepper(),
                                 ],
                               ),
-                              _buildTimelineStepper(),
-                            ],
-                          ),
+                            );
+                          },
                         ),
                       ],
 
@@ -1788,28 +1867,38 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                       // EVENT PILL TIKET SELESAI
                       if (question.isClosed) ...[
                         const SizedBox(height: 10),
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 24),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.slate100,
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                            border: Border.all(color: AppColors.slate300, width: 1),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.check_circle_outline_rounded, size: 13, color: Color(0xFF16A34A)),
-                              SizedBox(width: 6),
-                              Expanded(
-                                child: Text(
-                                  'Tiket pertanyaan ini telah diakhiri dan dinyatakan Selesai.',
-                                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.slate800),
-                                  textAlign: TextAlign.center,
-                                ),
+                        Builder(
+                          builder: (context) {
+                            final isAutoClosed = answers.any((a) =>
+                                a.isSystemEvent &&
+                                a.isiPesan.contains('ditutup otomatis oleh sistem'));
+
+                            return Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 24),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.slate100,
+                                borderRadius: BorderRadius.circular(AppRadius.sm),
+                                border: Border.all(color: AppColors.slate300, width: 1),
                               ),
-                            ],
-                          ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.check_circle_outline_rounded, size: 13, color: Color(0xFF16A34A)),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      isAutoClosed
+                                          ? 'Tiket telah diselesaikan otomatis oleh sistem (48 jam). Penilaian layanan bersifat opsional.'
+                                          : 'Tiket pertanyaan ini telah diakhiri dan dinyatakan Selesai.',
+                                      style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.slate800),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
                         // Survei Kepuasan Layanan (CSAT):
                         // Cukup tampil pada user yang mengajukan pertanyaan (pemilik tiket, baik Pegawai maupun Staf/Ketua LKSDM).

@@ -36,19 +36,27 @@ class NotificationService {
 
     try {
       _notificationChannel = _client
-          .channel('public:notifications:$userId')
+          .channel('public:notifications_channel')
           .onPostgresChanges(
             event: PostgresChangeEvent.insert,
             schema: 'public',
             table: 'notifications',
-            filter: PostgresChangeFilter(
-              type: PostgresChangeFilterType.eq,
-              column: 'user_id',
-              value: userId,
-            ),
             callback: (payload) {
               final record = payload.newRecord;
-              final title = record['title']?.toString() ?? 'Pemberitahuan Layanan';
+              final targetUserId = record['user_id']?.toString() ?? '';
+
+              debugPrint(
+                '>>> [REALTIME NOTIF] Event target: "$targetUserId", Active user: "$userId"',
+              );
+
+              // Validasi kecocokan target user ID (case-insensitive & trim)
+              if (targetUserId.trim().toLowerCase() !=
+                  userId.trim().toLowerCase()) {
+                return;
+              }
+
+              final title =
+                  record['title']?.toString() ?? 'Pemberitahuan Layanan';
               final message =
                   record['message']?.toString() ?? 'Terdapat informasi tiket baru.';
               final questionId = record['question_id'];

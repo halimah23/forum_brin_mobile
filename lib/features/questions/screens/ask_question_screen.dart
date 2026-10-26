@@ -140,6 +140,13 @@ class _AskQuestionViewState extends State<AskQuestionView> {
 
   void submitQuestion() async {
     if (_formKey.currentState?.validate() ?? false) {
+      if (attachedFileUrl != null &&
+          attachedFileUrl!.isNotEmpty &&
+          !(attachedFileUrl!.startsWith('http://') || attachedFileUrl!.startsWith('https://'))) {
+        showMessage('Berkas lampiran belum tersimpan di Cloud Storage. Silakan lampirkan ulang.');
+        return;
+      }
+
       final lksdmClean = selectedLksdm.shortName;
       final isConsultation = widget.isLksdmConsultation;
 

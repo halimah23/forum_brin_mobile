@@ -1,13 +1,16 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/storage/session_manager.dart';
 import '../data/tusi_catalog_data.dart';
+import '../models/answer_model.dart';
 import '../models/category_model.dart';
 import '../models/question_model.dart';
 import '../../notifications/services/notification_service.dart';
 
 class QuestionService {
   static SupabaseClient get _client => Supabase.instance.client;
+  static DateTime? _lastAutoResolveCheck;
 
   /// Helper untuk menentukan Nama Tim berdasarkan Kode atau Nama Tugas & Fungsi
   static String determineTeamName(String? categoryName) {
@@ -280,7 +283,9 @@ class QuestionService {
         debugPrint('Error grouping answers in getQuestions: $e');
       }
 
-      return questionList.map((item) => QuestionModel.fromJson(item)).toList();
+      final list = questionList.map((item) => QuestionModel.fromJson(item)).toList();
+      unawaited(checkAndProcessAutoResolveQuestions(list));
+      return list;
     } catch (e) {
       debugPrint('Error fetching questions from Supabase: $e');
       return [];
@@ -382,7 +387,9 @@ class QuestionService {
         debugPrint('Error fetching answers for question $questionId: $e');
       }
 
-      return QuestionModel.fromJson(qMap);
+      final qObj = QuestionModel.fromJson(qMap);
+      unawaited(checkAndProcessAutoResolveQuestions([qObj]));
+      return qObj;
     } catch (e) {
       debugPrint('Error fetching question detail $questionId: $e');
       return null;
@@ -457,6 +464,10 @@ class QuestionService {
         }
       }
 
+      debugPrint(
+        '>>> [NOTIFY TEAM] Target: "$cleanTarget", Found: ${matchedIds.length} user(s): $matchedIds',
+      );
+
       if (matchedIds.isNotEmpty) {
         final futures = matchedIds.map((id) => NotificationService.createNotification(
           userId: id,
@@ -468,7 +479,7 @@ class QuestionService {
         await Future.wait(futures);
       }
     } catch (e) {
-      debugPrint('Notice notifyTeamMembers: $e');
+      debugPrint('Notice notifyTeamMembers error: $e');
     }
   }
 
@@ -1025,7 +1036,7 @@ class QuestionService {
     }
   }
 
-  /// Konfirmasi Penyelesaian Jawaban oleh Pegawai ([Ya] -> Selesai, [Tidak] -> Dialihkan ke Admin Pusat)
+  /// Konfirmasi Penyelesaian Jawaban oleh Pegawai ([Ya] -> Selesai, [Belum Terjawab] -> Tiket tetap lanjut & Notifikasi ke tim penangan)
   static Future<bool> confirmAnswerResolution({
     required int questionId,
     required bool isResolved,
@@ -1044,31 +1055,252 @@ class QuestionService {
         throw Exception('Sesi pengguna tidak valid atau belum login.');
       }
 
-      final newStatus = isResolved ? 'selesai' : 'dialihkan_ke_pusat';
+      // Ambil metadata pertanyaan untuk notifikasi dan routing
+      Map<String, dynamic>? qRecord;
+      try {
+        qRecord = await _client
+            .from('questions')
+            .select('judul, ticket_number, lksdm_kawasan, target_tim_pusat, status')
+            .eq('id', questionId)
+            .maybeSingle();
+      } catch (e) {
+        debugPrint('Notice fetch question in confirmAnswerResolution: $e');
+      }
 
-      final systemMessage = isResolved
-          ? 'Pegawai mengonfirmasi bahwa pertanyaan sudah TERJAWAB dengan tuntas.'
-          : 'Pegawai mengonfirmasi bahwa kendala belum tuntas. Pertanyaan dialihkan ke Staf Admin Pusat dalam bubble chat 3 user.';
+      final ticketNumber = qRecord?['ticket_number']?.toString() ?? questionId.toString();
+      final judul = qRecord?['judul']?.toString() ?? 'Layanan Pertanyaan';
 
-      await _safeInsertAnswer({
-        'question_id': questionId,
-        'user_id': userId,
-        'sender_name': 'Sistem',
-        'sender_role': 'system',
-        'sender_role_type': 'system',
-        'isi_pesan': systemMessage,
-      });
+      if (isResolved) {
+        const systemMessage = 'Pegawai mengonfirmasi bahwa pertanyaan sudah TERJAWAB dengan tuntas.';
 
-      await _safeUpdateQuestion(questionId, {
-        'status': newStatus,
-        if (isResolved) 'resolved_at': DateTime.now().toIso8601String(),
-        'updated_at': DateTime.now().toIso8601String(),
-      });
+        await _safeInsertAnswer({
+          'question_id': questionId,
+          'user_id': userId,
+          'sender_name': 'Sistem',
+          'sender_role': 'system',
+          'sender_role_type': 'system',
+          'isi_pesan': systemMessage,
+        });
+
+        await _safeUpdateQuestion(questionId, {
+          'status': 'selesai',
+          'resolved_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+
+        // Notifikasi ke tim penangan bahwa tiket telah selesai ditutup
+        try {
+          final targetPusat = qRecord?['target_tim_pusat']?.toString();
+          final targetLksdm = qRecord?['lksdm_kawasan']?.toString();
+          final targetTeam = (targetPusat != null && targetPusat.isNotEmpty)
+              ? targetPusat
+              : (targetLksdm ?? '');
+
+          if (targetTeam.isNotEmpty) {
+            await notifyTeamMembers(
+              targetTeam: targetTeam,
+              questionId: questionId,
+              title: 'Tiket Selesai (#$ticketNumber)',
+              message: 'Pegawai telah mengonfirmasi bahwa tiket pertanyaan "$judul" telah selesai terjawab.',
+              type: 'tiket_selesai',
+            );
+          }
+        } catch (notifErr) {
+          debugPrint('Notice sending resolved notification: $notifErr');
+        }
+      } else {
+        // Jika belum terjawab: tiket tetap lanjut (tidak dialihkan ke pusat & tidak ditutup)
+        const systemMessage = 'Pegawai mengonfirmasi bahwa kendala/pertanyaan BELUM TERJAWAB dan memerlukan penanganan lanjutan dari tim.';
+
+        await _safeInsertAnswer({
+          'question_id': questionId,
+          'user_id': userId,
+          'sender_name': 'Sistem',
+          'sender_role': 'system',
+          'sender_role_type': 'system',
+          'isi_pesan': systemMessage,
+        });
+
+        await _safeUpdateQuestion(questionId, {
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+
+        // Kirim notifikasi ke tim penangan dan staf yang menangani bahwa tiket perlu penanganan lagi
+        try {
+          final targetPusat = qRecord?['target_tim_pusat']?.toString();
+          final targetLksdm = qRecord?['lksdm_kawasan']?.toString();
+          final targetTeam = (targetPusat != null && targetPusat.isNotEmpty)
+              ? targetPusat
+              : (targetLksdm ?? '');
+
+          if (targetTeam.isNotEmpty) {
+            await notifyTeamMembers(
+              targetTeam: targetTeam,
+              questionId: questionId,
+              title: 'Pertanyaan Belum Selesai (#$ticketNumber)',
+              message: 'Pegawai mengonfirmasi pertanyaan "$judul" belum selesai dan memerlukan penanganan lagi.',
+              type: 'tindak_lanjut',
+            );
+          }
+
+          // Kirim juga notifikasi ke staf yang pernah memberikan jawaban pada tiket ini
+          final staffAnswers = await _client
+              .from('answers')
+              .select('user_id')
+              .eq('question_id', questionId)
+              .neq('sender_role', 'pegawai')
+              .neq('sender_role', 'system');
+          final staffUserIds = staffAnswers
+              .map((a) => a['user_id']?.toString())
+              .whereType<String>()
+              .where((id) => id.isNotEmpty)
+              .toSet();
+
+          for (final staffId in staffUserIds) {
+            await NotificationService.createNotification(
+              userId: staffId,
+              questionId: questionId,
+              title: 'Pertanyaan Belum Selesai (#$ticketNumber)',
+              message: 'Pegawai mengonfirmasi pertanyaan "$judul" belum selesai dan memerlukan penanganan lagi.',
+              type: 'tindak_lanjut',
+            );
+          }
+        } catch (notifErr) {
+          debugPrint('Notice sending not-resolved notifications: $notifErr');
+        }
+      }
 
       return true;
     } catch (e) {
       debugPrint('Error confirming answer resolution: $e');
       return true;
+    }
+  }
+
+  /// Pengecekan dan eksekusi Auto-Close (48 jam / 2x24 jam) serta Gentle Reminder (24 jam / 1x24 jam)
+  /// Berdasarkan Opsi B:
+  /// - H+1 (>=24 jam tanpa respon member setelah jawaban staf): Kirim reminder push ke pegawai
+  /// - H+2 (>=48 jam tanpa respon member setelah jawaban staf): Auto-close tiket (status: selesai)
+  ///   dengan resolved_at dicatat ke waktu jawaban staf terakhir (agar SLA tim tetap adil & cepat).
+  static Future<void> checkAndProcessAutoResolveQuestions(List<QuestionModel> questions) async {
+    if (questions.isEmpty) return;
+
+    final now = DateTime.now();
+    if (_lastAutoResolveCheck != null && now.difference(_lastAutoResolveCheck!).inSeconds < 15) {
+      return;
+    }
+    _lastAutoResolveCheck = now;
+
+    for (final q in questions) {
+      if (q.id == null || q.isClosed) continue;
+      final answers = q.answers ?? [];
+      if (answers.isEmpty) continue;
+
+      final lastAnswer = answers.last;
+
+      // Jika pesan terakhir dari pegawai atau sistem 'BELUM TERJAWAB', bola ada di staf -> JANGAN auto-close
+      if (lastAnswer.senderRole == 'pegawai' ||
+          (lastAnswer.isSystemEvent && lastAnswer.isiPesan.contains('BELUM TERJAWAB'))) {
+        continue;
+      }
+
+      // Cari jawaban terakhir dari staf/petugas resmi
+      AnswerModel? lastStaffAnswer;
+      for (int i = answers.length - 1; i >= 0; i--) {
+        final a = answers[i];
+        if (a.isOfficial && !a.isSystemEvent) {
+          lastStaffAnswer = a;
+          break;
+        }
+      }
+
+      if (lastStaffAnswer == null || lastStaffAnswer.createdAt == null) continue;
+
+      DateTime? staffAnswerTime;
+      try {
+        staffAnswerTime = DateTime.parse(lastStaffAnswer.createdAt!);
+      } catch (_) {
+        continue;
+      }
+
+      final diff = now.difference(staffAnswerTime);
+      final ticketNumber = q.ticketNumber ?? '#${q.id}';
+      final authorId = q.userId;
+
+      // KASUS 1: >= 48 Jam (2 x 24 Jam) -> AUTO CLOSE OPSI B
+      if (diff.inHours >= 48) {
+        try {
+          const autoCloseMessage =
+              'Tiket ditutup otomatis oleh sistem setelah 48 jam tanpa tanggapan lanjutan dari pegawai. Penilaian kepuasan layanan tetap dapat diisi secara opsional.';
+
+          // 1. Simpan pesan sistem
+          await _safeInsertAnswer({
+            'question_id': q.id!,
+            'user_id': authorId ?? 'system',
+            'sender_name': 'Sistem',
+            'sender_role': 'system',
+            'sender_role_type': 'system',
+            'isi_pesan': autoCloseMessage,
+          });
+
+          // 2. Update status ke 'selesai', set resolved_at ke waktu jawaban staf (SLA tetap adil)
+          await _safeUpdateQuestion(q.id!, {
+            'status': 'selesai',
+            'resolved_at': staffAnswerTime.toIso8601String(),
+            'updated_at': now.toIso8601String(),
+          });
+
+          // 3. Notifikasi ke pegawai
+          if (authorId != null && authorId.isNotEmpty) {
+            await NotificationService.createNotification(
+              userId: authorId,
+              questionId: q.id!,
+              title: 'Tiket Selesai Otomatis (#$ticketNumber)',
+              message:
+                  'Tiket pertanyaan "${q.judul}" telah ditutup otomatis oleh sistem setelah 48 jam. Anda tetap dapat memberikan penilaian kepuasan layanan secara opsional.',
+              type: 'tiket_selesai',
+            );
+          }
+        } catch (err) {
+          debugPrint('Error auto-resolving question ${q.id}: $err');
+        }
+      }
+      // KASUS 2: >= 24 Jam & < 48 Jam (1 x 24 Jam) -> GENTLE REMINDER
+      else if (diff.inHours >= 24) {
+        // Cek apakah sudah pernah dikirim pengingat untuk sesi jawaban ini
+        final alreadyReminded = answers.any(
+          (a) => a.isSystemEvent && a.isiPesan.contains('pengingat otomatis (H+1)'),
+        );
+
+        if (!alreadyReminded) {
+          try {
+            const reminderMessage =
+                'Sistem mengirimkan pengingat otomatis (H+1) kepada pegawai untuk meninjau solusi yang telah diberikan.';
+
+            await _safeInsertAnswer({
+              'question_id': q.id!,
+              'user_id': authorId ?? 'system',
+              'sender_name': 'Sistem',
+              'sender_role': 'system',
+              'sender_role_type': 'system',
+              'isi_pesan': reminderMessage,
+            });
+
+            if (authorId != null && authorId.isNotEmpty) {
+              await NotificationService.createNotification(
+                userId: authorId,
+                questionId: q.id!,
+                title: 'Pengingat Tiket Layanan (#$ticketNumber)',
+                message:
+                    'Halo Rekan BRIN, pertanyaan "${q.judul}" telah dijawab oleh Tim Layanan. Silakan periksa jawaban dan konfirmasi jika kendala telah teratasi.',
+                type: 'pengingat_tiket',
+              );
+            }
+          } catch (err) {
+            debugPrint('Error sending gentle reminder for question ${q.id}: $err');
+          }
+        }
+      }
     }
   }
 
