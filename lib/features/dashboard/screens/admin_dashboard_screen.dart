@@ -32,6 +32,7 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   List<QuestionModel> teamQuestions = [];
   bool isLoading = true;
+  String _selectedFilter = 'all_active';
 
   @override
   void initState() {
@@ -60,10 +61,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final teamName = widget.user.tim ?? (isAdminLksdm ? lksdmName : 'Fungsi Pengelolaan data dan informasi SDM');
     final primaryColor = isAdminLksdm ? Colors.teal.shade800 : AppColors.primaryBlue;
 
-    final totalCount = teamQuestions.length;
+    final allActiveQuestions = teamQuestions.where((q) => q.isActive).toList();
     final waitingQuestions = teamQuestions.where((q) => q.ticketStatus == TicketStatus.open).toList();
     final inProgressQuestions = teamQuestions.where((q) => q.isActive && q.ticketStatus != TicketStatus.open).toList();
     final closedQuestions = teamQuestions.where((q) => q.isClosed).toList();
+
+    List<QuestionModel> displayedQuestions;
+    switch (_selectedFilter) {
+      case 'open':
+        displayedQuestions = waitingQuestions;
+        break;
+      case 'in_progress':
+        displayedQuestions = inProgressQuestions;
+        break;
+      case 'closed':
+        displayedQuestions = closedQuestions;
+        break;
+      case 'all_active':
+      default:
+        displayedQuestions = allActiveQuestions;
+        break;
+    }
 
     final personalStat = PerformanceAnalyticsService.getStaffPersonalPerformance(
       teamQuestions,
@@ -205,35 +223,43 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       const SizedBox(height: 16),
                     ],
 
-                    // Metric Counters Row
+                    // Metric Counters Row (Interactive Filter Cards)
                     Row(
                       children: [
+                        _buildStatBox(
+                          label: 'Semua Aktif',
+                          value: '${allActiveQuestions.length}',
+                          color: primaryColor,
+                          icon: Icons.mark_chat_unread_outlined,
+                          isSelected: _selectedFilter == 'all_active',
+                          onTap: () => setState(() => _selectedFilter = 'all_active'),
+                        ),
+                        const SizedBox(width: 8),
                         _buildStatBox(
                           label: 'Antrean Baru',
                           value: '${waitingQuestions.length}',
                           color: const Color(0xFFD97706),
                           icon: Icons.hourglass_top_rounded,
+                          isSelected: _selectedFilter == 'open',
+                          onTap: () => setState(() => _selectedFilter = 'open'),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
                         _buildStatBox(
                           label: 'Diproses',
                           value: '${inProgressQuestions.length}',
                           color: const Color(0xFF0D9488),
                           icon: Icons.support_agent_rounded,
+                          isSelected: _selectedFilter == 'in_progress',
+                          onTap: () => setState(() => _selectedFilter = 'in_progress'),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
                         _buildStatBox(
                           label: 'Selesai',
                           value: '${closedQuestions.length}',
                           color: const Color(0xFF16A34A),
                           icon: Icons.task_alt_rounded,
-                        ),
-                        const SizedBox(width: 10),
-                        _buildStatBox(
-                          label: 'Total',
-                          value: '$totalCount',
-                          color: AppColors.slate700,
-                          icon: Icons.inbox_rounded,
+                          isSelected: _selectedFilter == 'closed',
+                          onTap: () => setState(() => _selectedFilter = 'closed'),
                         ),
                       ],
                     ),
@@ -250,26 +276,93 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                     const SizedBox(height: 20),
 
-                    // DAFTAR TIKET AKTIF KAWASAN
+                    // DAFTAR TIKET SECTION & BULLET FILTER
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          isAdminLksdm ? 'Antrean Tiket $lksdmName' : 'Antrean Tiket $teamName',
-                          style: AppTypography.heading3,
-                        ),
-                        if (isLoading)
-                          const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isAdminLksdm ? 'Daftar Tiket $lksdmName' : 'Daftar Tiket $teamName',
+                                style: AppTypography.heading3,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _selectedFilter == 'all_active'
+                                    ? 'Menampilkan semua tiket aktif (belum selesai)'
+                                    : _selectedFilter == 'open'
+                                        ? 'Menampilkan antrean tiket baru belum ditangani'
+                                        : _selectedFilter == 'in_progress'
+                                            ? 'Menampilkan tiket sedang dalam proses penanganan'
+                                            : 'Menampilkan riwayat tiket selesai',
+                                style: const TextStyle(fontSize: 11, color: AppColors.slate500),
+                              ),
+                            ],
                           ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: primaryColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(AppRadius.full),
+                            border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
+                          ),
+                          child: Text(
+                            '${displayedQuestions.length} Tiket',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: primaryColor,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
 
-                    if (!isLoading && teamQuestions.isEmpty)
+                    // Bullet Filter Bar (● Semua Aktif, ● Belum Ditangani, ● Sedang Ditangani, ● Selesai)
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildBulletFilterChip(
+                            id: 'all_active',
+                            label: 'Semua Aktif',
+                            count: allActiveQuestions.length,
+                            color: primaryColor,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildBulletFilterChip(
+                            id: 'open',
+                            label: 'Belum Ditangani',
+                            count: waitingQuestions.length,
+                            color: const Color(0xFFD97706),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildBulletFilterChip(
+                            id: 'in_progress',
+                            label: 'Sedang Ditangani',
+                            count: inProgressQuestions.length,
+                            color: const Color(0xFF0D9488),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildBulletFilterChip(
+                            id: 'closed',
+                            label: 'Selesai',
+                            count: closedQuestions.length,
+                            color: const Color(0xFF16A34A),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    if (!isLoading && displayedQuestions.isEmpty)
                       Container(
+                        width: double.infinity,
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
@@ -279,10 +372,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         ),
                         child: Column(
                           children: [
-                            Icon(Icons.inbox_outlined, size: 36, color: Colors.grey.shade400),
+                            Icon(
+                              _selectedFilter == 'closed'
+                                  ? Icons.task_alt_rounded
+                                  : Icons.inbox_outlined,
+                              size: 36,
+                              color: Colors.grey.shade400,
+                            ),
                             const SizedBox(height: 8),
                             Text(
-                              'Belum ada tiket antrean untuk wilayah $lksdmName',
+                              _selectedFilter == 'all_active'
+                                  ? 'Tidak ada tiket aktif saat ini untuk wilayah $lksdmName'
+                                  : _selectedFilter == 'open'
+                                      ? 'Tidak ada antrean baru yang belum ditangani'
+                                      : _selectedFilter == 'in_progress'
+                                          ? 'Belum ada tiket yang sedang dalam penanganan'
+                                          : 'Belum ada tiket yang selesai',
                               style: const TextStyle(fontSize: 12, color: AppColors.slate600),
                               textAlign: TextAlign.center,
                             ),
@@ -293,12 +398,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ListView.separated(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        itemCount: teamQuestions.take(5).length,
+                        itemCount: displayedQuestions.length,
                         separatorBuilder: (context, index) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
-                          final q = teamQuestions[index];
+                          final q = displayedQuestions[index];
                           return QuestionCard(
                             question: q,
+                            currentUser: widget.user,
                             onTap: () async {
                               await Navigator.push(
                                 context,
@@ -532,44 +638,122 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildBulletFilterChip({
+    required String id,
+    required String label,
+    required int count,
+    required Color color,
+  }) {
+    final isSelected = _selectedFilter == id;
+    return InkWell(
+      key: ValueKey('bullet_filter_$id'),
+      onTap: () {
+        setState(() {
+          _selectedFilter = id;
+        });
+      },
+      borderRadius: BorderRadius.circular(AppRadius.full),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.12) : AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.full),
+          border: Border.all(
+            color: isSelected ? color : AppColors.border,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? color : AppColors.slate700,
+              ),
+            ),
+            const SizedBox(width: 5),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(
+                color: isSelected ? color.withValues(alpha: 0.2) : AppColors.slate100,
+                borderRadius: BorderRadius.circular(AppRadius.full),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? color : AppColors.slate600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildStatBox({
     required String label,
     required String value,
     required Color color,
     required IconData icon,
+    VoidCallback? onTap,
+    bool isSelected = false,
   }) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withValues(alpha: 0.08) : AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: isSelected ? color : AppColors.border,
+              width: isSelected ? 1.5 : 1,
             ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 9.5,
-                fontWeight: FontWeight.w600,
-                color: AppColors.slate600,
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(height: 6),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  color: isSelected ? color : AppColors.slate600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ),
     );

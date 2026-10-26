@@ -31,6 +31,7 @@ class KetuaTimDashboardScreen extends StatefulWidget {
 class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
   List<QuestionModel> teamQuestions = [];
   bool isLoading = true;
+  String _selectedFilter = 'all_active';
 
   @override
   void initState() {
@@ -59,11 +60,27 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
         ? widget.user.effectiveLksdm
         : (widget.user.tim ?? 'Tim Layanan SDM BOSDM');
 
-    final totalCount = teamQuestions.length;
-    final pendingCount = teamQuestions.where((q) => q.ticketStatus.dbKey == 'OPEN').length;
-    final inProgressCount = teamQuestions.where((q) => q.isActive && q.ticketStatus.dbKey != 'OPEN').length;
-    final closedCount = teamQuestions.where((q) => q.isClosed).length;
-    final pendingList = teamQuestions.where((q) => q.ticketStatus.dbKey == 'OPEN').toList();
+    final allActiveQuestions = teamQuestions.where((q) => q.isActive).toList();
+    final pendingQuestions = teamQuestions.where((q) => q.ticketStatus.dbKey == 'OPEN').toList();
+    final inProgressQuestions = teamQuestions.where((q) => q.isActive && q.ticketStatus.dbKey != 'OPEN').toList();
+    final closedQuestions = teamQuestions.where((q) => q.isClosed).toList();
+
+    List<QuestionModel> displayedQuestions;
+    switch (_selectedFilter) {
+      case 'open':
+        displayedQuestions = pendingQuestions;
+        break;
+      case 'in_progress':
+        displayedQuestions = inProgressQuestions;
+        break;
+      case 'closed':
+        displayedQuestions = closedQuestions;
+        break;
+      case 'all_active':
+      default:
+        displayedQuestions = allActiveQuestions;
+        break;
+    }
 
     final csatOverview = PerformanceAnalyticsService.calculateCsatOverview(teamQuestions);
     final staffLeaderboard = PerformanceAnalyticsService.getStaffPerformanceLeaderboard(teamQuestions, limit: 5);
@@ -158,7 +175,7 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
 
                     const SizedBox(height: 18),
 
-                    // 4 Real-time KPI Cards
+                    // 4 Real-time KPI Cards (Interactive Filters)
                     GridView.count(
                       crossAxisCount: 2,
                       shrinkWrap: true,
@@ -167,10 +184,38 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
                       childAspectRatio: 1.6,
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
-                        _kpiTile('Total Tiket Tim', '$totalCount', AppColors.primaryBlue, Icons.inbox_rounded),
-                        _kpiTile('Perlu Disposisi', '$pendingCount', const Color(0xFFD97706), Icons.hourglass_top_rounded),
-                        _kpiTile('Sedang Diproses', '$inProgressCount', const Color(0xFF0D9488), Icons.engineering_rounded),
-                        _kpiTile('Tiket Selesai', '$closedCount', const Color(0xFF16A34A), Icons.check_circle_rounded),
+                        _kpiTile(
+                          'Semua Aktif',
+                          '${allActiveQuestions.length}',
+                          primaryTeal,
+                          Icons.mark_chat_unread_outlined,
+                          isSelected: _selectedFilter == 'all_active',
+                          onTap: () => setState(() => _selectedFilter = 'all_active'),
+                        ),
+                        _kpiTile(
+                          'Perlu Disposisi',
+                          '${pendingQuestions.length}',
+                          const Color(0xFFD97706),
+                          Icons.hourglass_top_rounded,
+                          isSelected: _selectedFilter == 'open',
+                          onTap: () => setState(() => _selectedFilter = 'open'),
+                        ),
+                        _kpiTile(
+                          'Sedang Diproses',
+                          '${inProgressQuestions.length}',
+                          const Color(0xFF0D9488),
+                          Icons.engineering_rounded,
+                          isSelected: _selectedFilter == 'in_progress',
+                          onTap: () => setState(() => _selectedFilter = 'in_progress'),
+                        ),
+                        _kpiTile(
+                          'Tiket Selesai',
+                          '${closedQuestions.length}',
+                          const Color(0xFF16A34A),
+                          Icons.check_circle_rounded,
+                          isSelected: _selectedFilter == 'closed',
+                          onTap: () => setState(() => _selectedFilter = 'closed'),
+                        ),
                       ],
                     ),
 
@@ -181,44 +226,134 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
 
                     const SizedBox(height: 24),
 
-                    // Antrean Perlu Disposisi
-                    const Text(
-                      'Antrean Perlu Disposisi',
-                      style: AppTypography.heading3,
+                    // DAFTAR TIKET LAYANAN TIM SECTION & BULLET FILTER
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Daftar Tiket Layanan Tim',
+                                style: AppTypography.heading3,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _selectedFilter == 'all_active'
+                                    ? 'Menampilkan semua tiket aktif (belum selesai)'
+                                    : _selectedFilter == 'open'
+                                        ? 'Menampilkan antrean tiket yang perlu disposisi'
+                                        : _selectedFilter == 'in_progress'
+                                            ? 'Menampilkan tiket sedang ditangani tim'
+                                            : 'Menampilkan riwayat tiket selesai',
+                                style: const TextStyle(fontSize: 11, color: AppColors.slate500),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: primaryTeal.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(AppRadius.full),
+                            border: Border.all(color: primaryTeal.withValues(alpha: 0.3)),
+                          ),
+                          child: Text(
+                            '${displayedQuestions.length} Tiket',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: primaryTeal,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
+
+                    // Bullet Filter Bar (● Semua Aktif, ● Perlu Disposisi, ● Sedang Diproses, ● Selesai)
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildBulletFilterChip(
+                            id: 'all_active',
+                            label: 'Semua Aktif',
+                            count: allActiveQuestions.length,
+                            color: primaryTeal,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildBulletFilterChip(
+                            id: 'open',
+                            label: 'Perlu Disposisi',
+                            count: pendingQuestions.length,
+                            color: const Color(0xFFD97706),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildBulletFilterChip(
+                            id: 'in_progress',
+                            label: 'Sedang Diproses',
+                            count: inProgressQuestions.length,
+                            color: const Color(0xFF0D9488),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildBulletFilterChip(
+                            id: 'closed',
+                            label: 'Selesai',
+                            count: closedQuestions.length,
+                            color: const Color(0xFF16A34A),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
 
                     if (isLoading)
                       const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
-                    else if (pendingList.isEmpty)
+                    else if (displayedQuestions.isEmpty)
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                        alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: AppColors.surface,
                           borderRadius: BorderRadius.circular(AppRadius.md),
                           border: Border.all(color: AppColors.border),
                         ),
-                        child: const Row(
+                        child: Column(
                           children: [
-                            Icon(Icons.check_circle_outline_rounded, color: Color(0xFF16A34A)),
-                            SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'Semua tiket tim telah didisposisi/ditangani.',
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                              ),
+                            Icon(
+                              _selectedFilter == 'closed'
+                                  ? Icons.task_alt_rounded
+                                  : Icons.inbox_outlined,
+                              size: 36,
+                              color: Colors.grey.shade400,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _selectedFilter == 'all_active'
+                                  ? 'Tidak ada tiket aktif saat ini. Semua tiket tim telah tuntas.'
+                                  : _selectedFilter == 'open'
+                                      ? 'Semua tiket tim telah didisposisi/ditangani.'
+                                      : _selectedFilter == 'in_progress'
+                                          ? 'Belum ada tiket yang sedang dalam penanganan aktif.'
+                                          : 'Belum ada riwayat tiket selesai.',
+                              style: const TextStyle(fontSize: 12, color: AppColors.slate600),
+                              textAlign: TextAlign.center,
                             ),
                           ],
                         ),
                       )
                     else
-                      ListView.builder(
+                      ListView.separated(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        itemCount: pendingList.length,
+                        itemCount: displayedQuestions.length,
+                        separatorBuilder: (context, index) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
-                          final q = pendingList[index];
+                          final q = displayedQuestions[index];
                           return QuestionCard(
                             question: q,
                             currentUser: widget.user,
@@ -433,37 +568,124 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
     );
   }
 
-  Widget _kpiTile(String title, String value, Color color, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(fontSize: 11, color: AppColors.slate600),
-                  overflow: TextOverflow.ellipsis,
+  Widget _buildBulletFilterChip({
+    required String id,
+    required String label,
+    required int count,
+    required Color color,
+  }) {
+    final isSelected = _selectedFilter == id;
+    return InkWell(
+      key: ValueKey('bullet_filter_$id'),
+      onTap: () {
+        setState(() {
+          _selectedFilter = id;
+        });
+      },
+      borderRadius: BorderRadius.circular(AppRadius.full),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.12) : AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.full),
+          border: Border.all(
+            color: isSelected ? color : AppColors.border,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? color : AppColors.slate700,
+              ),
+            ),
+            const SizedBox(width: 5),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              decoration: BoxDecoration(
+                color: isSelected ? color.withValues(alpha: 0.2) : AppColors.slate100,
+                borderRadius: BorderRadius.circular(AppRadius.full),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? color : AppColors.slate600,
                 ),
               ),
-            ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _kpiTile(
+    String title,
+    String value,
+    Color color,
+    IconData icon, {
+    VoidCallback? onTap,
+    bool isSelected = false,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.08) : AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(
+            color: isSelected ? color : AppColors.border,
+            width: isSelected ? 1.5 : 1,
           ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
-          ),
-        ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 16, color: color),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected ? color : AppColors.slate600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color),
+            ),
+          ],
+        ),
       ),
     );
   }
