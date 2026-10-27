@@ -87,7 +87,7 @@ class _CsatRatingCardState extends State<CsatRatingCard> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Gagal mengirim penilaian. Silakan coba lagi.'),
-            backgroundColor: AppColors.primaryRed,
+            backgroundColor: AppColors.colorPrimary,
           ),
         );
       }
@@ -370,7 +370,7 @@ class _CsatRatingCardState extends State<CsatRatingCard> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppRadius.sm),
-                borderSide: const BorderSide(color: AppColors.primaryRed, width: 1.2),
+                borderSide: const BorderSide(color: AppColors.colorPrimary, width: 1.2),
               ),
               contentPadding: const EdgeInsets.all(10),
             ),
@@ -393,7 +393,7 @@ class _CsatRatingCardState extends State<CsatRatingCard> {
                   : const Icon(Icons.send_rounded, size: 16),
               label: Text(_isSubmitting ? 'Mengirim...' : 'Kirim Penilaian'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryRed,
+                backgroundColor: AppColors.colorPrimary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppRadius.sm),

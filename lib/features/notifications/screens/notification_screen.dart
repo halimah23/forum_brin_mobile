@@ -95,7 +95,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         context: context,
         barrierDismissible: false,
         builder: (ctx) => const Center(
-          child: CircularProgressIndicator(color: AppColors.primaryRed),
+          child: CircularProgressIndicator(color: AppColors.colorPrimary),
         ),
       );
 
@@ -120,7 +120,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Detail tiket tidak dapat ditemukan atau telah dihapus.'),
-            backgroundColor: AppColors.primaryRed,
+            backgroundColor: AppColors.colorPrimary,
           ),
         );
       }
@@ -153,7 +153,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       case 'sla_warning':
         return Colors.amber.shade800;
       default:
-        return AppColors.primaryRed;
+        return AppColors.colorPrimary;
     }
   }
 
@@ -173,11 +173,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
           if (unreadCount > 0)
             TextButton.icon(
               onPressed: _markAllAsRead,
-              icon: const Icon(Icons.done_all_rounded, size: 18, color: AppColors.primaryRed),
+              icon: const Icon(Icons.done_all_rounded, size: 18, color: AppColors.colorPrimary),
               label: const Text(
                 'Tandai Dibaca',
                 style: TextStyle(
-                  color: AppColors.primaryRed,
+                  color: AppColors.colorPrimary,
                   fontWeight: FontWeight.w600,
                   fontSize: 13,
                 ),
@@ -191,7 +191,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _loadNotifications,
-        color: AppColors.primaryRed,
+        color: AppColors.colorPrimary,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -205,7 +205,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     const Center(
                       child: Padding(
                         padding: EdgeInsets.all(40),
-                        child: CircularProgressIndicator(color: AppColors.primaryRed),
+                        child: CircularProgressIndicator(color: AppColors.colorPrimary),
                       ),
                     )
                   else if (notifications.isEmpty)
@@ -271,7 +271,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: AppColors.primaryRed,
+                                color: AppColors.colorPrimary,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
@@ -363,7 +363,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                               height: 8,
                                               margin: const EdgeInsets.only(left: 6),
                                               decoration: const BoxDecoration(
-                                                color: AppColors.primaryRed,
+                                                color: AppColors.colorPrimary,
                                                 shape: BoxShape.circle,
                                               ),
                                             ),

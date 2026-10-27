@@ -215,7 +215,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
         constraints: const BoxConstraints(maxHeight: 180, maxWidth: 260),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppRadius.sm),
-          border: Border.all(color: isMe ? const Color(0xFFC5E1A5) : const Color(0xFFCBD5E1)),
+          border: Border.all(color: isMe ? AppColors.colorPrimary.withAlpha(50) : AppColors.colorBorder),
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -242,14 +242,14 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
         margin: const EdgeInsets.only(top: 6, bottom: 4),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: isMe ? const Color(0xFFC8E6C9) : AppColors.slate100,
+          color: isMe ? AppColors.colorPrimarySoft : AppColors.slate100,
           borderRadius: BorderRadius.circular(AppRadius.sm),
-          border: Border.all(color: isMe ? const Color(0xFFA5D6A7) : AppColors.slate300),
+          border: Border.all(color: isMe ? AppColors.colorPrimary.withAlpha(60) : AppColors.colorBorder),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.description_rounded, size: 20, color: AppColors.primaryRed),
+            const Icon(Icons.description_rounded, size: 20, color: AppColors.colorPrimary),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
@@ -1180,13 +1180,13 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF512DA8).withAlpha(15),
+                                  color: AppColors.colorAccentSoft,
                                   borderRadius: BorderRadius.circular(AppRadius.sm),
-                                  border: Border.all(color: const Color(0xFF512DA8).withAlpha(40)),
+                                  border: Border.all(color: AppColors.colorAccent.withAlpha(80)),
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.auto_fix_high_rounded, size: 14, color: Color(0xFF512DA8)),
+                                    const Icon(Icons.auto_fix_high_rounded, size: 14, color: AppColors.colorAccentWarm),
                                     const SizedBox(width: 6),
                                     const Expanded(
                                       child: Text(
@@ -1194,7 +1194,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
-                                          color: Color(0xFF512DA8),
+                                          color: AppColors.colorAccentWarm,
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                         maxLines: 1,
@@ -1208,7 +1208,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                         style: const TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.bold,
-                                          color: Color(0xFF512DA8),
+                                          color: AppColors.colorAccentWarm,
                                           decoration: TextDecoration.underline,
                                         ),
                                       ),
@@ -1295,14 +1295,14 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                               margin: const EdgeInsets.only(bottom: 12, left: 40),
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFDCF8C6),
+                                color: AppColors.colorPrimarySoft,
                                 borderRadius: const BorderRadius.only(
                                   topLeft: Radius.circular(16),
                                   topRight: Radius.circular(16),
                                   bottomLeft: Radius.circular(16),
                                   bottomRight: Radius.circular(4),
                                 ),
-                                border: Border.all(color: const Color(0xFFC5E1A5), width: 0.8),
+                                border: Border.all(color: AppColors.colorPrimary.withAlpha(50), width: 1.0),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1313,7 +1313,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                       Flexible(
                                         child: Text(
                                           authorDisplayName,
-                                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                                          style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: AppColors.colorPrimary),
                                           overflow: TextOverflow.ellipsis,
                                           maxLines: 1,
                                         ),
@@ -1322,12 +1322,12 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFC8E6C9),
+                                          color: AppColors.colorPrimary.withAlpha(25),
                                           borderRadius: BorderRadius.circular(4),
                                         ),
                                         child: const Text(
                                           'KONSULTASI AWAL',
-                                          style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Color(0xFF1B5E20)),
+                                          style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: AppColors.colorPrimary),
                                         ),
                                       ),
                                     ],
@@ -1356,10 +1356,10 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                       if (question.createdAt != null)
                                         Text(
                                           question.createdAt!.split('T').first,
-                                          style: const TextStyle(fontSize: 9.5, color: Color(0xFF558B2F)),
+                                          style: const TextStyle(fontSize: 9.5, color: AppColors.colorTextMuted),
                                         ),
                                       const SizedBox(width: 4),
-                                      const Icon(Icons.done_all, size: 13, color: Color(0xFF2E7D32)),
+                                      const Icon(Icons.done_all, size: 13, color: AppColors.colorPrimary),
                                     ],
                                   ),
                                 ],
@@ -1558,21 +1558,21 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                               margin: const EdgeInsets.only(bottom: 12, left: 40),
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFDCF8C6),
+                                color: AppColors.colorPrimarySoft,
                                 borderRadius: const BorderRadius.only(
                                   topLeft: Radius.circular(16),
                                   topRight: Radius.circular(16),
                                   bottomLeft: Radius.circular(16),
                                   bottomRight: Radius.circular(4),
                                 ),
-                                border: Border.all(color: const Color(0xFFC5E1A5), width: 0.8),
+                                border: Border.all(color: AppColors.colorPrimary.withAlpha(50), width: 1.0),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     ans.penjawabNama,
-                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
+                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.colorPrimary),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
@@ -1593,10 +1593,10 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                       if (ans.createdAt != null)
                                         Text(
                                           ans.createdAt!.split('T').first,
-                                          style: const TextStyle(fontSize: 9.5, color: Color(0xFF558B2F)),
+                                          style: const TextStyle(fontSize: 9.5, color: AppColors.colorTextMuted),
                                         ),
                                       const SizedBox(width: 4),
-                                      const Icon(Icons.done_all, size: 13, color: Color(0xFF2E7D32)),
+                                      const Icon(Icons.done_all, size: 13, color: AppColors.colorPrimary),
                                     ],
                                   ),
                                 ],
@@ -1610,10 +1610,10 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                           final isKetua = ans.isKetuaTim;
 
                           final headerBg = isPusat
-                              ? Colors.amber.shade900
+                              ? AppColors.colorAccentWarm
                               : (isLksdm
-                                  ? Colors.teal.shade800
-                                  : (isKetua ? Colors.purple.shade800 : const Color(0xFF2E7D32)));
+                                  ? AppColors.colorSecondaryStrong
+                                  : (isKetua ? AppColors.colorPrimaryHover : AppColors.colorPrimary));
 
                           final roleBadgeLabel = isPusat
                               ? 'TIM PUSAT'

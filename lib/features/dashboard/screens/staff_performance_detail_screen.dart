@@ -93,7 +93,7 @@ class _StaffPerformanceDetailScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Gagal mengunduh berkas Excel: $e'),
-          backgroundColor: AppColors.primaryRed,
+          backgroundColor: AppColors.colorPrimary,
         ),
       );
     } finally {
@@ -131,7 +131,7 @@ class _StaffPerformanceDetailScreenState
                   )
                 : const Icon(
                     Icons.file_download_outlined,
-                    color: AppColors.primaryRed,
+                    color: AppColors.colorPrimary,
                   ),
           ),
         ],
@@ -270,13 +270,13 @@ class _StaffPerformanceDetailScreenState
           // Avatar Petugas
           CircleAvatar(
             radius: 28,
-            backgroundColor: AppColors.primaryRed.withAlpha(25),
+            backgroundColor: AppColors.colorPrimarySoft,
             child: Text(
               initial,
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: AppColors.primaryRed,
+                color: AppColors.colorPrimary,
               ),
             ),
           ),
@@ -598,7 +598,7 @@ class _StaffPerformanceDetailScreenState
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.primaryRed,
+                    color: AppColors.colorPrimary,
                   ),
                 ),
                 Container(

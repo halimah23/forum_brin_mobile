@@ -75,7 +75,7 @@ class _FaqDetailScreenState extends State<FaqDetailScreen> {
         actions: [
           if (_canEdit)
             IconButton(
-              icon: const Icon(Icons.edit_note_rounded, color: AppColors.primaryRed),
+              icon: const Icon(Icons.edit_note_rounded, color: AppColors.colorPrimary),
               tooltip: 'Edit Pembakuan & Solusi FAQ',
               onPressed: _handleEdit,
             ),
@@ -157,16 +157,16 @@ class _FaqDetailScreenState extends State<FaqDetailScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: AppColors.primaryRed.withAlpha(20),
+            color: AppColors.colorPrimarySoft,
             borderRadius: BorderRadius.circular(AppRadius.full),
-            border: Border.all(color: AppColors.primaryRed.withAlpha(50)),
+            border: Border.all(color: AppColors.colorPrimary.withAlpha(50)),
           ),
           child: Text(
             _question.tugasFungsiNama ?? _question.effectiveTargetTim,
             style: const TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: AppColors.primaryRed,
+              color: AppColors.colorPrimary,
             ),
           ),
         ),
@@ -230,7 +230,7 @@ class _FaqDetailScreenState extends State<FaqDetailScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF3E8FF),
+                    color: AppColors.colorAccentSoft,
                     borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                   child: const Text(
@@ -238,7 +238,7 @@ class _FaqDetailScreenState extends State<FaqDetailScreen> {
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF7E22CE),
+                      color: AppColors.colorAccentWarm,
                     ),
                   ),
                 ),
@@ -297,13 +297,13 @@ class _FaqDetailScreenState extends State<FaqDetailScreen> {
                         style: const TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF6B21A8),
+                          color: AppColors.colorAccentWarm,
                         ),
                       ),
                       Icon(
                         _showOriginalText ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                         size: 16,
-                        color: const Color(0xFF6B21A8),
+                        color: AppColors.colorAccentWarm,
                       ),
                     ],
                   ),
@@ -317,9 +317,9 @@ class _FaqDetailScreenState extends State<FaqDetailScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFFAF5FF),
+                color: AppColors.colorAccentSoft,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
-                border: Border.all(color: const Color(0xFFE9D5FF)),
+                border: Border.all(color: AppColors.colorAccent.withAlpha(80)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -665,20 +665,20 @@ class _FaqDetailScreenState extends State<FaqDetailScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               visualDensity: VisualDensity.compact,
               side: BorderSide(
-                color: _isHelpful == false ? AppColors.primaryRed : AppColors.border,
+                color: _isHelpful == false ? AppColors.error : AppColors.border,
               ),
               backgroundColor: _isHelpful == false ? const Color(0xFFFEE2E2) : null,
             ),
             icon: Icon(
               Icons.thumb_down_rounded,
               size: 14,
-              color: _isHelpful == false ? AppColors.primaryRed : AppColors.slate600,
+              color: _isHelpful == false ? AppColors.error : AppColors.slate600,
             ),
             label: Text(
               'Tidak',
               style: TextStyle(
                 fontSize: 12,
-                color: _isHelpful == false ? AppColors.primaryRed : AppColors.slate700,
+                color: _isHelpful == false ? AppColors.error : AppColors.slate700,
                 fontWeight: _isHelpful == false ? FontWeight.bold : FontWeight.normal,
               ),
             ),

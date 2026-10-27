@@ -58,7 +58,7 @@ class _AttachmentPickerWidgetState extends State<AttachmentPickerWidget> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Ukuran berkas melebihi batas maksimal 10 MB.'),
-              backgroundColor: AppColors.primaryRed,
+              backgroundColor: AppColors.colorPrimary,
             ),
           );
         }
@@ -102,7 +102,7 @@ class _AttachmentPickerWidgetState extends State<AttachmentPickerWidget> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Gagal mengunggah berkas ke Cloud Storage ($uploadError). Pastikan bucket "attachments" dan izin Supabase sudah aktif.'),
-              backgroundColor: AppColors.primaryRed,
+              backgroundColor: AppColors.colorPrimary,
               duration: const Duration(seconds: 4),
             ),
           );
@@ -135,7 +135,7 @@ class _AttachmentPickerWidgetState extends State<AttachmentPickerWidget> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gagal memilih berkas: $e'),
-            backgroundColor: AppColors.primaryRed,
+            backgroundColor: AppColors.colorPrimary,
           ),
         );
       }

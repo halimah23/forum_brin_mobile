@@ -27,7 +27,7 @@ class _AdminMainTabPageState extends State<AdminMainTabPage> {
     final isAdminLksdm = widget.user.isAdminLksdm;
     final lksdmName = widget.user.effectiveLksdm;
     final teamName = widget.user.tim ?? (isAdminLksdm ? lksdmName : 'Fungsi Pengelolaan data dan informasi SDM');
-    final primaryColor = isAdminLksdm ? Colors.teal.shade800 : AppColors.primaryBlue;
+    final primaryColor = isAdminLksdm ? AppColors.colorSecondaryStrong : AppColors.colorPrimary;
 
     final pages = [
       AdminDashboardScreen(

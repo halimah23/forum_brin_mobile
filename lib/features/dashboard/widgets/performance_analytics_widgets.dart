@@ -272,7 +272,7 @@ class StaffLeaderboardCardWidget extends StatelessWidget {
                   onPressed: onViewAll,
                   style: TextButton.styleFrom(
                     visualDensity: VisualDensity.compact,
-                    foregroundColor: AppColors.primaryRed,
+                    foregroundColor: AppColors.colorPrimary,
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   ),
                   child: const Row(

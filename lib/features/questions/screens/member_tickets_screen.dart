@@ -98,20 +98,20 @@ class _MemberTicketsScreenState extends State<MemberTicketsScreen>
           'Tiket Saya',
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: AppColors.colorText,
             fontSize: 18,
           ),
         ),
-        backgroundColor: AppColors.primaryRed,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.colorSurface,
+        foregroundColor: AppColors.colorText,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
+          labelColor: AppColors.colorPrimary,
+          unselectedLabelColor: AppColors.colorTextMuted,
+          indicatorColor: AppColors.colorPrimary,
           indicatorWeight: 3,
           tabs: [
             Tab(
@@ -130,7 +130,7 @@ class _MemberTicketsScreenState extends State<MemberTicketsScreen>
                       child: Text(
                         '${activeTickets.length}',
                         style: const TextStyle(
-                          color: AppColors.primaryRed,
+                          color: AppColors.colorPrimary,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -156,7 +156,7 @@ class _MemberTicketsScreenState extends State<MemberTicketsScreen>
                       child: Text(
                         '${closedTickets.length}',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.colorSecondaryStrong,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -273,7 +273,7 @@ class _MemberTicketsScreenState extends State<MemberTicketsScreen>
                   icon: const Icon(Icons.add_comment_outlined, size: 18),
                   label: const Text('Ajukan Pertanyaan Baru'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryRed,
+                    backgroundColor: AppColors.colorPrimary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -290,7 +290,7 @@ class _MemberTicketsScreenState extends State<MemberTicketsScreen>
 
     return RefreshIndicator(
       onRefresh: _loadTickets,
-      color: AppColors.primaryRed,
+      color: AppColors.colorPrimary,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),

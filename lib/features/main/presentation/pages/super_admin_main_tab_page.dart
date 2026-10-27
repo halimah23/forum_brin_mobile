@@ -1,3 +1,4 @@
+import '../../../../core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import '../../../auth/models/user_model.dart';
 import '../../../dashboard/screens/super_admin_audit_screen.dart';
@@ -24,7 +25,7 @@ class _SuperAdminMainTabPageState extends State<SuperAdminMainTabPage> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryPurple = Color(0xFF512DA8);
+    final primaryOceanic = AppColors.colorPrimary;
 
     final pages = [
       SuperAdminDashboardScreen(
@@ -54,7 +55,7 @@ class _SuperAdminMainTabPageState extends State<SuperAdminMainTabPage> {
             _currentIndex = index;
           });
         },
-        selectedItemColor: primaryPurple,
+        selectedItemColor: primaryOceanic,
         items: SuperAdminMenuType.values
             .map(
               (type) => AppBottomNavItem(

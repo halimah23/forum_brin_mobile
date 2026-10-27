@@ -1,3 +1,4 @@
+import '../../../../core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import '../../../auth/models/user_model.dart';
 import '../../../dashboard/screens/eksekutif_dashboard_screen.dart';
@@ -23,7 +24,7 @@ class _EksekutifMainTabPageState extends State<EksekutifMainTabPage> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryIndigo = Color(0xFF283593);
+    final primaryIndigo = AppColors.colorPrimaryHover;
 
     final pages = [
       EksekutifDashboardScreen(

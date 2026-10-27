@@ -15,6 +15,8 @@ class AppBottomNavItem {
   });
 }
 
+/// Minimalist Floating Dock Bottom Navigation Bar
+/// Sesuai tema: Modern Institutional White — Oceanic Blue, Teal & Amber
 class AppBottomNavigationBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
@@ -35,51 +37,73 @@ class AppBottomNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = selectedItemColor ?? AppColors.primaryRed;
-    final inactiveColor = unselectedItemColor ?? AppColors.slate400;
-    final bgColor = backgroundColor ?? Colors.white;
+    final activeColor = selectedItemColor ?? AppColors.colorPrimary;
+    final inactiveColor = unselectedItemColor ?? AppColors.colorTextMuted;
+    final bgColor = backgroundColor ?? AppColors.colorSurface;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: bgColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(12),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        child: Container(
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.colorBorder, width: 1),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x140F366A),
+                blurRadius: 18,
+                offset: Offset(0, 6),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: ClipRRect(
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(20),
-          ),
-          child: BottomNavigationBar(
-            elevation: 0,
-            backgroundColor: bgColor,
-            currentIndex: currentIndex,
-            onTap: onTap,
-            type: BottomNavigationBarType.fixed,
-            selectedItemColor: activeColor,
-            unselectedItemColor: inactiveColor,
-            selectedFontSize: 12,
-            unselectedFontSize: 12,
-            selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
-            items: items.asMap().entries.map((entry) {
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: items.asMap().entries.map((entry) {
               final idx = entry.key;
               final item = entry.value;
               final isSelected = currentIndex == idx;
               final color = isSelected ? activeColor : inactiveColor;
-              final builder = isSelected ? item.selectedIconBuilder : item.unselectedIconBuilder;
+              final iconBuilder = isSelected
+                  ? item.selectedIconBuilder
+                  : item.unselectedIconBuilder;
 
-              return BottomNavigationBarItem(
-                label: item.label,
-                icon: Padding(
-                  padding: const EdgeInsets.only(bottom: 4, top: 4),
-                  child: builder(color, 22),
+              return Expanded(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => onTap(idx),
+                    borderRadius: BorderRadius.circular(16),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.colorPrimarySoft
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          iconBuilder(color, 20),
+                          const SizedBox(height: 3),
+                          Text(
+                            item.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                              color: color,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               );
             }).toList(),

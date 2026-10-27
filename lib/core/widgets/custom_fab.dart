@@ -15,8 +15,8 @@ class CustomFab extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.onPressed,
-    this.backgroundColor = AppColors.primaryRed,
-    this.foregroundColor = Colors.white,
+    this.backgroundColor = AppColors.colorPrimary,
+    this.foregroundColor = AppColors.colorTextInverse,
   });
 
   @override
@@ -26,7 +26,7 @@ class CustomFab extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x1F000000),
+            color: Color(0x261769D2),
             blurRadius: 10,
             offset: Offset(0, 4),
           ),
@@ -50,10 +50,7 @@ class CustomFab extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   label,
-                  style: AppTypography.button.copyWith(
-                    color: foregroundColor,
-                    fontSize: 14,
-                  ),
+                  style: AppTypography.button.copyWith(color: foregroundColor),
                 ),
               ],
             ),

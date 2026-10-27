@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_typography.dart';
-import '../../../core/widgets/status_badge.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/models/user_role.dart';
 import '../models/question_model.dart';
+import '../../../core/widgets/status_badge.dart';
 
 class QuestionCard extends StatelessWidget {
   final QuestionModel question;
@@ -19,38 +19,30 @@ class QuestionCard extends StatelessWidget {
     this.currentUser,
   });
 
-  bool get isPrivilegedRole {
-    if (currentUser == null) return false;
-    return currentUser!.isAdminLksdm ||
-        currentUser!.isAdminPusat ||
-        currentUser!.isKetuaTim ||
-        currentUser!.isEksekutif ||
-        currentUser!.isSuperAdmin ||
-        currentUser!.userRole == UserRole.admin ||
-        currentUser!.userRole == UserRole.adminLksdm ||
-        currentUser!.userRole == UserRole.adminPusat ||
-        currentUser!.userRole == UserRole.ketuaTim ||
-        currentUser!.userRole == UserRole.eksekutif ||
-        currentUser!.userRole == UserRole.superAdmin;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final String namaUser = question.getAuthorDisplayName(currentUser);
-    final String initial = question.getAuthorInitial(currentUser);
-    final String? namaTim = question.targetTim ??
-        ((question.tugasFungsi != null && question.tugasFungsi!.isNotEmpty)
-            ? question.tugasFungsi!.first.teamName ?? question.tugasFungsi!.first.nama
-            : null);
+    final namaUser = question.user?.name ?? 'Pegawai';
+    final initial = namaUser.isNotEmpty ? namaUser[0].toUpperCase() : 'P';
+    final answerCount = question.answers?.length ?? 0;
+    final namaTim = question.targetTimPusat ?? question.targetTim;
 
-    final int answerCount = question.answers?.length ?? 0;
+    // Logika Privasi Identitas:
+    final currentRole = currentUser?.userRole ?? UserRole.member;
+    final bool isPrivilegedRole = currentRole != UserRole.member;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.colorSurface,
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.border, width: 1),
+        border: Border.all(color: AppColors.colorBorder, width: 1),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x080F366A),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
@@ -67,11 +59,11 @@ class QuestionCard extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 16,
-                      backgroundColor: AppColors.primaryRed,
+                      backgroundColor: AppColors.colorPrimarySoft,
                       child: Text(
                         initial,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.colorPrimary,
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
@@ -84,14 +76,14 @@ class QuestionCard extends StatelessWidget {
                         children: [
                           Text(
                             isPrivilegedRole ? question.officialAuthorName : namaUser,
-                            style: AppTypography.labelMedium,
+                            style: AppTypography.labelMedium.copyWith(color: AppColors.colorText),
                             overflow: TextOverflow.ellipsis,
                             maxLines: 1,
                           ),
                           if (question.ticketNumber != null)
                             Text(
                               question.ticketNumber!,
-                              style: AppTypography.caption,
+                              style: AppTypography.caption.copyWith(color: AppColors.colorTextMuted),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                             ),
@@ -103,7 +95,7 @@ class QuestionCard extends StatelessWidget {
                                   const Icon(
                                     Icons.location_city_rounded,
                                     size: 11,
-                                    color: AppColors.slate600,
+                                    color: AppColors.colorTextMuted,
                                   ),
                                   const SizedBox(width: 4),
                                   Expanded(
@@ -112,7 +104,7 @@ class QuestionCard extends StatelessWidget {
                                       style: const TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w600,
-                                        color: AppColors.slate700,
+                                        color: AppColors.colorTextMuted,
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                       maxLines: 1,
@@ -135,21 +127,21 @@ class QuestionCard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.purple.shade50,
+                              color: AppColors.colorSecondarySoft,
                               borderRadius: BorderRadius.circular(AppRadius.sm),
-                              border: Border.all(color: Colors.purple.shade300, width: 0.8),
+                              border: Border.all(color: AppColors.colorSecondary.withAlpha(80), width: 0.8),
                             ),
-                            child: Row(
+                            child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.badge_outlined, size: 10, color: Colors.purple.shade700),
-                                const SizedBox(width: 3),
+                                Icon(Icons.badge_outlined, size: 10, color: AppColors.colorSecondaryStrong),
+                                SizedBox(width: 3),
                                 Text(
                                   'KONSULTASI LKSDM',
                                   style: TextStyle(
                                     fontSize: 8.5,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.purple.shade800,
+                                    color: AppColors.colorSecondaryStrong,
                                   ),
                                 ),
                               ],
@@ -166,14 +158,14 @@ class QuestionCard extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 6),
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.slate100,
+                      color: AppColors.colorPrimarySoft,
                       borderRadius: BorderRadius.circular(AppRadius.sm),
-                      border: Border.all(color: AppColors.slate300, width: 1),
+                      border: Border.all(color: AppColors.colorPrimary.withAlpha(40), width: 1),
                     ),
                     child: Text(
                       'Tujuan: $namaTim',
                       style: AppTypography.caption.copyWith(
-                        color: AppColors.primaryBlue,
+                        color: AppColors.colorPrimary,
                         fontWeight: FontWeight.w600,
                         fontSize: 10.5,
                       ),
@@ -183,17 +175,20 @@ class QuestionCard extends StatelessWidget {
                   ),
                 Text(
                   question.judul,
-                  style: AppTypography.heading3.copyWith(fontSize: 14),
+                  style: AppTypography.heading3.copyWith(
+                    fontSize: 14,
+                    color: AppColors.colorText,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   question.isi,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTypography.bodySmall,
+                  style: AppTypography.bodySmall.copyWith(color: AppColors.colorTextMuted),
                 ),
                 const SizedBox(height: 10),
-                const Divider(height: 1, color: AppColors.border),
+                const Divider(height: 1, color: AppColors.colorBorder),
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -205,7 +200,7 @@ class QuestionCard extends StatelessWidget {
                           const Icon(
                             Icons.chat_bubble_outline_rounded,
                             size: 13,
-                            color: AppColors.slate500,
+                            color: AppColors.colorTextMuted,
                           ),
                           const SizedBox(width: 5),
                           Flexible(
@@ -214,7 +209,7 @@ class QuestionCard extends StatelessWidget {
                                   ? '$answerCount Tanggapan'
                                   : 'Belum ada tanggapan',
                               style: AppTypography.caption.copyWith(
-                                color: answerCount > 0 ? AppColors.slate700 : AppColors.slate500,
+                                color: answerCount > 0 ? AppColors.colorText : AppColors.colorTextMuted,
                                 fontWeight: FontWeight.w500,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -230,7 +225,7 @@ class QuestionCard extends StatelessWidget {
                         child: Text(
                           'Petugas: ${question.assignedTo}',
                           style: AppTypography.caption.copyWith(
-                            color: AppColors.slate600,
+                            color: AppColors.colorTextMuted,
                             fontWeight: FontWeight.w500,
                           ),
                           overflow: TextOverflow.ellipsis,
@@ -249,4 +244,3 @@ class QuestionCard extends StatelessWidget {
     );
   }
 }
-

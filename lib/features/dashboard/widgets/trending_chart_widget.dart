@@ -38,7 +38,7 @@ class TrendingChartWidget extends StatelessWidget {
                 ),
                 child: const Icon(
                   Icons.local_fire_department_rounded,
-                  color: AppColors.primaryRed,
+                  color: AppColors.colorAccentWarm,
                   size: 20,
                 ),
               ),
@@ -79,7 +79,7 @@ class TrendingChartWidget extends StatelessWidget {
                     height: 28,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: index == 0 ? AppColors.primaryRed : AppColors.slate100,
+                      color: index == 0 ? AppColors.colorPrimary : AppColors.slate100,
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Text(

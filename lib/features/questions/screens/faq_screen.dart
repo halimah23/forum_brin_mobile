@@ -103,7 +103,7 @@ class _FaqScreenState extends State<FaqScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _loadFaqs,
-        color: AppColors.primaryRed,
+        color: AppColors.colorPrimary,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -164,10 +164,10 @@ class _FaqScreenState extends State<FaqScreen> {
                               ),
                             ),
                             backgroundColor: AppColors.surface,
-                            selectedColor: AppColors.primaryRed,
+                            selectedColor: AppColors.colorPrimary,
                             checkmarkColor: Colors.white,
                             side: BorderSide(
-                              color: isSelected ? AppColors.primaryRed : AppColors.border,
+                              color: isSelected ? AppColors.colorPrimary : AppColors.border,
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(AppRadius.full),
@@ -284,7 +284,7 @@ class _FaqScreenState extends State<FaqScreen> {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                         decoration: BoxDecoration(
-                                          color: AppColors.primaryRed.withAlpha(20),
+                                          color: AppColors.colorPrimarySoft,
                                           borderRadius: BorderRadius.circular(AppRadius.sm),
                                         ),
                                         child: Text(
@@ -292,7 +292,7 @@ class _FaqScreenState extends State<FaqScreen> {
                                           style: const TextStyle(
                                             fontSize: 10.5,
                                             fontWeight: FontWeight.bold,
-                                            color: AppColors.primaryRed,
+                                            color: AppColors.colorPrimary,
                                           ),
                                         ),
                                       ),

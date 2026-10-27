@@ -346,13 +346,13 @@ class _AskQuestionViewState extends State<AskQuestionView> {
                                     Container(
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: isConsultation ? Colors.purple.shade50 : AppColors.slate100,
+                                        color: isConsultation ? AppColors.colorSecondarySoft : AppColors.colorPrimarySoft,
                                         borderRadius: BorderRadius.circular(AppRadius.sm),
                                       ),
                                       child: Icon(
                                         isConsultation ? Icons.badge_outlined : Icons.location_on_rounded,
                                         size: 22,
-                                        color: isConsultation ? Colors.purple.shade700 : AppColors.primaryRed,
+                                        color: isConsultation ? AppColors.colorSecondaryStrong : AppColors.colorPrimary,
                                       ),
                                     ),
                                     const SizedBox(width: 12),
@@ -595,7 +595,7 @@ class _AskQuestionViewState extends State<AskQuestionView> {
                         constraints: const BoxConstraints(maxWidth: 440),
                         child: CustomButton(
                           text: isConsultation ? 'Kirim Konsultasi ke Tim Pusat' : 'Kirim Pertanyaan',
-                          backgroundColor: isConsultation ? Colors.purple.shade800 : AppColors.primaryRed,
+                          backgroundColor: isConsultation ? AppColors.colorSecondaryStrong : AppColors.colorPrimary,
                           onPressed: submitQuestion,
                           isLoading: isSubmitting,
                           icon: const Icon(Icons.send_rounded),

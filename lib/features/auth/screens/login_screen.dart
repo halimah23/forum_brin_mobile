@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_typography.dart';
@@ -23,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final passwordController = TextEditingController();
   final emailFocusNode = FocusNode();
   final passwordFocusNode = FocusNode();
+
   bool obscurePassword = true;
 
   @override
@@ -35,24 +35,26 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void handleLogin() {
-    if (_formKey.currentState?.validate() ?? false) {
-      final email = emailController.text.trim();
-      final password = passwordController.text;
-      context.read<AuthCubit>().login(email: email, password: password);
+    if (_formKey.currentState!.validate()) {
+      FocusScope.of(context).unfocus();
+      context.read<AuthCubit>().login(
+            email: emailController.text.trim(),
+            password: passwordController.text,
+          );
     }
   }
 
   void handleQuickDemoLogin(String email) {
     emailController.text = email;
     passwordController.text = 'Password123!';
-    context.read<AuthCubit>().login(email: email, password: 'Password123!');
+    handleLogin();
   }
 
   void showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: AppTypography.bodyMedium.copyWith(color: Colors.white)),
-        backgroundColor: AppColors.slate900,
+        backgroundColor: AppColors.colorText,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -62,7 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.colorBg,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -93,17 +95,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Brand Logo
                         Center(
                           child: Container(
-                            width: 72,
-                            height: 72,
+                            width: 76,
+                            height: 76,
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: AppColors.border, width: 1),
+                              color: AppColors.colorSurface,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppColors.colorBorder, width: 1),
                               boxShadow: const [
                                 BoxShadow(
-                                  color: Color(0x0A000000),
-                                  blurRadius: 12,
+                                  color: Color(0x100F366A),
+                                  blurRadius: 16,
                                   offset: Offset(0, 4),
                                 ),
                               ],
@@ -118,13 +120,20 @@ class _LoginScreenState extends State<LoginScreen> {
                         const Text(
                           AppConstants.appTitle,
                           textAlign: TextAlign.center,
-                          style: AppTypography.heading1,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.colorText,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         const Text(
                           AppConstants.appSubtitle,
                           textAlign: TextAlign.center,
-                          style: AppTypography.bodySmall,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.colorTextMuted,
+                          ),
                         ),
                         const SizedBox(height: 32),
 
@@ -189,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         // Action Buttons
                         CustomButton(
-                          text: 'Masuk',
+                          text: 'Masuk ke BOSDM Connect',
                           onPressed: handleLogin,
                           isLoading: isLoading,
                           variant: CustomButtonVariant.primary,
@@ -208,13 +217,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         const SizedBox(height: 36),
 
-                        // Demo Roles Panel (Solid crisp design, no opacity badges)
+                        // Demo Roles Panel
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.border, width: 1),
+                            color: AppColors.colorSurface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.colorBorder, width: 1),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -224,28 +233,35 @@ class _LoginScreenState extends State<LoginScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
-                                      color: AppColors.slate100,
-                                      borderRadius: BorderRadius.circular(6),
+                                      color: AppColors.colorPrimarySoft,
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: const Icon(
                                       Icons.touch_app_outlined,
                                       size: 16,
-                                      color: AppColors.primaryRed,
+                                      color: AppColors.colorPrimary,
                                     ),
                                   ),
                                   const SizedBox(width: 10),
                                   const Expanded(
                                     child: Text(
                                       'Akses Pengujian Cepat (Database Supabase)',
-                                      style: AppTypography.heading3,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.colorText,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 6),
                               const Text(
                                 'Pilih akun resmi dari basis data Supabase di bawah ini untuk masuk cepat:',
-                                style: AppTypography.caption,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.colorTextMuted,
+                                ),
                               ),
                               const SizedBox(height: 14),
                               Wrap(
@@ -347,7 +363,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         const Text(
                           'Badan Riset dan Inovasi Nasional (BRIN)',
                           textAlign: TextAlign.center,
-                          style: AppTypography.caption,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.colorTextMuted,
+                          ),
                         ),
                       ],
                     ),
@@ -366,6 +385,23 @@ class _LoginScreenState extends State<LoginScreen> {
     required String roleTag,
     required String email,
   }) {
+    Color tagBg;
+    Color tagFg;
+
+    if (roleTag.contains('Member')) {
+      tagBg = AppColors.colorPrimarySoft;
+      tagFg = AppColors.colorPrimary;
+    } else if (roleTag.contains('LKSDM')) {
+      tagBg = AppColors.colorSecondarySoft;
+      tagFg = AppColors.colorSecondaryStrong;
+    } else if (roleTag.contains('Pusat')) {
+      tagBg = AppColors.colorAccentSoft;
+      tagFg = AppColors.colorAccentWarm;
+    } else {
+      tagBg = AppColors.slate800;
+      tagFg = Colors.white;
+    }
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -374,9 +410,9 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
-            color: AppColors.slate50,
+            color: AppColors.colorSurface,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: AppColors.border, width: 1),
+            border: Border.all(color: AppColors.colorBorder, width: 1),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -384,15 +420,15 @@ class _LoginScreenState extends State<LoginScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.slate800,
+                  color: tagBg,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   roleTag,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: tagFg,
                   ),
                 ),
               ),
@@ -400,9 +436,10 @@ class _LoginScreenState extends State<LoginScreen> {
               Flexible(
                 child: Text(
                   roleName,
-                  style: AppTypography.bodySmall.copyWith(
+                  style: const TextStyle(
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: AppColors.colorText,
                   ),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,

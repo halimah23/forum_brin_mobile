@@ -92,16 +92,16 @@ class AuditQuestionCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF512DA8).withAlpha(18),
+                            color: AppColors.colorPrimarySoft,
                             borderRadius: BorderRadius.circular(AppRadius.sm),
-                            border: Border.all(color: const Color(0xFF512DA8).withAlpha(40)),
+                            border: Border.all(color: AppColors.colorPrimary.withAlpha(50)),
                           ),
                           child: Text(
                             question.ticketNumber ?? '#TKT-${question.id ?? 0}',
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF512DA8),
+                              color: AppColors.colorPrimary,
                               letterSpacing: 0.3,
                             ),
                           ),
@@ -110,20 +110,21 @@ class AuditQuestionCard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF512DA8).withAlpha(18),
+                              color: AppColors.colorAccentSoft,
                               borderRadius: BorderRadius.circular(AppRadius.sm),
+                              border: Border.all(color: AppColors.colorAccent.withAlpha(80)),
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.auto_fix_high_rounded, size: 10, color: Color(0xFF512DA8)),
+                                Icon(Icons.auto_fix_high_rounded, size: 10, color: AppColors.colorAccentWarm),
                                 SizedBox(width: 3),
                                 Text(
                                   'DIBAKUKAN',
                                   style: TextStyle(
                                     fontSize: 9.5,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF512DA8),
+                                    color: AppColors.colorAccentWarm,
                                   ),
                                 ),
                               ],
@@ -213,7 +214,7 @@ class AuditQuestionCard extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.hub_outlined, size: 14, color: Color(0xFF512DA8)),
+                      const Icon(Icons.hub_outlined, size: 14, color: AppColors.colorPrimary),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(

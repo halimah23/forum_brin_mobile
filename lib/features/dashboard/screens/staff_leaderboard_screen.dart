@@ -175,7 +175,7 @@ class _StaffLeaderboardScreenState extends State<StaffLeaderboardScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Gagal membuat berkas Excel: $e'),
-          backgroundColor: AppColors.primaryRed,
+          backgroundColor: AppColors.colorPrimary,
         ),
       );
     } finally {
@@ -222,14 +222,14 @@ class _StaffLeaderboardScreenState extends State<StaffLeaderboardScreen> {
                   )
                 : const Icon(
                     Icons.file_download_outlined,
-                    color: AppColors.primaryRed,
+                    color: AppColors.colorPrimary,
                   ),
           ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadData,
-        color: AppColors.primaryRed,
+        color: AppColors.colorPrimary,
         child: Column(
           children: [
             // 1. Search Box & Filter Chips
@@ -277,7 +277,7 @@ class _StaffLeaderboardScreenState extends State<StaffLeaderboardScreen> {
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppRadius.md),
                         borderSide:
-                            const BorderSide(color: AppColors.primaryRed),
+                            const BorderSide(color: AppColors.colorPrimary),
                       ),
                     ),
                   ),
@@ -311,7 +311,7 @@ class _StaffLeaderboardScreenState extends State<StaffLeaderboardScreen> {
                                 ? Colors.white
                                 : AppColors.slate700,
                           ),
-                          selectedColor: AppColors.primaryRed,
+                          selectedColor: AppColors.colorPrimary,
                           backgroundColor: AppColors.slate100,
                           padding: const EdgeInsets.symmetric(horizontal: 4),
                           materialTapTargetSize:
@@ -369,7 +369,7 @@ class _StaffLeaderboardScreenState extends State<StaffLeaderboardScreen> {
               child: _isLoading
                   ? const Center(
                       child: CircularProgressIndicator(
-                          color: AppColors.primaryRed),
+                          color: AppColors.colorPrimary),
                     )
                   : staffList.isEmpty
                       ? Center(
@@ -568,13 +568,13 @@ class _StaffLeaderboardScreenState extends State<StaffLeaderboardScreen> {
             // Staff Avatar
             CircleAvatar(
               radius: 18,
-              backgroundColor: AppColors.primaryRed.withAlpha(20),
+              backgroundColor: AppColors.colorPrimarySoft,
               child: Text(
                 initial,
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.primaryRed,
+                  color: AppColors.colorPrimary,
                 ),
               ),
             ),

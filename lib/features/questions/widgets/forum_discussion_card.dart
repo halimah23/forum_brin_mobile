@@ -88,7 +88,7 @@ class ForumDiscussionCard extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 15,
-                      backgroundColor: question.isPinned ? Colors.amber.shade700 : AppColors.primaryRed,
+                      backgroundColor: question.isPinned ? AppColors.colorAccentWarm : AppColors.colorPrimary,
                       child: Text(
                         initial,
                         style: const TextStyle(
@@ -189,20 +189,21 @@ class ForumDiscussionCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF512DA8).withAlpha(15),
+                          color: AppColors.colorAccentSoft,
+                          border: Border.all(color: AppColors.colorAccent.withAlpha(80)),
                           borderRadius: BorderRadius.circular(AppRadius.sm),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.auto_fix_high_rounded, size: 10, color: Color(0xFF512DA8)),
+                            Icon(Icons.auto_fix_high_rounded, size: 10, color: AppColors.colorAccentWarm),
                             SizedBox(width: 3),
                             Text(
                               'Telah Dibakukan',
                               style: TextStyle(
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF512DA8),
+                                color: AppColors.colorAccentWarm,
                               ),
                             ),
                           ],
@@ -298,7 +299,7 @@ class ForumDiscussionCard extends StatelessWidget {
                       children: [
                         Text(
                           'Buka Diskusi',
-                          style: TextStyle(fontSize: 11.5, color: AppColors.primaryRed, fontWeight: FontWeight.w600),
+                          style: TextStyle(fontSize: 11.5, color: AppColors.colorPrimary, fontWeight: FontWeight.w600),
                         ),
                         SizedBox(width: 3),
                         Icon(Icons.arrow_forward_ios_rounded, size: 10, color: AppColors.primaryRed),

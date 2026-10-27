@@ -199,7 +199,7 @@ class _ReopenTicketDialogState extends State<ReopenTicketDialog> {
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
-                              color: AppColors.primaryRed,
+                              color: AppColors.colorPrimary,
                             ),
                           ),
                           Container(

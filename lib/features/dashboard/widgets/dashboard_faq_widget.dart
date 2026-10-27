@@ -85,12 +85,12 @@ class _DashboardFaqWidgetState extends State<DashboardFaqWidget> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryRed.withAlpha(20),
+                  color: AppColors.colorPrimarySoft,
                   borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: const Icon(
                   Icons.auto_stories_rounded,
-                  color: AppColors.primaryRed,
+                  color: AppColors.colorPrimary,
                   size: 20,
                 ),
               ),
@@ -131,13 +131,13 @@ class _DashboardFaqWidgetState extends State<DashboardFaqWidget> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.primaryRed,
+                        color: AppColors.colorPrimary,
                       ),
                     ),
                     Icon(
                       Icons.chevron_right,
                       size: 16,
-                      color: AppColors.primaryRed,
+                      color: AppColors.colorPrimary,
                     ),
                   ],
                 ),
@@ -218,7 +218,7 @@ class _DashboardFaqWidgetState extends State<DashboardFaqWidget> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primaryRed.withAlpha(20),
+                                  color: AppColors.colorPrimarySoft,
                                   borderRadius: BorderRadius.circular(AppRadius.sm),
                                 ),
                                 child: Text(
@@ -226,7 +226,7 @@ class _DashboardFaqWidgetState extends State<DashboardFaqWidget> {
                                   style: const TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: AppColors.primaryRed,
+                                    color: AppColors.colorPrimary,
                                   ),
                                 ),
                               ),

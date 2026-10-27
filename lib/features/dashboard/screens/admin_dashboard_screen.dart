@@ -59,7 +59,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final isAdminLksdm = widget.user.isAdminLksdm;
     final lksdmName = widget.user.effectiveLksdm;
     final teamName = widget.user.tim ?? (isAdminLksdm ? lksdmName : 'Fungsi Pengelolaan data dan informasi SDM');
-    final primaryColor = isAdminLksdm ? Colors.teal.shade800 : AppColors.primaryBlue;
+    final primaryColor = isAdminLksdm ? AppColors.colorSecondaryStrong : AppColors.colorPrimary;
 
     final allActiveQuestions = teamQuestions.where((q) => q.isActive).toList();
     final waitingQuestions = teamQuestions.where((q) => q.ticketStatus == TicketStatus.open).toList();

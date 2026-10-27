@@ -39,21 +39,21 @@ class CustomButton extends StatelessWidget {
 
     switch (variant) {
       case CustomButtonVariant.primary:
-        bg = backgroundColor ?? AppColors.primaryRed;
-        fg = textColor ?? AppColors.textOnPrimary;
+        bg = backgroundColor ?? AppColors.colorPrimary;
+        fg = textColor ?? AppColors.colorTextInverse;
         border = BorderSide.none;
         break;
       case CustomButtonVariant.outlined:
         bg = backgroundColor ?? Colors.transparent;
-        fg = textColor ?? AppColors.slate700;
+        fg = textColor ?? AppColors.colorText;
         border = BorderSide(
-          color: borderColor ?? AppColors.slate300,
+          color: borderColor ?? AppColors.colorBorder,
           width: 1.0,
         );
         break;
       case CustomButtonVariant.ghost:
         bg = backgroundColor ?? Colors.transparent;
-        fg = textColor ?? AppColors.primaryRed;
+        fg = textColor ?? AppColors.colorPrimary;
         border = BorderSide.none;
         break;
     }

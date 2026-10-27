@@ -85,7 +85,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: AppColors.primaryRed,
+                      color: AppColors.colorPrimary,
                     ),
                   ),
                   Container(
@@ -116,7 +116,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _loadData,
-        color: AppColors.primaryRed,
+        color: AppColors.colorPrimary,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Center(
@@ -142,7 +142,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                       childAspectRatio: 1.6,
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
-                        _metricTile('Total Tiket System', '$totalCount', AppColors.primaryRed, Icons.storage_rounded),
+                        _metricTile('Total Tiket System', '$totalCount', AppColors.colorPrimary, Icons.storage_rounded),
                         _metricTile('Tiket Aktif Berjalan', '$activeCount', const Color(0xFF0284C7), Icons.pending_actions_rounded),
                         _metricTile('Tiket Eskalasi Pusat', '$escalatedCount', const Color(0xFFC2410C), Icons.alt_route_rounded),
                         _metricTile('Tiket Selesai / Closed', '$closedCount', const Color(0xFF16A34A), Icons.task_alt_rounded),
@@ -268,7 +268,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                     const SizedBox(height: 10),
 
                     if (isLoading)
-                      const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: AppColors.primaryRed)))
+                      const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: AppColors.colorPrimary)))
                     else if (questions.isEmpty)
                       const Text('Belum ada tiket dalam sistem.', style: TextStyle(color: Colors.grey))
                     else

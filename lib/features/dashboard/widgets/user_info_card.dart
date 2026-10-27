@@ -37,11 +37,11 @@ class UserInfoCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: AppColors.primaryRed,
+                backgroundColor: AppColors.colorPrimarySoft,
                 child: Text(
                   initial,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.colorPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
                   ),

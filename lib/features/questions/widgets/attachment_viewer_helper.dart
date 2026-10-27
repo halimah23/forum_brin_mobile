@@ -131,7 +131,7 @@ class AttachmentViewerHelper {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Alamat URL berkas tidak valid.'),
-            backgroundColor: AppColors.primaryRed,
+            backgroundColor: AppColors.colorPrimary,
           ),
         );
       }
@@ -244,7 +244,7 @@ class AttachmentViewerHelper {
         ),
         title: const Row(
           children: [
-            Icon(Icons.file_present_rounded, color: AppColors.primaryRed, size: 24),
+            Icon(Icons.file_present_rounded, color: AppColors.colorPrimary, size: 24),
             SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -289,7 +289,7 @@ class AttachmentViewerHelper {
             ),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryRed,
+                backgroundColor: AppColors.colorPrimary,
                 foregroundColor: Colors.white,
               ),
               icon: const Icon(Icons.open_in_browser_rounded, size: 16),

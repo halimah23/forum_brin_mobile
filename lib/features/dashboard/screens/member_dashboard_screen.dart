@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_radius.dart';
-import '../../../core/constants/app_typography.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../auth/models/user_model.dart';
 import '../../questions/models/question_model.dart';
@@ -56,9 +55,9 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
     final closedTickets = myQuestions.where((q) => q.isClosed).toList();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.colorBg,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.colorSurface,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
@@ -75,7 +74,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
-                  color: AppColors.primaryRed,
+                  color: AppColors.colorPrimary,
                 ),
               ),
             ),
@@ -87,12 +86,12 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(color: AppColors.border, height: 1),
+          child: Container(color: AppColors.colorBorder, height: 1),
         ),
       ),
       body: RefreshIndicator(
         onRefresh: _loadMyQuestions,
-        color: AppColors.primaryRed,
+        color: AppColors.colorPrimary,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -105,12 +104,21 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                   // 1. Greeting Header
                   const Text(
                     'Selamat datang kembali,',
-                    style: AppTypography.bodySmall,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.colorTextMuted,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     widget.user.name,
-                    style: AppTypography.heading1,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.colorText,
+                      letterSpacing: -0.3,
+                    ),
                   ),
 
                   const SizedBox(height: 20),
@@ -121,7 +129,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                       // Card Tiket Aktif
                       Expanded(
                         child: Material(
-                          color: AppColors.surface,
+                          color: AppColors.colorSurface,
                           borderRadius: BorderRadius.circular(AppRadius.md),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(AppRadius.md),
@@ -141,29 +149,29 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(AppRadius.md),
-                                border: Border.all(color: AppColors.border, width: 1),
+                                border: Border.all(color: AppColors.colorBorder, width: 1),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Row(
                                     children: [
-                                      Icon(Icons.mark_chat_unread_outlined, color: Color(0xFF0284C7), size: 18),
+                                      Icon(Icons.mark_chat_unread_outlined, color: AppColors.colorPrimary, size: 18),
                                       SizedBox(width: 6),
                                       Expanded(
                                         child: Text(
                                           'Tiket Aktif',
-                                          style: TextStyle(fontSize: 12, color: AppColors.slate600, fontWeight: FontWeight.w600),
+                                          style: TextStyle(fontSize: 12, color: AppColors.colorTextMuted, fontWeight: FontWeight.w600),
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                      Icon(Icons.chevron_right, size: 16, color: AppColors.slate400),
+                                      Icon(Icons.chevron_right, size: 16, color: AppColors.colorTextMuted),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
                                     '${activeTickets.length}',
-                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.slate900),
+                                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.colorText),
                                   ),
                                 ],
                               ),
@@ -175,7 +183,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                       // Card Tiket Selesai
                       Expanded(
                         child: Material(
-                          color: AppColors.surface,
+                          color: AppColors.colorSurface,
                           borderRadius: BorderRadius.circular(AppRadius.md),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(AppRadius.md),
@@ -195,29 +203,29 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(AppRadius.md),
-                                border: Border.all(color: AppColors.border, width: 1),
+                                border: Border.all(color: AppColors.colorBorder, width: 1),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Row(
                                     children: [
-                                      Icon(Icons.check_circle_outline_rounded, color: Color(0xFF16A34A), size: 18),
+                                      Icon(Icons.check_circle_outline_rounded, color: AppColors.colorSecondary, size: 18),
                                       SizedBox(width: 6),
                                       Expanded(
                                         child: Text(
                                           'Tiket Selesai',
-                                          style: TextStyle(fontSize: 12, color: AppColors.slate600, fontWeight: FontWeight.w600),
+                                          style: TextStyle(fontSize: 12, color: AppColors.colorTextMuted, fontWeight: FontWeight.w600),
                                           overflow: TextOverflow.ellipsis,
                                         ),
                                       ),
-                                      Icon(Icons.chevron_right, size: 16, color: AppColors.slate400),
+                                      Icon(Icons.chevron_right, size: 16, color: AppColors.colorTextMuted),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
                                     '${closedTickets.length}',
-                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.slate900),
+                                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.colorText),
                                   ),
                                 ],
                               ),
@@ -256,12 +264,20 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                     children: [
                       const Text(
                         'Tiket Aktif Berjalan',
-                        style: AppTypography.heading3,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.colorText,
+                        ),
                       ),
                       if (activeTickets.isNotEmpty)
                         Text(
                           '${activeTickets.length} Tiket',
-                          style: AppTypography.caption.copyWith(color: AppColors.slate500),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.colorTextMuted,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                     ],
                   ),
@@ -271,7 +287,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                     const Center(
                       child: Padding(
                         padding: EdgeInsets.all(20),
-                        child: CircularProgressIndicator(color: AppColors.primaryRed),
+                        child: CircularProgressIndicator(color: AppColors.colorPrimary),
                       ),
                     )
                   else if (activeTickets.isEmpty)
@@ -279,23 +295,23 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: AppColors.colorSurface,
                         borderRadius: BorderRadius.circular(AppRadius.md),
-                        border: Border.all(color: AppColors.border, width: 1),
+                        border: Border.all(color: AppColors.colorBorder, width: 1),
                       ),
                       child: const Column(
                         children: [
-                          Icon(Icons.task_alt_rounded, size: 36, color: Color(0xFF16A34A)),
+                          Icon(Icons.task_alt_rounded, size: 36, color: AppColors.colorSecondary),
                           SizedBox(height: 8),
                           Text(
                             'Tidak ada tiket aktif yang berjalan.',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.slate800),
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.colorText),
                           ),
                           SizedBox(height: 4),
                           Text(
                             'Pertanyaan yang Anda ajukan akan diproses oleh Staf Admin LKSDM Kawasan.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 11, color: AppColors.slate500),
+                            style: TextStyle(fontSize: 11, color: AppColors.colorTextMuted),
                           ),
                         ],
                       ),
@@ -329,7 +345,6 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                   const SizedBox(height: 24),
 
                   // 5. Section Pertanyaan Populer / FAQ
-                  
                   DashboardFaqWidget(currentUser: widget.user),
 
                   const SizedBox(height: 24),

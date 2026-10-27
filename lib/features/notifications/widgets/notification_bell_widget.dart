@@ -90,7 +90,7 @@ class _NotificationBellWidgetState extends State<NotificationBellWidget> {
             _unreadCount > 0
                 ? Icons.notifications_active_rounded
                 : Icons.notifications_none_rounded,
-            color: _unreadCount > 0 ? AppColors.primaryRed : widget.iconColor,
+            color: _unreadCount > 0 ? AppColors.colorAccentWarm : widget.iconColor,
             size: 24,
           ),
           tooltip: 'Notifikasi ${_unreadCount > 0 ? "($_unreadCount baru)" : ""}',
@@ -108,12 +108,12 @@ class _NotificationBellWidgetState extends State<NotificationBellWidget> {
                   minHeight: 16,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryRed,
+                  color: AppColors.colorAccentWarm,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: Colors.white, width: 1.5),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primaryRed.withAlpha(80),
+                      color: AppColors.colorAccentWarm.withAlpha(80),
                       blurRadius: 4,
                       offset: const Offset(0, 1),
                     ),

@@ -131,18 +131,18 @@ class _QuestionListViewState extends State<QuestionListView> with SingleTickerPr
         : 'Antrean Tiket Pertanyaan');
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F7),
+      backgroundColor: AppColors.colorBg,
       appBar: AppBar(
         title: Text(
           headerTitle,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: AppColors.colorText,
             fontSize: 18,
           ),
         ),
-        backgroundColor: AppColors.primaryRed,
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.colorSurface,
+        foregroundColor: AppColors.colorText,
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
@@ -155,7 +155,7 @@ class _QuestionListViewState extends State<QuestionListView> with SingleTickerPr
                     : <QuestionModel>[];
                 return IconButton(
                   tooltip: 'Ekspor Rekap Laporan (CSV)',
-                  icon: const Icon(Icons.download_rounded, color: Colors.white),
+                  icon: const Icon(Icons.download_rounded, color: AppColors.colorText),
                   onPressed: list.isEmpty
                       ? null
                       : () => _showExportReportDialog(context, list),
@@ -166,9 +166,9 @@ class _QuestionListViewState extends State<QuestionListView> with SingleTickerPr
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
+          labelColor: AppColors.colorPrimary,
+          unselectedLabelColor: AppColors.colorTextMuted,
+          indicatorColor: AppColors.colorPrimary,
           indicatorWeight: 3,
           tabs: _tabLabels.map((lbl) => Tab(text: lbl)).toList(),
         ),
@@ -198,7 +198,7 @@ class _QuestionListViewState extends State<QuestionListView> with SingleTickerPr
                   builder: (context, state) {
                     if (state is QuestionListLoading || state is QuestionListInitial) {
                       return const Center(
-                        child: CircularProgressIndicator(color: AppColors.primaryRed),
+                        child: CircularProgressIndicator(color: AppColors.colorPrimary),
                       );
                     }
 
@@ -373,7 +373,7 @@ class _QuestionListViewState extends State<QuestionListView> with SingleTickerPr
             borderRadius: BorderRadius.circular(AppRadius.md)),
         title: const Row(
           children: [
-            Icon(Icons.description_outlined, color: AppColors.primaryRed),
+            Icon(Icons.description_outlined, color: AppColors.colorPrimary),
             SizedBox(width: 8),
             Text('Ekspor Rekap Laporan',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -423,7 +423,7 @@ class _QuestionListViewState extends State<QuestionListView> with SingleTickerPr
           ),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryRed,
+              backgroundColor: AppColors.colorPrimary,
               foregroundColor: Colors.white,
             ),
             icon: const Icon(Icons.file_download_outlined, size: 16),

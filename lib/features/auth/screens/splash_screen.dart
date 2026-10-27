@@ -140,13 +140,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // Top header: BRIN Logo
+                          // Top header: BOSDM_Connect Logo
                           Padding(
                             padding: const EdgeInsets.only(left: 24.0, top: 16.0, bottom: 8.0),
                             child: Align(
                               alignment: Alignment.centerLeft,
                               child: Image.asset(
-                                AppConstants.logoBrinTextAssetPath,
+                                AppConstants.logoBOSDMConnectTextAssetPath,
                                 height: 38,
                                 fit: BoxFit.contain,
                               ),

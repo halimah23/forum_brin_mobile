@@ -61,24 +61,24 @@ class _SearchFilterBarState extends State<SearchFilterBar> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.colorSurface,
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.border, width: 1),
+        border: Border.all(color: AppColors.colorBorder, width: 1),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
-          const Icon(Icons.search_rounded, color: AppColors.slate400, size: 20),
+          const Icon(Icons.search_rounded, color: AppColors.colorTextMuted, size: 20),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
               controller: _controller,
               onChanged: _onTextChanged,
-              style: const TextStyle(fontSize: 13, color: AppColors.slate900),
+              style: const TextStyle(fontSize: 13, color: AppColors.colorText),
               decoration: InputDecoration(
                 hintText: widget.hintText,
                 hintStyle:
-                    const TextStyle(fontSize: 13, color: AppColors.slate400),
+                    const TextStyle(fontSize: 13, color: AppColors.colorTextMuted),
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -90,7 +90,7 @@ class _SearchFilterBarState extends State<SearchFilterBar> {
               onTap: _clearSearch,
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Icon(Icons.cancel, color: AppColors.slate400, size: 18),
+                child: Icon(Icons.cancel, color: AppColors.colorTextMuted, size: 18),
               ),
             ),
           if (widget.onFilterTap != null) ...[
@@ -98,7 +98,7 @@ class _SearchFilterBarState extends State<SearchFilterBar> {
               margin: const EdgeInsets.symmetric(horizontal: 6),
               width: 1,
               height: 20,
-              color: AppColors.border,
+              color: AppColors.colorBorder,
             ),
             InkWell(
               onTap: widget.onFilterTap,
@@ -110,8 +110,8 @@ class _SearchFilterBarState extends State<SearchFilterBar> {
                     Icon(
                       Icons.tune_rounded,
                       color: widget.hasActiveFilter
-                          ? AppColors.primaryRed
-                          : AppColors.slate600,
+                          ? AppColors.colorPrimary
+                          : AppColors.colorTextMuted,
                       size: 20,
                     ),
                     if (widget.hasActiveFilter)
@@ -122,7 +122,7 @@ class _SearchFilterBarState extends State<SearchFilterBar> {
                           width: 7,
                           height: 7,
                           decoration: const BoxDecoration(
-                            color: AppColors.primaryRed,
+                            color: AppColors.colorAccentWarm,
                             shape: BoxShape.circle,
                           ),
                         ),

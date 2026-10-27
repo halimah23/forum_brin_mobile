@@ -1,3 +1,4 @@
+import '../../../../core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import '../../../auth/models/user_model.dart';
 import '../../../dashboard/screens/ketua_tim_dashboard_screen.dart';
@@ -23,7 +24,7 @@ class _KetuaTimMainTabPageState extends State<KetuaTimMainTabPage> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryTeal = Colors.teal.shade800;
+    final primaryTeal = AppColors.colorSecondaryStrong;
     final isLksdm = widget.user.isKetuaTimLksdm;
     final teamFilter = isLksdm ? widget.user.effectiveLksdm : (widget.user.tim ?? 'Tim Layanan SDM BOSDM');
     final teamName = teamFilter;

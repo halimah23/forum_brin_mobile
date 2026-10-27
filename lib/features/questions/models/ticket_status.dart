@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/app_colors.dart';
 
 enum TicketStatus {
-  open('OPEN', 'Open (Antrean LKSDM)', Color(0xFFD97706), Icons.hourglass_top_rounded),
-  inProgress('IN_PROGRESS', 'Ditangani LKSDM', Color(0xFF0D9488), Icons.support_agent_rounded),
-  waitingUser('WAITING_USER', 'Menunggu Konfirmasi Pegawai', Color(0xFF0284C7), Icons.mark_chat_unread_outlined),
-  escalated('ESCALATED', 'Dialihkan ke Pusat', Color(0xFFC2410C), Icons.alt_route_rounded),
-  inProgressCenter('IN_PROGRESS_CENTER', 'Ditangani Staf Pusat', Color(0xFF7C3AED), Icons.engineering_outlined),
-  mandiriLksdm('TIKET_MANDIRI_LKSDM', 'Konsultasi LKSDM ke Pusat', Color(0xFF9333EA), Icons.badge_outlined),
-  resolved('RESOLVED', 'Solusi Diberikan', Color(0xFF16A34A), Icons.task_alt_rounded),
-  closed('CLOSED', 'Selesai (Closed)', Color(0xFF475569), Icons.check_circle_outline_rounded);
+  open('OPEN', 'Open (Antrean LKSDM)', AppColors.colorAccentWarm, Icons.hourglass_top_rounded),
+  inProgress('IN_PROGRESS', 'Ditangani LKSDM', AppColors.colorSecondary, Icons.support_agent_rounded),
+  waitingUser('WAITING_USER', 'Menunggu Konfirmasi Pegawai', AppColors.colorPrimary, Icons.mark_chat_unread_outlined),
+  escalated('ESCALATED', 'Dialihkan ke Pusat', AppColors.colorAccentWarm, Icons.alt_route_rounded),
+  inProgressCenter('IN_PROGRESS_CENTER', 'Ditangani Staf Pusat', AppColors.colorSecondaryStrong, Icons.engineering_outlined),
+  mandiriLksdm('TIKET_MANDIRI_LKSDM', 'Konsultasi LKSDM ke Pusat', AppColors.colorPrimaryHover, Icons.badge_outlined),
+  resolved('RESOLVED', 'Solusi Diberikan', AppColors.success, Icons.task_alt_rounded),
+  closed('CLOSED', 'Selesai (Closed)', AppColors.colorTextMuted, Icons.check_circle_outline_rounded);
 
   final String dbKey;
   final String label;

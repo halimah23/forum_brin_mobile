@@ -83,7 +83,7 @@ class _TicketTimelineTrackerState extends State<TicketTimelineTracker> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
-                  const Icon(Icons.route_outlined, size: 20, color: AppColors.primaryRed),
+                  const Icon(Icons.route_outlined, size: 20, color: AppColors.colorPrimary),
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
@@ -209,7 +209,7 @@ class _TicketTimelineTrackerState extends State<TicketTimelineTracker> {
   }) {
     final Color stepColor = isCompleted
         ? const Color(0xFF16A34A)
-        : (isActive ? AppColors.primaryRed : AppColors.slate300);
+        : (isActive ? AppColors.colorPrimary : AppColors.slate300);
 
     return IntrinsicHeight(
       child: Row(
@@ -225,7 +225,7 @@ class _TicketTimelineTrackerState extends State<TicketTimelineTracker> {
                   shape: BoxShape.circle,
                   color: isCompleted
                       ? const Color(0xFF16A34A)
-                      : (isActive ? AppColors.primaryRed : Colors.white),
+                      : (isActive ? AppColors.colorPrimary : Colors.white),
                   border: Border.all(
                     color: stepColor,
                     width: 2,

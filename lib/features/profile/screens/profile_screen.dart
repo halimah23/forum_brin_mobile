@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -276,7 +275,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(7),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryRed,
+                            color: AppColors.colorPrimary,
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 2),
                             boxShadow: const [
@@ -407,7 +406,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _buildSectionCard(
                   title: 'Diagnostik Notifikasi & Perangkat',
                   icon: Icons.notifications_active_outlined,
-                  iconColor: AppColors.primaryRed,
+                  iconColor: AppColors.colorPrimary,
                   children: [
                     const Text(
                       'Pastikan izin notifikasi aktif dan periksa token perangkat ini untuk pengujian push notification.',
@@ -419,8 +418,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Expanded(
                           child: OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.primaryRed,
-                              side: const BorderSide(color: AppColors.primaryRed),
+                              foregroundColor: AppColors.colorPrimary,
+                              side: const BorderSide(color: AppColors.colorPrimary),
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
                             ),
@@ -447,7 +446,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Expanded(
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryRed,
+                              backgroundColor: AppColors.colorPrimary,
                               foregroundColor: Colors.white,
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -694,7 +693,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Color _getRoleColor(UserRole role) {
     switch (role) {
       case UserRole.member:
-        return AppColors.primaryRed;
+        return AppColors.colorPrimary;
       case UserRole.adminLksdm:
         return Colors.teal.shade800;
       case UserRole.adminPusat:
@@ -855,7 +854,7 @@ class _PhotoRepositionDialog extends StatelessWidget {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryRed,
+                        backgroundColor: AppColors.colorPrimary,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
