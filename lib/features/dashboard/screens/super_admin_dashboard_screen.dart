@@ -17,6 +17,7 @@ import '../widgets/performance_analytics_widgets.dart';
 import '../widgets/dashboard_faq_widget.dart';
 import 'staff_leaderboard_screen.dart';
 import 'staff_performance_detail_screen.dart';
+import '../../broadcasts/screens/broadcast_management_screen.dart';
 
 class SuperAdminDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -256,6 +257,25 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                             icon: Icons.analytics_outlined,
                             iconColor: const Color(0xFFC2410C),
                             onTap: () => _showStatistikDialog(context),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _adminActionCard(
+                            title: 'Broadcast Notifikasi',
+                            subtitle: 'Siaran info ke LKSDM/BRIN',
+                            icon: Icons.campaign_outlined,
+                            iconColor: const Color(0xFFD97706),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => BroadcastManagementScreen(
+                                    currentUser: widget.user,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ],

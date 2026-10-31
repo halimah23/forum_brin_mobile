@@ -12,8 +12,10 @@ import '../../auth/models/user_model.dart';
 import '../cubits/ask_question_cubit.dart';
 import '../cubits/ask_question_state.dart';
 import '../data/lksdm_catalog_data.dart';
+import '../data/service_category_catalog.dart';
 import '../data/tusi_catalog_data.dart';
 import '../models/question_model.dart';
+import '../models/service_category_model.dart';
 import '../services/question_service.dart';
 import '../widgets/attachment_picker_widget.dart';
 import 'question_detail_screen.dart';
@@ -86,6 +88,10 @@ class _AskQuestionViewState extends State<AskQuestionView> {
   String? attachedFileName;
   UserModel? currentUser;
 
+  List<ServiceCategoryModel> serviceCategories = ServiceCategoryCatalog.defaultCategories;
+  ServiceCategoryModel? selectedCategory;
+  bool isLoadingCategories = false;
+
   @override
   void initState() {
     super.initState();
@@ -93,6 +99,24 @@ class _AskQuestionViewState extends State<AskQuestionView> {
     selectedLksdm = lksdmList.first;
     selectedPusatTeam = TusiCatalogData.centralTeams.first;
     _resolveUserAndLksdm();
+    _loadServiceCategories();
+  }
+
+  void _loadServiceCategories() async {
+    setState(() => isLoadingCategories = true);
+    try {
+      final list = await QuestionService.getServiceCategories();
+      if (mounted) {
+        setState(() {
+          serviceCategories = list;
+          isLoadingCategories = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => isLoadingCategories = false);
+      }
+    }
   }
 
   void _resolveUserAndLksdm() async {
@@ -140,6 +164,10 @@ class _AskQuestionViewState extends State<AskQuestionView> {
 
   void submitQuestion() async {
     if (_formKey.currentState?.validate() ?? false) {
+      if (selectedCategory == null) {
+        showMessage('Silakan pilih Kategori Layanan Kepegawaian terlebih dahulu.');
+        return;
+      }
       if (attachedFileUrl != null &&
           attachedFileUrl!.isNotEmpty &&
           !(attachedFileUrl!.startsWith('http://') || attachedFileUrl!.startsWith('https://'))) {
@@ -158,6 +186,8 @@ class _AskQuestionViewState extends State<AskQuestionView> {
             lksdmKawasan: lksdmClean,
             targetTimPusat: isConsultation ? selectedPusatTeam : null,
             tugasFungsiIds: const [],
+            serviceCategoryId: selectedCategory?.id,
+            kategoriLayanan: selectedCategory?.nama,
             isPublic: false,
             attachmentUrl: attachedFileUrl,
             attachmentName: attachedFileName,
@@ -216,6 +246,9 @@ class _AskQuestionViewState extends State<AskQuestionView> {
           if (state is AskQuestionSuccess) {
             titleController.clear();
             questionController.clear();
+            setState(() {
+              selectedCategory = null;
+            });
             
             final successMsg = isConsultation
                 ? 'Konsultasi berhasil diteruskan langsung ke $selectedPusatTeam.'
@@ -516,11 +549,99 @@ class _AskQuestionViewState extends State<AskQuestionView> {
 
                               const SizedBox(height: 20),
 
+                              // Kategori Layanan Dropdown (Wajib Dipilih)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isConsultation
+                                        ? '3. Kategori Layanan Kepegawaian *'
+                                        : '2. Kategori Layanan Kepegawaian *',
+                                    style: AppTypography.labelMedium,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  DropdownButtonFormField<ServiceCategoryModel>(
+                                    key: const ValueKey('dropdown_service_category'),
+                                    value: selectedCategory,
+                                    isExpanded: true,
+                                    hint: Text(
+                                      'Pilih Kategori Layanan Kepegawaian...',
+                                      style: AppTypography.bodySmall.copyWith(color: AppColors.slate400),
+                                    ),
+                                    style: const TextStyle(fontSize: 13, color: AppColors.slate900),
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      prefixIcon: const Icon(Icons.category_outlined, size: 20, color: AppColors.slate500),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(AppRadius.md),
+                                        borderSide: const BorderSide(color: AppColors.border),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(AppRadius.md),
+                                        borderSide: const BorderSide(color: AppColors.border),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(AppRadius.md),
+                                        borderSide: const BorderSide(color: AppColors.primaryRed, width: 1.5),
+                                      ),
+                                      errorBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(AppRadius.md),
+                                        borderSide: const BorderSide(color: Colors.red, width: 1),
+                                      ),
+                                    ),
+                                    items: serviceCategories.map((cat) {
+                                      return DropdownMenuItem<ServiceCategoryModel>(
+                                        value: cat,
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Text(
+                                              cat.nama,
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.slate800,
+                                              ),
+                                            ),
+                                            if (cat.deskripsi != null && cat.deskripsi!.isNotEmpty)
+                                              Text(
+                                                cat.deskripsi!,
+                                                style: const TextStyle(
+                                                  fontSize: 10,
+                                                  color: AppColors.slate500,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) {
+                                      setState(() {
+                                        selectedCategory = val;
+                                      });
+                                    },
+                                    validator: (val) {
+                                      if (val == null) {
+                                        return 'Kategori layanan wajib dipilih';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 20),
+
                               // Judul Input
                               CustomTextField(
                                 controller: titleController,
                                 focusNode: titleFocusNode,
-                                label: isConsultation ? '3. Topik / Judul Konsultasi' : '2. Judul Pertanyaan',
+                                label: isConsultation ? '4. Topik / Judul Konsultasi' : '3. Judul Pertanyaan',
                                 hintText: isConsultation
                                     ? 'Contoh: Permohonan Arahan Penetapan Hukuman Disiplin Pegawai...'
                                     : 'Contoh: Prosedur Uji Kompetensi Kenaikan Jabatan...',
@@ -544,7 +665,7 @@ class _AskQuestionViewState extends State<AskQuestionView> {
                               CustomTextField(
                                 controller: questionController,
                                 focusNode: questionFocusNode,
-                                label: isConsultation ? '4. Rincian Kendala / Permohonan Arahan' : '3. Uraian Pertanyaan Lengkap',
+                                label: isConsultation ? '5. Rincian Kendala / Permohonan Arahan' : '4. Uraian Pertanyaan Lengkap',
                                 hintText: isConsultation
                                     ? 'Jelaskan kronologi kendala atau regulasi yang memerlukan penegasan dari kantor pusat...'
                                     : 'Jelaskan pertanyaan atau kendala yang Anda hadapi secara rinci...',
@@ -564,7 +685,7 @@ class _AskQuestionViewState extends State<AskQuestionView> {
 
                               // Lampiran Berkas Bukti (Opsional)
                               Text(
-                                isConsultation ? '5. Lampiran Berkas Dukung (Opsional)' : '4. Lampiran Dokumen Bukti (Opsional)',
+                                isConsultation ? '6. Lampiran Berkas Dukung (Opsional)' : '5. Lampiran Dokumen Bukti (Opsional)',
                                 style: AppTypography.labelMedium,
                               ),
                               const SizedBox(height: 8),

@@ -17,6 +17,8 @@ class QuestionModel {
   final String? adminPusatId;
   final String? assignedTo;
   final String? tugasFungsiNama;
+  final int? serviceCategoryId;
+  final String? kategoriLayanan;
   final bool isPublic;
   final bool isPinned;
   final String? rawUserId;
@@ -43,6 +45,10 @@ class QuestionModel {
   String? get escalatedToTeam => targetTimPusat;
   UserModel? get author => user;
   String? get userId => user?.id ?? rawUserId;
+  String get displayCategory =>
+      (kategoriLayanan != null && kategoriLayanan!.isNotEmpty)
+          ? kategoriLayanan!
+          : (tugasFungsiNama ?? 'Layanan Umum');
 
   TicketStatus get ticketStatus => TicketStatus.fromString(status);
   bool get isClosed => ticketStatus.isClosed;
@@ -148,6 +154,8 @@ class QuestionModel {
     this.adminPusatId,
     this.assignedTo,
     this.tugasFungsiNama,
+    this.serviceCategoryId,
+    this.kategoriLayanan,
     this.isPublic = true,
     this.isPinned = false,
     this.isAnonymized = false,
@@ -349,6 +357,10 @@ class QuestionModel {
       adminPusatId: json['admin_pusat_id']?.toString(),
       assignedTo: json['assigned_to']?.toString() ?? json['assignedTo']?.toString(),
       tugasFungsiNama: json['tugas_fungsi_nama']?.toString(),
+      serviceCategoryId: json['service_category_id'] is int
+          ? json['service_category_id'] as int
+          : int.tryParse(json['service_category_id']?.toString() ?? ''),
+      kategoriLayanan: json['kategori_layanan']?.toString() ?? json['service_category_nama']?.toString(),
       isPublic: json['is_public'] == true || json['is_public'] == 1,
       isPinned: json['is_pinned'] == true || json['is_pinned'] == 1,
       isAnonymized: json['is_anonymized'] == true || json['is_anonymized'] == 1,
@@ -385,6 +397,8 @@ class QuestionModel {
       'admin_pusat_id': adminPusatId,
       'assigned_to': assignedTo,
       'tugas_fungsi_nama': tugasFungsiNama,
+      if (serviceCategoryId != null) 'service_category_id': serviceCategoryId,
+      if (kategoriLayanan != null) 'kategori_layanan': kategoriLayanan,
       'is_public': isPublic,
       'is_pinned': isPinned,
       'is_anonymized': isAnonymized,
@@ -420,6 +434,8 @@ class QuestionModel {
     String? adminPusatId,
     String? assignedTo,
     String? tugasFungsiNama,
+    int? serviceCategoryId,
+    String? kategoriLayanan,
     bool? isPublic,
     bool? isPinned,
     bool? isAnonymized,
@@ -453,6 +469,8 @@ class QuestionModel {
       adminPusatId: adminPusatId ?? this.adminPusatId,
       assignedTo: assignedTo ?? this.assignedTo,
       tugasFungsiNama: tugasFungsiNama ?? this.tugasFungsiNama,
+      serviceCategoryId: serviceCategoryId ?? this.serviceCategoryId,
+      kategoriLayanan: kategoriLayanan ?? this.kategoriLayanan,
       isPublic: isPublic ?? this.isPublic,
       isPinned: isPinned ?? this.isPinned,
       isAnonymized: isAnonymized ?? this.isAnonymized,

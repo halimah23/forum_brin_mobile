@@ -153,26 +153,57 @@ class QuestionCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 10),
-                if (namaTim != null && namaTim.isNotEmpty && namaTim != '-')
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.colorPrimarySoft,
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                      border: Border.all(color: AppColors.colorPrimary.withAlpha(40), width: 1),
-                    ),
-                    child: Text(
-                      'Tujuan: $namaTim',
-                      style: AppTypography.caption.copyWith(
-                        color: AppColors.colorPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 10.5,
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.slate100,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                        border: Border.all(color: AppColors.slate300, width: 0.8),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.label_outline, size: 11, color: AppColors.slate600),
+                          const SizedBox(width: 4),
+                          Text(
+                            question.displayCategory,
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.slate700,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 10.5,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                    if (namaTim != null && namaTim.isNotEmpty && namaTim != '-')
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.colorPrimarySoft,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                          border: Border.all(color: AppColors.colorPrimary.withAlpha(40), width: 1),
+                        ),
+                        child: Text(
+                          'Tujuan: $namaTim',
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.colorPrimary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 10.5,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 6),
                 Text(
                   question.judul,
                   style: AppTypography.heading3.copyWith(

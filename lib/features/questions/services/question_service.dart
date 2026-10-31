@@ -2,15 +2,38 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/services/storage/session_manager.dart';
+import '../data/service_category_catalog.dart';
 import '../data/tusi_catalog_data.dart';
 import '../models/answer_model.dart';
 import '../models/category_model.dart';
 import '../models/question_model.dart';
+import '../models/service_category_model.dart';
 import '../../notifications/services/notification_service.dart';
 
 class QuestionService {
   static SupabaseClient get _client => Supabase.instance.client;
   static DateTime? _lastAutoResolveCheck;
+
+  /// Ambil daftar kategori layanan dinamis dari Supabase (tabel service_categories)
+  /// dengan fallback ke ServiceCategoryCatalog.defaultCategories jika offline/gagal.
+  static Future<List<ServiceCategoryModel>> getServiceCategories({
+    bool onlyActive = true,
+  }) async {
+    try {
+      var query = _client.from('service_categories').select();
+      if (onlyActive) {
+        query = query.eq('is_active', true);
+      }
+      final response = await query.order('sort_order', ascending: true);
+      final list = (response as List)
+          .map((item) => ServiceCategoryModel.fromJson(Map<String, dynamic>.from(item)))
+          .toList();
+      if (list.isNotEmpty) return list;
+    } catch (e) {
+      debugPrint('Fetch service_categories from Supabase failed: $e, using local fallback');
+    }
+    return ServiceCategoryCatalog.defaultCategories;
+  }
 
   /// Helper untuk menentukan Nama Tim berdasarkan Kode atau Nama Tugas & Fungsi
   static String determineTeamName(String? categoryName) {
@@ -83,10 +106,11 @@ class QuestionService {
     return TusiCatalogData.allTugasFungsi;
   }
 
-  /// Ambil seluruh pertanyaan / tiket dengan filter opsional (Tim, Status, dsb)
+  /// Ambil seluruh pertanyaan / tiket dengan filter opsional (Tim, Status, Kategori, dsb)
   static Future<List<QuestionModel>> getQuestions({
     String? teamFilter,
     String? statusFilter,
+    String? categoryFilter,
     String? userIdFilter,
     bool? isPublicOnly,
     bool? isPrivateOnly,
@@ -105,6 +129,14 @@ class QuestionService {
 
         if (userIdFilter != null && userIdFilter.isNotEmpty) {
           q = q.eq('user_id', userIdFilter);
+        }
+
+        if (categoryFilter != null &&
+            categoryFilter.isNotEmpty &&
+            categoryFilter.toLowerCase() != 'semua' &&
+            categoryFilter.toLowerCase() != 'semua kategori') {
+          final cleanCat = categoryFilter.trim();
+          q = q.or('kategori_layanan.ilike.%$cleanCat%,tugas_fungsi_nama.ilike.%$cleanCat%');
         }
 
         if (teamFilter != null &&
@@ -489,6 +521,8 @@ class QuestionService {
     required String judul,
     required String isi,
     required List<int> tugasFungsiIds,
+    int? serviceCategoryId,
+    String? kategoriLayanan,
     String? selectedTeam,
     String? lksdmKawasan,
     String? targetTimPusat,
@@ -513,7 +547,9 @@ class QuestionService {
 
     // Tentukan Tusi dan Tim Terkait
     String targetTeam = selectedTeam ?? 'Tim Layanan SDM BOSDM';
-    String tusiNama = 'Layanan Umum Kepegawaian';
+    String tusiNama = (kategoriLayanan != null && kategoriLayanan.isNotEmpty)
+        ? kategoriLayanan
+        : 'Layanan Umum Kepegawaian';
 
     if (tugasFungsiIds.isNotEmpty) {
       final selectedId = tugasFungsiIds.first;
@@ -545,6 +581,8 @@ class QuestionService {
         'judul': judul,
         'isi': isi,
         'tugas_fungsi_nama': tusiNama,
+        if (serviceCategoryId != null) 'service_category_id': serviceCategoryId,
+        if (kategoriLayanan != null && kategoriLayanan.isNotEmpty) 'kategori_layanan': kategoriLayanan,
         'lksdm_kawasan': effectiveLksdm,
         if (effectiveTargetPusat != null) 'target_tim_pusat': effectiveTargetPusat,
         'is_public': false,

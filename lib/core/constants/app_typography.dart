@@ -26,6 +26,14 @@ class AppTypography {
     height: 1.35,
   );
 
+  static const TextStyle heading4 = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    color: AppColors.textPrimary,
+    letterSpacing: -0.1,
+    height: 1.35,
+  );
+
   static const TextStyle bodyLarge = TextStyle(
     fontSize: 15,
     fontWeight: FontWeight.normal,

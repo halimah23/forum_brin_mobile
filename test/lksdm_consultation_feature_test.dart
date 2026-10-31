@@ -84,8 +84,8 @@ void main() {
       expect(find.text('Konsultasi ke Tim Pusat'), findsOneWidget);
       expect(find.text('1. Asal Kawasan LKSDM Pengaju'), findsOneWidget);
       expect(find.text('2. Tim Pusat yang Dituju *'), findsOneWidget);
-      expect(find.text('3. Topik / Judul Konsultasi'), findsOneWidget);
-      expect(find.text('4. Rincian Kendala / Permohonan Arahan'), findsOneWidget);
+      expect(find.text('4. Topik / Judul Konsultasi'), findsOneWidget);
+      expect(find.text('5. Rincian Kendala / Permohonan Arahan'), findsOneWidget);
       expect(find.text('Kirim Konsultasi ke Tim Pusat'), findsOneWidget);
 
       // Verify Central Teams dropdown contains official 14 central teams

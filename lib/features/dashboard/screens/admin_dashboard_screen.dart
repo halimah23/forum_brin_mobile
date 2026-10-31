@@ -6,6 +6,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/widgets/custom_fab.dart';
 import '../../auth/models/user_model.dart';
 import '../../notifications/widgets/notification_bell_widget.dart';
+import '../../questions/data/service_category_catalog.dart';
 import '../../questions/models/question_model.dart';
 import '../../questions/models/ticket_status.dart';
 import '../../questions/screens/ask_question_screen.dart';
@@ -16,6 +17,8 @@ import '../../questions/widgets/question_card.dart';
 import '../services/performance_analytics_service.dart';
 import '../widgets/performance_analytics_widgets.dart';
 import '../widgets/dashboard_faq_widget.dart';
+import '../../broadcasts/screens/broadcast_management_screen.dart';
+import '../../broadcasts/screens/create_broadcast_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -33,6 +36,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   List<QuestionModel> teamQuestions = [];
   bool isLoading = true;
   String _selectedFilter = 'all_active';
+  String _selectedCategoryFilter = 'all';
 
   @override
   void initState() {
@@ -81,6 +85,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       default:
         displayedQuestions = allActiveQuestions;
         break;
+    }
+
+    final statusFilteredQuestions = displayedQuestions;
+    if (_selectedCategoryFilter != 'all') {
+      displayedQuestions = displayedQuestions
+          .where((q) => q.displayCategory.toLowerCase().contains(_selectedCategoryFilter.toLowerCase()))
+          .toList();
     }
 
     final personalStat = PerformanceAnalyticsService.getStaffPersonalPerformance(
@@ -271,6 +282,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                     if (isAdminLksdm) ...[
                       const SizedBox(height: 16),
+                      _buildLksdmBroadcastCard(context),
+                      const SizedBox(height: 16),
                       _buildLksdmConsultationCard(context),
                     ],
 
@@ -355,6 +368,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             count: closedQuestions.length,
                             color: const Color(0xFF16A34A),
                           ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Category Filter Chip Row (Semua, Kehadiran, Mutasi Unit, dsb)
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildCategoryFilterChip(
+                            id: 'all',
+                            label: 'Semua Kategori',
+                            count: statusFilteredQuestions.length,
+                          ),
+                          const SizedBox(width: 6),
+                          ...ServiceCategoryCatalog.defaultCategories.map((cat) {
+                            final catCount = statusFilteredQuestions
+                                .where((q) => q.displayCategory.toLowerCase().contains(cat.nama.toLowerCase()))
+                                .length;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: _buildCategoryFilterChip(
+                                id: cat.nama,
+                                label: cat.nama,
+                                count: catCount,
+                              ),
+                            );
+                          }),
                         ],
                       ),
                     ),
@@ -638,6 +680,130 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  Widget _buildLksdmBroadcastCard(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.amber.shade50,
+            Colors.orange.shade50.withAlpha(160),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: Colors.amber.shade300, width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade800,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: const Icon(
+                  Icons.campaign_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Broadcast Notifikasi ${widget.user.effectiveLksdm}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color(0xFF78350F),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Siarkan pengumuman resmi dan berkas lampiran ke pegawai kawasan',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF78350F),
+                    side: BorderSide(color: Colors.amber.shade700),
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                  ),
+                  icon: const Icon(Icons.history_rounded, size: 16),
+                  label: const Text(
+                    'Kelola & Riwayat',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BroadcastManagementScreen(
+                          currentUser: widget.user,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber.shade800,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                  ),
+                  icon: const Icon(Icons.add, size: 16),
+                  label: const Text(
+                    'Buat Siaran',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CreateBroadcastScreen(
+                          currentUser: widget.user,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBulletFilterChip({
     required String id,
     required String label,
@@ -700,6 +866,72 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryFilterChip({
+    required String id,
+    required String label,
+    int? count,
+  }) {
+    final isSelected = _selectedCategoryFilter == id;
+    return InkWell(
+      key: ValueKey('category_filter_$id'),
+      onTap: () {
+        setState(() {
+          _selectedCategoryFilter = id;
+        });
+      },
+      borderRadius: BorderRadius.circular(AppRadius.full),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.slate900 : AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.full),
+          border: Border.all(
+            color: isSelected ? AppColors.slate900 : AppColors.border,
+            width: isSelected ? 1.2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.label_outline,
+              size: 11,
+              color: isSelected ? Colors.white : AppColors.slate500,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? Colors.white : AppColors.slate700,
+              ),
+            ),
+            if (count != null && count > 0) ...[
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.white.withValues(alpha: 0.25) : AppColors.slate100,
+                  borderRadius: BorderRadius.circular(AppRadius.full),
+                ),
+                child: Text(
+                  '$count',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : AppColors.slate600,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

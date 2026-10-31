@@ -4,6 +4,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/app_radius.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../auth/models/user_model.dart';
+import '../../questions/data/service_category_catalog.dart';
 import '../../questions/models/question_model.dart';
 import '../../questions/screens/ask_question_screen.dart';
 import '../../questions/screens/member_tickets_screen.dart';
@@ -12,6 +13,8 @@ import '../../questions/services/question_service.dart';
 import '../../questions/widgets/question_card.dart';
 import '../../notifications/widgets/notification_bell_widget.dart';
 import '../widgets/dashboard_faq_widget.dart';
+import '../../broadcasts/screens/broadcast_feed_screen.dart';
+import '../../broadcasts/widgets/urgent_broadcast_dialog.dart';
 
 class MemberDashboardScreen extends StatefulWidget {
   final UserModel user;
@@ -28,11 +31,15 @@ class MemberDashboardScreen extends StatefulWidget {
 class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
   List<QuestionModel> myQuestions = [];
   bool isLoading = true;
+  String _selectedCategoryFilter = 'all';
 
   @override
   void initState() {
     super.initState();
     _loadMyQuestions();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      UrgentBroadcastDialog.checkAndShow(context, widget.user);
+    });
   }
 
   Future<void> _loadMyQuestions() async {
@@ -53,6 +60,13 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
   Widget build(BuildContext context) {
     final activeTickets = myQuestions.where((q) => q.isActive).toList();
     final closedTickets = myQuestions.where((q) => q.isClosed).toList();
+
+    List<QuestionModel> displayedActiveTickets = activeTickets;
+    if (_selectedCategoryFilter != 'all') {
+      displayedActiveTickets = activeTickets
+          .where((q) => q.displayCategory.toLowerCase().contains(_selectedCategoryFilter.toLowerCase()))
+          .toList();
+    }
 
     return Scaffold(
       backgroundColor: AppColors.colorBg,
@@ -155,14 +169,14 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Icon(Icons.mark_chat_unread_outlined, color: AppColors.colorPrimary, size: 18),
-                                      SizedBox(width: 6),
-                                      Expanded(
-                                        child: Text(
-                                          'Tiket Aktif',
-                                          style: TextStyle(fontSize: 12, color: AppColors.colorTextMuted, fontWeight: FontWeight.w600),
-                                          overflow: TextOverflow.ellipsis,
+                                      Text(
+                                        'Tiket Aktif',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.colorTextMuted,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                       Icon(Icons.chevron_right, size: 16, color: AppColors.colorTextMuted),
@@ -171,7 +185,11 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                                   const SizedBox(height: 8),
                                   Text(
                                     '${activeTickets.length}',
-                                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.colorText),
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.colorPrimary,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -209,14 +227,14 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Icon(Icons.check_circle_outline_rounded, color: AppColors.colorSecondary, size: 18),
-                                      SizedBox(width: 6),
-                                      Expanded(
-                                        child: Text(
-                                          'Tiket Selesai',
-                                          style: TextStyle(fontSize: 12, color: AppColors.colorTextMuted, fontWeight: FontWeight.w600),
-                                          overflow: TextOverflow.ellipsis,
+                                      Text(
+                                        'Tiket Selesai',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.colorTextMuted,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                       Icon(Icons.chevron_right, size: 16, color: AppColors.colorTextMuted),
@@ -256,6 +274,71 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                     },
                   ),
 
+                  const SizedBox(height: 12),
+
+                  // Banner Pengumuman LKSDM
+                  InkWell(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => BroadcastFeedScreen(
+                            currentUser: widget.user,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: Colors.amber.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade800,
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                            ),
+                            child: const Icon(Icons.campaign_rounded,
+                                color: Colors.white, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Pengumuman ${widget.user.effectiveLksdm}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: Color(0xFF78350F),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'Lihat siaran resmi dan berkas lampiran kawasan',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right,
+                              color: Color(0xFF78350F)),
+                        ],
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 24),
 
                   // 4. Section Tiket Aktif Berjalan
@@ -281,6 +364,35 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                         ),
                     ],
                   ),
+                  const SizedBox(height: 10),
+
+                  // Category Filter Chip Row (Semua, Kehadiran, Mutasi Unit, dsb)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildCategoryFilterChip(
+                          id: 'all',
+                          label: 'Semua Kategori',
+                          count: activeTickets.length,
+                        ),
+                        const SizedBox(width: 6),
+                        ...ServiceCategoryCatalog.defaultCategories.map((cat) {
+                          final catCount = activeTickets
+                              .where((q) => q.displayCategory.toLowerCase().contains(cat.nama.toLowerCase()))
+                              .length;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: _buildCategoryFilterChip(
+                              id: cat.nama,
+                              label: cat.nama,
+                              count: catCount,
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 12),
 
                   if (isLoading)
@@ -290,7 +402,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                         child: CircularProgressIndicator(color: AppColors.colorPrimary),
                       ),
                     )
-                  else if (activeTickets.isEmpty)
+                  else if (displayedActiveTickets.isEmpty)
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
@@ -299,16 +411,19 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                         borderRadius: BorderRadius.circular(AppRadius.md),
                         border: Border.all(color: AppColors.colorBorder, width: 1),
                       ),
-                      child: const Column(
+                      child: Column(
                         children: [
-                          Icon(Icons.task_alt_rounded, size: 36, color: AppColors.colorSecondary),
-                          SizedBox(height: 8),
+                          const Icon(Icons.task_alt_rounded, size: 36, color: AppColors.colorSecondary),
+                          const SizedBox(height: 8),
                           Text(
-                            'Tidak ada tiket aktif yang berjalan.',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.colorText),
+                            _selectedCategoryFilter == 'all'
+                                ? 'Tidak ada tiket aktif yang berjalan.'
+                                : 'Tidak ada tiket aktif pada kategori "$_selectedCategoryFilter".',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.colorText),
+                            textAlign: TextAlign.center,
                           ),
-                          SizedBox(height: 4),
-                          Text(
+                          const SizedBox(height: 4),
+                          const Text(
                             'Pertanyaan yang Anda ajukan akan diproses oleh Staf Admin LKSDM Kawasan.',
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 11, color: AppColors.colorTextMuted),
@@ -320,9 +435,9 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                     ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: activeTickets.length,
+                      itemCount: displayedActiveTickets.length,
                       itemBuilder: (context, index) {
-                        final q = activeTickets[index];
+                        final q = displayedActiveTickets[index];
                         return QuestionCard(
                           question: q,
                           currentUser: widget.user,
@@ -352,6 +467,72 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryFilterChip({
+    required String id,
+    required String label,
+    int? count,
+  }) {
+    final isSelected = _selectedCategoryFilter == id;
+    return InkWell(
+      key: ValueKey('member_category_filter_$id'),
+      onTap: () {
+        setState(() {
+          _selectedCategoryFilter = id;
+        });
+      },
+      borderRadius: BorderRadius.circular(AppRadius.full),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.colorPrimary : AppColors.colorSurface,
+          borderRadius: BorderRadius.circular(AppRadius.full),
+          border: Border.all(
+            color: isSelected ? AppColors.colorPrimary : AppColors.colorBorder,
+            width: isSelected ? 1.2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.label_outline,
+              size: 11,
+              color: isSelected ? Colors.white : AppColors.colorTextMuted,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? Colors.white : AppColors.colorText,
+              ),
+            ),
+            if (count != null && count > 0) ...[
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.white.withValues(alpha: 0.25) : AppColors.colorPrimarySoft,
+                  borderRadius: BorderRadius.circular(AppRadius.full),
+                ),
+                child: Text(
+                  '$count',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : AppColors.colorPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

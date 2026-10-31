@@ -893,10 +893,12 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
             ? question.tugasFungsi!.first.teamName ?? 'Tim Layanan BOSDM'
             : 'Tim Layanan BOSDM');
 
-    final String tusiText = question.tugasFungsiNama ??
-        ((question.tugasFungsi != null && question.tugasFungsi!.isNotEmpty)
-            ? question.tugasFungsi!.first.fullDisplayName
-            : 'Layanan Kepegawaian');
+    final String tusiText = (question.kategoriLayanan != null && question.kategoriLayanan!.isNotEmpty)
+        ? question.kategoriLayanan!
+        : (question.tugasFungsiNama ??
+            ((question.tugasFungsi != null && question.tugasFungsi!.isNotEmpty)
+                ? question.tugasFungsi!.first.fullDisplayName
+                : 'Layanan Kepegawaian'));
 
     final answers = question.answers ?? [];
 
@@ -1259,7 +1261,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                   if (tusiText.isNotEmpty)
                                     Expanded(
                                       child: Text(
-                                        'Topik: $tusiText',
+                                        'Kategori: $tusiText',
                                         style: AppTypography.caption.copyWith(color: AppColors.slate600),
                                         overflow: TextOverflow.ellipsis,
                                       ),

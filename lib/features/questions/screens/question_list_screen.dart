@@ -11,6 +11,7 @@ import '../../auth/models/user_model.dart';
 import '../../auth/models/user_role.dart';
 import '../cubits/question_list_cubit.dart';
 import '../cubits/question_list_state.dart';
+import '../data/service_category_catalog.dart';
 import '../models/question_model.dart';
 import '../widgets/question_card.dart';
 import 'ask_question_screen.dart';
@@ -72,6 +73,7 @@ class _QuestionListViewState extends State<QuestionListView> with SingleTickerPr
   late final List<String> _statuses;
   late final List<String> _tabLabels;
   String _searchQuery = '';
+  String _selectedCategoryFilter = 'all';
 
   @override
   void initState() {
@@ -179,11 +181,36 @@ class _QuestionListViewState extends State<QuestionListView> with SingleTickerPr
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: SearchFilterBar(
                   hintText: 'Cari no tiket, judul, atau kata kunci...',
                   onSearchChanged: (val) =>
                       setState(() => _searchQuery = val.toLowerCase()),
+                ),
+              ),
+              // Category Filter Chip Row (Semua, Kehadiran, Mutasi Unit, dsb)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildCategoryFilterChip(
+                        id: 'all',
+                        label: 'Semua Kategori',
+                      ),
+                      const SizedBox(width: 6),
+                      ...ServiceCategoryCatalog.defaultCategories.map((cat) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: _buildCategoryFilterChip(
+                            id: cat.nama,
+                            label: cat.nama,
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
                 ),
               ),
               Expanded(
@@ -205,6 +232,13 @@ class _QuestionListViewState extends State<QuestionListView> with SingleTickerPr
                     if (state is QuestionListLoaded) {
                       final allQuestions = state.questions;
                       final filteredQuestions = allQuestions.where((q) {
+                        if (_selectedCategoryFilter != 'all') {
+                          if (!q.displayCategory
+                              .toLowerCase()
+                              .contains(_selectedCategoryFilter.toLowerCase())) {
+                            return false;
+                          }
+                        }
                         if (_searchQuery.isEmpty) return true;
                         final matchTitle =
                             q.judul.toLowerCase().contains(_searchQuery);
@@ -441,6 +475,53 @@ class _QuestionListViewState extends State<QuestionListView> with SingleTickerPr
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryFilterChip({
+    required String id,
+    required String label,
+  }) {
+    final isSelected = _selectedCategoryFilter == id;
+    return InkWell(
+      key: ValueKey('list_category_filter_$id'),
+      onTap: () {
+        setState(() {
+          _selectedCategoryFilter = id;
+        });
+      },
+      borderRadius: BorderRadius.circular(AppRadius.full),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.colorPrimary : AppColors.colorSurface,
+          borderRadius: BorderRadius.circular(AppRadius.full),
+          border: Border.all(
+            color: isSelected ? AppColors.colorPrimary : AppColors.colorBorder,
+            width: isSelected ? 1.2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.label_outline,
+              size: 11,
+              color: isSelected ? Colors.white : AppColors.colorTextMuted,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? Colors.white : AppColors.colorText,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

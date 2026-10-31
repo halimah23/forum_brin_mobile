@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_typography.dart';
 import '../../auth/models/user_model.dart';
+import '../../broadcasts/screens/broadcast_feed_screen.dart';
 import '../../questions/screens/question_detail_screen.dart';
 import '../../questions/services/question_service.dart';
 import '../models/notification_model.dart';
@@ -89,7 +90,27 @@ class _NotificationScreenState extends State<NotificationScreen> {
       }
     }
 
-    // 2. Open question detail if questionId is present
+    // 2. Open broadcast feed if type is broadcast
+    if (notif.type == 'broadcast' && mounted) {
+      final currentUser = widget.user ??
+          UserModel(
+            id: resolvedUserId,
+            name: 'Pegawai BRIN',
+            email: '',
+          );
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => BroadcastFeedScreen(
+            currentUser: currentUser,
+          ),
+        ),
+      );
+      _loadNotifications();
+      return;
+    }
+
+    // 3. Open question detail if questionId is present
     if (notif.questionId != null && mounted) {
       showDialog(
         context: context,
@@ -129,6 +150,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   IconData _getNotificationIcon(String type) {
     switch (type) {
+      case 'broadcast':
+        return Icons.campaign_rounded;
       case 'tiket_diajukan':
         return Icons.confirmation_number_outlined;
       case 'jawaban_baru':
@@ -144,6 +167,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   Color _getNotificationColor(String type) {
     switch (type) {
+      case 'broadcast':
+        return Colors.amber.shade800;
       case 'tiket_diajukan':
         return AppColors.primaryBlue;
       case 'jawaban_baru':
