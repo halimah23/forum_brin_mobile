@@ -15,7 +15,7 @@ void main() {
     id: 'usr_pegawai_1',
     name: 'Fathurrahman Adam Rahadian',
     email: 'fathurrahman@brin.go.id',
-    role: 'member',
+    role: 'sivitas',
     unit: 'Direktorat Pengelolaan Fasilitas Riset',
     tim: 'Pengelolaan Lab Riset Fisika',
     jabatan: 'Analis Kebijakan Ahli Muda',

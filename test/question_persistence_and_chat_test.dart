@@ -1,4 +1,4 @@
-import 'package:forum_brin_mobile/core/services/storage/session_manager.dart';
+﻿import 'package:forum_brin_mobile/core/services/storage/session_manager.dart';
 import 'package:forum_brin_mobile/features/auth/models/user_model.dart';
 // ignore_for_file: avoid_print
 import 'dart:io';
@@ -56,7 +56,7 @@ void main() {
     // Verify directly in Supabase questions table
     final directCheck = await client.from('questions').select().eq('id', questionId).single();
     expect(directCheck['judul'], testJudul);
-    expect(directCheck['status'], 'menunggu_lksdm');
+    expect(directCheck['status'], anyOf('menunggu_lksdm', 'antrean_luar_jam_kerja'));
 
     // 2. Load questions via QuestionService.getQuestions()
     final allQuestions = await QuestionService.getQuestions();

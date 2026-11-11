@@ -209,6 +209,23 @@ class ForumDiscussionCard extends StatelessWidget {
                           ],
                         ),
                       ),
+                    if (question.isEdited == true)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: AppColors.slate100,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                          border: Border.all(color: AppColors.slate300),
+                        ),
+                        child: const Text(
+                          'Diedit',
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            fontStyle: FontStyle.italic,
+                            color: AppColors.slate600,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 6),

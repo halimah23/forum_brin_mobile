@@ -29,8 +29,8 @@ void main() {
         UserRole.ketuaTim,
       );
       expect(
-        UserRole.fromString('Member'),
-        UserRole.member,
+        UserRole.fromString('Sivitas'),
+        UserRole.sivitas,
       );
     });
 
@@ -97,7 +97,7 @@ void main() {
           'first_name': 'Manda Talita Taruli Hasibuan',
           'username': 'mand001',
           'email': 'manda.talita.taruli.hasibuan.@brin.go.id',
-          'role': 'Member',
+          'role': 'Sivitas',
           'satuan_kerja': 'Badan Riset dan Inovasi Nasional',
           'teams': {
             'id_tim': 'tim_00',
@@ -122,7 +122,7 @@ void main() {
       expect(question.ticketNumber, 'TKT-2026-0001');
       expect(question.author?.id, 'usr_240');
       expect(question.author?.name, 'Manda Talita Taruli Hasibuan');
-      expect(question.author?.userRole, UserRole.member);
+      expect(question.author?.userRole, UserRole.sivitas);
       expect(question.tugasFungsi, isNotEmpty);
       expect(question.tugasFungsi!.first.idTusi, 'tusi_005');
     });

@@ -1,14 +1,12 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_radius.dart';
 import '../../../core/constants/app_typography.dart';
-import '../../../core/services/notifications/fcm_service.dart';
-import '../../../core/services/notifications/local_notification_service.dart';
 import '../../../core/services/storage/session_manager.dart';
 import '../../auth/cubits/auth_cubit.dart';
 import '../../auth/models/user_model.dart';
@@ -402,121 +400,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 const SizedBox(height: 24),
 
-                // Diagnostik Notifikasi & Perangkat
-                _buildSectionCard(
-                  title: 'Diagnostik Notifikasi & Perangkat',
-                  icon: Icons.notifications_active_outlined,
-                  iconColor: AppColors.colorPrimary,
-                  children: [
-                    const Text(
-                      'Pastikan izin notifikasi aktif dan periksa token perangkat ini untuk pengujian push notification.',
-                      style: TextStyle(fontSize: 12, color: AppColors.slate700),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.colorPrimary,
-                              side: const BorderSide(color: AppColors.colorPrimary),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                            ),
-                            onPressed: () async {
-                              final granted = await LocalNotificationService.requestPermission();
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      granted
-                                          ? 'Izin notifikasi aktif! (Granted)'
-                                          : 'Izin belum aktif. Buka Pengaturan HP > Aplikasi > Izin Notifikasi.',
-                                    ),
-                                    backgroundColor: granted ? Colors.green[700] : AppColors.error,
-                                  ),
-                                );
-                              }
-                            },
-                            icon: const Icon(Icons.security, size: 16),
-                            label: const Text('Cek Izin', style: TextStyle(fontSize: 12)),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.colorPrimary,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                            ),
-                            onPressed: () {
-                              LocalNotificationService.showNotification(
-                                title: 'Uji Coba Notifikasi',
-                                body: 'Pop-up & bar status berhasil muncul di perangkat ${currentUser.name}!',
-                              );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Notifikasi uji coba dikirim ke bar status!'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.play_arrow_rounded, size: 16),
-                            label: const Text('Tes Pop-Up', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: TextButton.icon(
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.slate800,
-                          backgroundColor: AppColors.slate100,
-                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                        ),
-                        onPressed: () async {
-                          final token = FcmService.currentToken;
-                          if (token != null && token.isNotEmpty) {
-                            await Clipboard.setData(ClipboardData(text: token));
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('FCM Token berhasil disalin ke clipboard!'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            }
-                          } else {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Token belum tersedia. Pastikan perangkat terhubung internet.'),
-                                  backgroundColor: AppColors.error,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                        icon: const Icon(Icons.copy_rounded, size: 16),
-                        label: Text(
-                          FcmService.currentToken != null
-                              ? 'Salin Token FCM (${FcmService.currentToken!.substring(0, 10)}...)'
-                              : 'Ambil / Salin Token FCM',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-
                 // Tombol Keluar Akun
                 SizedBox(
                   width: double.infinity,
@@ -621,7 +504,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildRoleScopeCard(UserModel user, Color roleColor) {
     String description = '';
     switch (user.userRole) {
-      case UserRole.member:
+      case UserRole.sivitas:
         description = '• Konsultasi tiket layanan kepegawaian ke LKSDM Kawasan\n• Pengajuan & pelacakan tiket layanan mandiri\n• Pemantauan riwayat status pertanyaan & tanggapan Staf';
         break;
       case UserRole.adminLksdm:
@@ -692,7 +575,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Color _getRoleColor(UserRole role) {
     switch (role) {
-      case UserRole.member:
+      case UserRole.sivitas:
         return AppColors.colorPrimary;
       case UserRole.adminLksdm:
         return Colors.teal.shade800;
@@ -711,7 +594,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   IconData _getRoleIcon(UserRole role) {
     switch (role) {
-      case UserRole.member:
+      case UserRole.sivitas:
         return Icons.person;
       case UserRole.adminLksdm:
         return Icons.business_outlined;
@@ -730,8 +613,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String _getRoleTitle(UserModel user) {
     switch (user.userRole) {
-      case UserRole.member:
-        return 'PEGAWAI BRIN';
+      case UserRole.sivitas:
+        return 'SIVITAS BRIN';
       case UserRole.adminLksdm:
         return 'STAF ADMIN LKSDM';
       case UserRole.adminPusat:

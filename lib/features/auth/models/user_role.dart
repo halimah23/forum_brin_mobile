@@ -5,10 +5,13 @@ enum UserRole {
   adminPusat,
   ketuaTim,
   eksekutif,
-  member;
+  sivitas;
+
+  /// Backwards-compatibility alias agar kode lama tetap aman
+  static const UserRole member = sivitas;
 
   static UserRole fromString(String? roleStr, {String? eskalasi}) {
-    if (roleStr == null || roleStr.isEmpty) return UserRole.member;
+    if (roleStr == null || roleStr.isEmpty) return UserRole.sivitas;
     final normalized = roleStr.toLowerCase().replaceAll(' ', '_').trim();
     final esk = eskalasi?.toUpperCase().trim();
 
@@ -48,11 +51,12 @@ enum UserRole {
       case 'pimpinan':
       case 'direktur':
         return UserRole.eksekutif;
+      case 'sivitas':
       case 'member':
       case 'pegawai':
       case 'user':
       default:
-        return UserRole.member;
+        return UserRole.sivitas;
     }
   }
 
@@ -70,8 +74,8 @@ enum UserRole {
         return 'Ketua Tim';
       case UserRole.eksekutif:
         return 'Eksekutif';
-      case UserRole.member:
-        return 'Pegawai';
+      case UserRole.sivitas:
+        return 'Sivitas';
     }
   }
 
@@ -89,8 +93,8 @@ enum UserRole {
         return 'ketua_tim';
       case UserRole.eksekutif:
         return 'eksekutif';
-      case UserRole.member:
-        return 'member';
+      case UserRole.sivitas:
+        return 'sivitas';
     }
   }
 }

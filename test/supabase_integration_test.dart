@@ -42,10 +42,11 @@ void main() {
       expect(UserRole.fromString('executive'), UserRole.eksekutif);
       expect(UserRole.fromString('pimpinan'), UserRole.eksekutif);
 
-      expect(UserRole.fromString('member'), UserRole.member);
-      expect(UserRole.fromString('pegawai'), UserRole.member);
-      expect(UserRole.fromString(''), UserRole.member);
-      expect(UserRole.fromString(null), UserRole.member);
+      expect(UserRole.fromString('sivitas'), UserRole.sivitas);
+      expect(UserRole.fromString('member'), UserRole.sivitas);
+      expect(UserRole.fromString('pegawai'), UserRole.sivitas);
+      expect(UserRole.fromString(''), UserRole.sivitas);
+      expect(UserRole.fromString(null), UserRole.sivitas);
     });
 
     test('CategoryModel handles Supabase tugas_fungsi JSON', () {
@@ -69,7 +70,7 @@ void main() {
           'id': 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
           'name': 'Dr. Siti',
           'email': 'siti@brin.go.id',
-          'role': 'member',
+          'role': 'sivitas',
           'unit': 'Pusat Riset AI',
         },
         'question_tugas_fungsi': [
@@ -87,7 +88,7 @@ void main() {
       expect(question.id, 101);
       expect(question.judul, 'Bagaimana cara pengajuan cuti riset?');
       expect(question.user?.name, 'Dr. Siti');
-      expect(question.user?.userRole, UserRole.member);
+      expect(question.user?.userRole, UserRole.sivitas);
       expect(question.user?.id, 'a1b2c3d4-e5f6-7890-abcd-ef1234567890');
       expect(question.tugasFungsi?.length, 2);
       expect(question.tugasFungsi?[0].nama, 'Pelayanan SDM');

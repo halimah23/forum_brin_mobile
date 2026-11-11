@@ -14,10 +14,14 @@ class AnswerModel {
   final String? senderUnit;
   final String? senderLksdm;
   final String? createdAt;
+  final bool isDeleted;
+  final String? deletedAt;
+  final bool isEdited;
+  final String? editedAt;
 
   String get senderName => penjawabNama;
   String get senderRole => penjawabRole;
-  String get isiPesan => isiJawaban;
+  String get isiPesan => isDeleted ? 'Pesan telah ditarik' : isiJawaban;
 
   const AnswerModel({
     this.id,
@@ -38,6 +42,10 @@ class AnswerModel {
     this.senderUnit,
     this.senderLksdm,
     this.createdAt,
+    this.isDeleted = false,
+    this.deletedAt,
+    this.isEdited = false,
+    this.editedAt,
   })  : penjawabNama = penjawabNama ?? senderName ?? 'Pengguna',
         penjawabRole = penjawabRole ?? senderRole ?? 'Staf Admin LKSDM',
         isiJawaban = isiJawaban ?? isiPesan ?? '-';
@@ -82,6 +90,25 @@ class AnswerModel {
       senderRoleType == 'ketua_tim' ||
       penjawabRole.toLowerCase().contains('ketua');
 
+  /// Memeriksa apakah pengguna tertentu dapat mengedit pesan balasan ini (Maksimal 15 menit dan belum dihapus)
+  bool canEdit(String? currentUserId) {
+    if (isDeleted || isSystemEvent) return false;
+    if (currentUserId == null || currentUserId.isEmpty || userId != currentUserId) return false;
+    if (createdAt == null) return false;
+    try {
+      final created = DateTime.parse(createdAt!);
+      final diff = DateTime.now().difference(created);
+      return diff.inMinutes <= 15;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Memeriksa apakah pengguna tertentu dapat menarik / menghapus pesan ini (Maksimal 15 menit dan belum dihapus)
+  bool canDelete(String? currentUserId) {
+    return canEdit(currentUserId);
+  }
+
   factory AnswerModel.fromJson(Map<String, dynamic> json) {
     final rawRole = json['sender_role']?.toString() ??
         json['sender_role_type']?.toString() ??
@@ -97,11 +124,14 @@ class AnswerModel {
       formattedRole = 'Ketua Tim';
     } else if (rawRole == 'system' || rawRole == 'system_event') {
       formattedRole = 'Sistem';
-    } else if (rawRole == 'pegawai') {
-      formattedRole = 'Pegawai';
+    } else if (rawRole == 'pegawai' || rawRole == 'sivitas' || rawRole == 'member') {
+      formattedRole = 'Sivitas';
     } else {
       formattedRole = rawRole;
     }
+
+    final rawIsDeleted = json['is_deleted'] == true || json['is_deleted'] == 1;
+    final rawIsEdited = json['is_edited'] == true || json['is_edited'] == 1;
 
     return AnswerModel(
       id: json['id'] is int ? json['id'] : int.tryParse(json['id']?.toString() ?? ''),
@@ -131,11 +161,15 @@ class AnswerModel {
           json['lksdm']?.toString() ??
           json['kawasan']?.toString(),
       createdAt: json['created_at']?.toString(),
+      isDeleted: rawIsDeleted,
+      deletedAt: json['deleted_at']?.toString(),
+      isEdited: rawIsEdited,
+      editedAt: json['edited_at']?.toString(),
     );
   }
 
   Map<String, dynamic> toJson() {
-    String dbRole = senderRoleType ?? 'pegawai';
+    String dbRole = senderRoleType ?? 'sivitas';
     final roleLow = penjawabRole.toLowerCase();
     if (roleLow.contains('lksdm')) {
       dbRole = 'admin_lksdm';
@@ -157,6 +191,10 @@ class AnswerModel {
       if (attachmentUrl != null) 'attachment_url': attachmentUrl,
       if (attachmentName != null) 'attachment_name': attachmentName,
       if (createdAt != null) 'created_at': createdAt,
+      'is_deleted': isDeleted,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      'is_edited': isEdited,
+      if (editedAt != null) 'edited_at': editedAt,
     };
   }
 
@@ -176,6 +214,10 @@ class AnswerModel {
     String? senderUnit,
     String? senderLksdm,
     String? createdAt,
+    bool? isDeleted,
+    String? deletedAt,
+    bool? isEdited,
+    String? editedAt,
   }) {
     return AnswerModel(
       id: id ?? this.id,
@@ -193,6 +235,10 @@ class AnswerModel {
       senderUnit: senderUnit ?? this.senderUnit,
       senderLksdm: senderLksdm ?? this.senderLksdm,
       createdAt: createdAt ?? this.createdAt,
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: deletedAt ?? this.deletedAt,
+      isEdited: isEdited ?? this.isEdited,
+      editedAt: editedAt ?? this.editedAt,
     );
   }
 }

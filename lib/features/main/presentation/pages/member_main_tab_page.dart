@@ -7,6 +7,8 @@ import '../../../questions/screens/member_tickets_screen.dart';
 import '../widgets/app_bottom_navigation_bar.dart';
 import 'menu_types.dart';
 
+typedef SivitasMainTabPage = MemberMainTabPage;
+
 class MemberMainTabPage extends StatefulWidget {
   final UserModel user;
 

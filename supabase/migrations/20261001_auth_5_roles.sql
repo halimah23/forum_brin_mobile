@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
-  role TEXT NOT NULL DEFAULT 'member',
+  role TEXT NOT NULL DEFAULT 'sivitas',
   unit TEXT,
   tim TEXT,
   jabatan TEXT,
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- 3. Constraint Validasi 5 Role
 ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS check_valid_5_roles;
 ALTER TABLE public.profiles ADD CONSTRAINT check_valid_5_roles 
-  CHECK (role IN ('super_admin', 'admin', 'ketua_tim', 'eksekutif', 'member'));
+  CHECK (role IN ('super_admin', 'admin', 'ketua_tim', 'eksekutif', 'sivitas', 'member'));
 
 -- 4. Aktifkan RLS
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -43,7 +43,7 @@ BEGIN
     new.id,
     new.email,
     COALESCE(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
-    COALESCE(new.raw_user_meta_data->>'role', 'member'),
+    COALESCE(new.raw_user_meta_data->>'role', 'sivitas'),
     COALESCE(new.raw_user_meta_data->>'unit', 'BRIN'),
     COALESCE(new.raw_user_meta_data->>'tim', 'Umum'),
     COALESCE(new.raw_user_meta_data->>'jabatan', 'Pegawai')

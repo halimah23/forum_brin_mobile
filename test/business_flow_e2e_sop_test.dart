@@ -11,7 +11,7 @@ void main() {
         id: 'usr_151',
         name: 'Hafiz Rifki',
         email: 'hafiz.rifki@brin.go.id',
-        role: 'Member',
+        role: 'Sivitas',
         unit: 'DPRI',
         kawasan: 'LKSDM 6',
       );
@@ -86,7 +86,7 @@ void main() {
           'id_user': 'usr_151',
           'first_name': 'Hafiz Rifki',
           'email': 'hafiz.rifki@brin.go.id',
-          'role': 'Member',
+          'role': 'Sivitas',
           'satuan_kerja': 'DPRI',
           'kawasan': 'LKSDM 6',
         },

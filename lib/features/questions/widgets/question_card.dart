@@ -5,6 +5,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/models/user_role.dart';
 import '../models/question_model.dart';
+import '../services/ticket_read_service.dart';
 import '../../../core/widgets/status_badge.dart';
 
 class QuestionCard extends StatelessWidget {
@@ -25,10 +26,17 @@ class QuestionCard extends StatelessWidget {
     final initial = namaUser.isNotEmpty ? namaUser[0].toUpperCase() : 'P';
     final answerCount = question.answers?.length ?? 0;
     final namaTim = question.targetTimPusat ?? question.targetTim;
+    final unreadResponses = question.isActive
+        ? TicketReadService.getUnreadCount(
+            questionId: question.id,
+            totalAnswers: answerCount,
+            userId: currentUser?.id?.toString(),
+          )
+        : 0;
 
     // Logika Privasi Identitas:
-    final currentRole = currentUser?.userRole ?? UserRole.member;
-    final bool isPrivilegedRole = currentRole != UserRole.member;
+    final currentRole = currentUser?.userRole ?? UserRole.sivitas;
+    final bool isPrivilegedRole = currentRole != UserRole.sivitas;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -121,7 +129,37 @@ class QuestionCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        StatusBadge(status: question.status, useShortLabel: true),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (unreadResponses > 0) ...[
+                              Container(
+                                margin: const EdgeInsets.only(right: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEF4444),
+                                  borderRadius: BorderRadius.circular(AppRadius.full),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFFEF4444).withValues(alpha: 0.35),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  unreadResponses > 99 ? '99+' : '$unreadResponses',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            StatusBadge(status: question.status, useShortLabel: true),
+                          ],
+                        ),
                         if (question.isMandiriLksdm) ...[
                           const SizedBox(height: 4),
                           Container(
@@ -247,6 +285,24 @@ class QuestionCard extends StatelessWidget {
                               maxLines: 1,
                             ),
                           ),
+                          if (unreadResponses > 0) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEF4444),
+                                borderRadius: BorderRadius.circular(AppRadius.full),
+                              ),
+                              child: Text(
+                                '$unreadResponses',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

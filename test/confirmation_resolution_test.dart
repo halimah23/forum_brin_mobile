@@ -11,7 +11,7 @@ void main() {
       id: 'member-user-1',
       name: 'Rian Pegawai',
       email: 'rian@brin.go.id',
-      role: 'member',
+      role: 'sivitas',
       kawasan: 'KST Habibie Serpong',
       unit: 'LKSDM 1',
     );

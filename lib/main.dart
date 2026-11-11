@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app/app.dart';
 import 'core/services/notifications/fcm_service.dart';
 import 'core/services/notifications/local_notification_service.dart';
+import 'features/questions/services/ticket_read_service.dart';
 
 export 'app/app.dart';
 
@@ -34,6 +35,12 @@ void main() async {
     await FcmService.initialize();
   } catch (e) {
     debugPrint('Warning: Inisialisasi FCM gagal: $e');
+  }
+
+  try {
+    await TicketReadService.init();
+  } catch (e) {
+    debugPrint('Warning: Inisialisasi TicketReadService gagal: $e');
   }
 
   runApp(const ForumBrinApp());

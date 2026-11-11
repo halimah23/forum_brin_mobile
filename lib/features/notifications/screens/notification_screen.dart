@@ -29,9 +29,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
   bool isLoading = true;
 
   String? get resolvedUserId {
-    return widget.userId ??
-        widget.user?.id?.toString() ??
-        Supabase.instance.client.auth.currentUser?.id;
+    if (widget.userId != null) return widget.userId;
+    if (widget.user?.id != null) return widget.user!.id.toString();
+    try {
+      return Supabase.instance.client.auth.currentUser?.id;
+    } catch (_) {
+      return null;
+    }
   }
 
   @override

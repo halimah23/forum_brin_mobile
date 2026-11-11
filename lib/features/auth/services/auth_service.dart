@@ -61,7 +61,7 @@ class AuthService {
 
           final rawRole = profileData['role']?.toString() ??
               user.userMetadata?['role']?.toString() ??
-              'member';
+              'sivitas';
 
           final userModel = UserModel(
             id: user.id,
@@ -156,7 +156,7 @@ class AuthService {
 
         final rawRole = profileData['role']?.toString() ??
             user.userMetadata?['role']?.toString() ??
-            'member';
+            'sivitas';
 
         final userModel = UserModel(
           id: user.id,

@@ -6,6 +6,7 @@ import '../../auth/models/user_model.dart';
 import '../../questions/data/lksdm_catalog_data.dart';
 import '../../questions/data/tusi_catalog_data.dart';
 import '../../questions/models/question_model.dart';
+import '../../questions/models/ticket_status.dart';
 import '../../questions/screens/question_detail_screen.dart';
 import '../../questions/services/question_service.dart';
 import '../../questions/widgets/reopen_ticket_dialog.dart';
@@ -120,7 +121,11 @@ class _SuperAdminAuditScreenState extends State<SuperAdminAuditScreen>
       // 1. Status Filter
       if (currentStatus != 'semua') {
         if (currentStatus == 'menunggu_lksdm') {
-          if (!['menunggu_lksdm', 'menunggu_disposisi', 'open', 'OPEN'].contains(q.status.toLowerCase())) {
+          final s = q.status.toLowerCase();
+          final isWaiting = ['menunggu_lksdm', 'menunggu_disposisi', 'open', 'antrean_luar_jam_kerja'].contains(s) ||
+              q.ticketStatus == TicketStatus.open ||
+              q.ticketStatus == TicketStatus.offHoursQueue;
+          if (!isWaiting) {
             return false;
           }
         } else if (currentStatus == 'ditangani_lksdm') {

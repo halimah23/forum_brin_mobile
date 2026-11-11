@@ -17,7 +17,9 @@ import '../data/tusi_catalog_data.dart';
 import '../models/question_model.dart';
 import '../models/service_category_model.dart';
 import '../services/question_service.dart';
+import '../../../core/utils/operational_hours_helper.dart';
 import '../widgets/attachment_picker_widget.dart';
+import '../widgets/tupoksi_bottom_sheet.dart';
 import 'question_detail_screen.dart';
 
 class AskQuestionScreen extends StatelessWidget {
@@ -83,6 +85,7 @@ class _AskQuestionViewState extends State<AskQuestionView> {
   late String selectedPusatTeam;
 
   QuestionModel? activeTicket;
+  int activeTicketCount = 0;
   bool dismissActiveBanner = false;
   String? attachedFileUrl;
   String? attachedFileName;
@@ -133,24 +136,29 @@ class _AskQuestionViewState extends State<AskQuestionView> {
       setState(() {
         selectedLksdm = matched;
       });
-      if (!widget.isLksdmConsultation) {
-        _checkActiveTicket();
-      }
+      _checkActiveTicket();
     }
   }
 
   void _checkActiveTicket() async {
-    final user = Supabase.instance.client.auth.currentUser;
-    final userId = user?.id ?? currentUser?.id ?? 'usr_240';
-    final ticket = await QuestionService.getUserActiveTicket(
-      userId: userId,
-      lksdmKawasan: selectedLksdm.shortName,
-    );
-    if (mounted) {
-      setState(() {
-        activeTicket = ticket;
-      });
-    }
+    try {
+      String? userId;
+      try {
+        userId = Supabase.instance.client.auth.currentUser?.id;
+      } catch (_) {}
+      userId ??= currentUser?.id ?? 'usr_240';
+      final count = await QuestionService.getUserActiveTicketCount(userId: userId);
+      final ticket = await QuestionService.getUserActiveTicket(
+        userId: userId,
+        lksdmKawasan: selectedLksdm.shortName,
+      );
+      if (mounted) {
+        setState(() {
+          activeTicketCount = count;
+          activeTicket = ticket;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -163,6 +171,11 @@ class _AskQuestionViewState extends State<AskQuestionView> {
   }
 
   void submitQuestion() async {
+    if (activeTicketCount >= 10) {
+      showMessage('Anda telah mencapai batas maksimal 10 tiket aktif. Mohon selesaikan tiket Anda yang sedang berjalan terlebih dahulu.');
+      return;
+    }
+
     if (_formKey.currentState?.validate() ?? false) {
       if (selectedCategory == null) {
         showMessage('Silakan pilih Kategori Layanan Kepegawaian terlebih dahulu.');
@@ -292,6 +305,152 @@ class _AskQuestionViewState extends State<AskQuestionView> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Banner Kuota Maksimal 10 Tiket Aktif
+                              if (activeTicketCount >= 10) ...[
+                                Container(
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF2F2),
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                    border: Border.all(color: const Color(0xFFFECACA)),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(Icons.block_rounded, color: Color(0xFFDC2626), size: 20),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Batas Kuota 10 Tiket Aktif Tercapai',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF991B1B),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Anda saat ini memiliki $activeTicketCount tiket aktif yang sedang berjalan. Demi efisiensi layanan, Anda belum dapat membuat tiket baru sampai tiket berjalan diselesaikan.',
+                                              style: const TextStyle(fontSize: 11.5, color: Color(0xFFB91C1C), height: 1.4),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+
+                              // Banner Luar Jam Operasional Resmi
+                              if (!OperationalHoursHelper.isWithinWorkingHours()) ...[
+                                Container(
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  padding: const EdgeInsets.all(14),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(AppRadius.md),
+                                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(Icons.access_time_rounded, color: Color(0xFF2563EB), size: 20),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Layanan di Luar Jam Operasional',
+                                              style: TextStyle(
+                                                fontSize: 12.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF1E40AF),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              OperationalHoursHelper.offHoursNotice,
+                                              style: const TextStyle(fontSize: 11.5, color: Color(0xFF1D4ED8), height: 1.35),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+
+                              // Kartu Ringkas Pintasan Panduan Tugas & Fungsi Tim BOSDM
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 16),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFC62828).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(
+                                        Icons.menu_book_rounded,
+                                        color: Color(0xFFC62828),
+                                        size: 18,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Buku Saku Tupoksi 14 Tim BOSDM',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF1E293B),
+                                            ),
+                                          ),
+                                          Text(
+                                            'Cek rincian tugas & fungsi tim pusat BOSDM',
+                                            style: TextStyle(fontSize: 10.5, color: Colors.grey[600]),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    TextButton.icon(
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: const Color(0xFFC62828),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      icon: const Icon(Icons.open_in_new_rounded, size: 14),
+                                      label: const Text('Buka', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                                      onPressed: () {
+                                        TupoksiBottomSheet.show(
+                                          context,
+                                          onSelectTeam: (teamName) {
+                                            if (isConsultation) {
+                                              setState(() => selectedPusatTeam = teamName);
+                                            }
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+
                               if (activeTicket != null && !dismissActiveBanner && !isConsultation) ...[
                                 Container(
                                   padding: const EdgeInsets.all(14),
@@ -393,7 +552,10 @@ class _AskQuestionViewState extends State<AskQuestionView> {
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Row(
+                                          Wrap(
+                                            crossAxisAlignment: WrapCrossAlignment.center,
+                                            spacing: 6,
+                                            runSpacing: 4,
                                             children: [
                                               Text(
                                                 selectedLksdm.shortName,
@@ -562,8 +724,9 @@ class _AskQuestionViewState extends State<AskQuestionView> {
                                   const SizedBox(height: 6),
                                   DropdownButtonFormField<ServiceCategoryModel>(
                                     key: const ValueKey('dropdown_service_category'),
-                                    value: selectedCategory,
+                                    initialValue: selectedCategory,
                                     isExpanded: true,
+                                    itemHeight: null,
                                     hint: Text(
                                       'Pilih Kategori Layanan Kepegawaian...',
                                       style: AppTypography.bodySmall.copyWith(color: AppColors.slate400),
@@ -715,9 +878,13 @@ class _AskQuestionViewState extends State<AskQuestionView> {
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 440),
                         child: CustomButton(
-                          text: isConsultation ? 'Kirim Konsultasi ke Tim Pusat' : 'Kirim Pertanyaan',
-                          backgroundColor: isConsultation ? AppColors.colorSecondaryStrong : AppColors.colorPrimary,
-                          onPressed: submitQuestion,
+                          text: activeTicketCount >= 10
+                              ? 'Batas Kuota 10 Tiket Aktif Tercapai'
+                              : (isConsultation ? 'Kirim Konsultasi ke Tim Pusat' : 'Kirim Pertanyaan'),
+                          backgroundColor: activeTicketCount >= 10
+                              ? Colors.grey
+                              : (isConsultation ? AppColors.colorSecondaryStrong : AppColors.colorPrimary),
+                          onPressed: activeTicketCount >= 10 ? null : submitQuestion,
                           isLoading: isSubmitting,
                           icon: const Icon(Icons.send_rounded),
                         ),

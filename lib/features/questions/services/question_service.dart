@@ -9,10 +9,12 @@ import '../models/category_model.dart';
 import '../models/question_model.dart';
 import '../models/service_category_model.dart';
 import '../../notifications/services/notification_service.dart';
+import '../../../core/utils/operational_hours_helper.dart';
 
 class QuestionService {
   static SupabaseClient get _client => Supabase.instance.client;
   static DateTime? _lastAutoResolveCheck;
+  static DateTime? _lastOffHoursCheck;
 
   /// Ambil daftar kategori layanan dinamis dari Supabase (tabel service_categories)
   /// dengan fallback ke ServiceCategoryCatalog.defaultCategories jika offline/gagal.
@@ -160,8 +162,24 @@ class QuestionService {
           final normalizedStatus = statusFilter.toLowerCase();
           if (normalizedStatus == 'menunggu_lksdm' ||
               normalizedStatus == 'open') {
-            q = q.inFilter('status',
-                ['menunggu_lksdm', 'menunggu_disposisi', 'OPEN', 'open']);
+            q = q.inFilter('status', [
+              'menunggu_lksdm',
+              'menunggu_disposisi',
+              'OPEN',
+              'open',
+              'antrean_luar_jam_kerja',
+              'ANTREAN_LUAR_JAM_KERJA',
+              'luar_jam_kerja',
+            ]);
+          } else if (normalizedStatus == 'antrean_luar_jam_kerja' ||
+              normalizedStatus == 'luar_jam_kerja' ||
+              normalizedStatus == 'off_hours') {
+            q = q.inFilter('status', [
+              'antrean_luar_jam_kerja',
+              'ANTREAN_LUAR_JAM_KERJA',
+              'luar_jam_kerja',
+              'off_hours',
+            ]);
           } else if (normalizedStatus == 'ditangani_lksdm' ||
               normalizedStatus == 'in_progress' ||
               normalizedStatus == 'waiting_user') {
@@ -315,8 +333,14 @@ class QuestionService {
         debugPrint('Error grouping answers in getQuestions: $e');
       }
 
-      final list = questionList.map((item) => QuestionModel.fromJson(item)).toList();
+      final list = questionList.map((item) => QuestionModel.fromJson(item)).where((q) {
+        if (statusFilter != null && statusFilter.toLowerCase() == 'dibatalkan') {
+          return q.isCancelled || q.isDeleted == true;
+        }
+        return q.isDeleted != true && !q.isCancelled;
+      }).toList();
       unawaited(checkAndProcessAutoResolveQuestions(list));
+      unawaited(checkAndProcessOffHoursQueueQuestions(list));
       return list;
     } catch (e) {
       debugPrint('Error fetching questions from Supabase: $e');
@@ -421,6 +445,7 @@ class QuestionService {
 
       final qObj = QuestionModel.fromJson(qMap);
       unawaited(checkAndProcessAutoResolveQuestions([qObj]));
+      unawaited(checkAndProcessOffHoursQueueQuestions([qObj]));
       return qObj;
     } catch (e) {
       debugPrint('Error fetching question detail $questionId: $e');
@@ -428,7 +453,7 @@ class QuestionService {
     }
   }
 
-  /// Ambil pertanyaan milik Member yang sedang login
+  /// Ambil pertanyaan milik Sivitas yang sedang login
   static Future<List<QuestionModel>> getMyQuestions({
     String? userId,
     String? statusFilter,
@@ -545,6 +570,12 @@ class QuestionService {
     }
     final String userId = resolvedId!;
 
+    // 1. Validasi Batasan Kuota Maksimal 10 Tiket Aktif Berjalan
+    final activeCount = await getUserActiveTicketCount(userId: userId);
+    if (activeCount >= 10) {
+      throw Exception('Anda telah mencapai batas maksimal 10 tiket aktif. Mohon tunggu tiket Anda yang sedang berjalan diselesaikan terlebih dahulu.');
+    }
+
     // Tentukan Tusi dan Tim Terkait
     String targetTeam = selectedTeam ?? 'Tim Layanan SDM BOSDM';
     String tusiNama = (kategoriLayanan != null && kategoriLayanan.isNotEmpty)
@@ -573,8 +604,16 @@ class QuestionService {
             : 'LKSDM 1');
     final effectiveTargetPusat = targetTimPusat ?? (targetTeam.contains('LKSDM') ? null : targetTeam);
 
+    // 2. Tentukan Status & SLA berdasarkan Jam Operasional (Senin-Jumat, 08:00 - 16:00 WIB)
+    final isOffHours = !OperationalHoursHelper.isWithinWorkingHours();
+    final initialStatus = isLksdmConsultation
+        ? 'tiket_mandiri_lksdm'
+        : (isOffHours ? 'antrean_luar_jam_kerja' : 'menunggu_lksdm');
+    final slaStartTime = isOffHours
+        ? OperationalHoursHelper.getNextSlaStartTime().toIso8601String()
+        : DateTime.now().toIso8601String();
+
     try {
-      final initialStatus = isLksdmConsultation ? 'tiket_mandiri_lksdm' : 'menunggu_lksdm';
       final insertPayload = <String, dynamic>{
         'user_id': userId,
         'ticket_number': ticketNumber,
@@ -587,6 +626,8 @@ class QuestionService {
         if (effectiveTargetPusat != null) 'target_tim_pusat': effectiveTargetPusat,
         'is_public': false,
         'status': initialStatus, // Status awal tiket
+        'is_off_hours': isOffHours,
+        'sla_start_at': slaStartTime,
       };
       if (attachmentUrl != null) {
         insertPayload['attachment_url'] = attachmentUrl;
@@ -886,12 +927,30 @@ class QuestionService {
         if (attachmentName != null) 'attachment_name': attachmentName,
       });
 
-      // 2. Perbarui status pertanyaan: jika direspon oleh Ketua Tim / Admin LKSDM, ubah jadi 'ditangani_lksdm' (IN_PROGRESS)
+      // 2. Perbarui status pertanyaan:
       final updateData = <String, dynamic>{};
       if (validSenderRole == 'admin_lksdm' || validSenderRole == 'ketua_tim') {
         updateData['status'] = 'ditangani_lksdm';
       } else if (validSenderRole == 'admin_pusat') {
         updateData['status'] = 'dialihkan_ke_pusat';
+      } else if (validSenderRole == 'pegawai') {
+        // Jika pegawai membalas dan saat ini sudah dalam jam operasional
+        if (OperationalHoursHelper.isWithinWorkingHours()) {
+          try {
+            final cur = await _client
+                .from('questions')
+                .select('status, target_tim_pusat')
+                .eq('id', questionId)
+                .maybeSingle();
+            final curStatus = cur?['status']?.toString().toLowerCase();
+            if (curStatus == 'antrean_luar_jam_kerja' || curStatus == 'luar_jam_kerja') {
+              final isMandiri = cur?['target_tim_pusat'] != null &&
+                  cur!['target_tim_pusat'].toString().isNotEmpty &&
+                  !cur['target_tim_pusat'].toString().contains('LKSDM');
+              updateData['status'] = isMandiri ? 'tiket_mandiri_lksdm' : 'menunggu_lksdm';
+            }
+          } catch (_) {}
+        }
       }
 
       if (updateData.isNotEmpty) {
@@ -1215,10 +1274,61 @@ class QuestionService {
     }
   }
 
+  /// Pengecekan dan transisi otomatis tiket 'antrean_luar_jam_kerja' ke 'menunggu_lksdm' (atau 'tiket_mandiri_lksdm')
+  /// saat waktu telah memasuki jam operasional resmi (08:00 - 16:00 WIB, Senin-Jumat) atau melewati batas `sla_start_at`.
+  static Future<void> checkAndProcessOffHoursQueueQuestions(List<QuestionModel> questions) async {
+    if (questions.isEmpty) return;
+
+    final isWorking = OperationalHoursHelper.isWithinWorkingHours();
+    final now = OperationalHoursHelper.currentTime;
+
+    // Debounce agar tidak spam query
+    if (_lastOffHoursCheck != null && now.difference(_lastOffHoursCheck!).inSeconds < 10) {
+      return;
+    }
+    _lastOffHoursCheck = now;
+
+    for (final q in questions) {
+      if (q.id == null || q.isClosed) continue;
+
+      final s = q.status.toLowerCase();
+      final isOffHoursStatus = s == 'antrean_luar_jam_kerja' || s == 'luar_jam_kerja' || s == 'off_hours';
+      if (!isOffHoursStatus) continue;
+
+      bool shouldTransition = isWorking;
+      if (!shouldTransition && q.slaStartAt != null) {
+        final slaStart = DateTime.tryParse(q.slaStartAt!);
+        if (slaStart != null && now.isAfter(slaStart)) {
+          shouldTransition = true;
+        }
+      }
+
+      if (shouldTransition) {
+        try {
+          final isMandiri = q.isMandiriLksdm ||
+              (q.targetTimPusat != null &&
+                  q.targetTimPusat!.isNotEmpty &&
+                  !q.targetTimPusat!.contains('LKSDM'));
+
+          final nextStatus = isMandiri ? 'tiket_mandiri_lksdm' : 'menunggu_lksdm';
+
+          debugPrint('Auto-transitioning off-hours ticket #${q.id} to $nextStatus during active operational hours.');
+
+          await _safeUpdateQuestion(q.id!, {
+            'status': nextStatus,
+            'updated_at': now.toIso8601String(),
+          });
+        } catch (e) {
+          debugPrint('Error transitioning off-hours ticket #${q.id}: $e');
+        }
+      }
+    }
+  }
+
   /// Pengecekan dan eksekusi Auto-Close (48 jam / 2x24 jam) serta Gentle Reminder (24 jam / 1x24 jam)
   /// Berdasarkan Opsi B:
-  /// - H+1 (>=24 jam tanpa respon member setelah jawaban staf): Kirim reminder push ke pegawai
-  /// - H+2 (>=48 jam tanpa respon member setelah jawaban staf): Auto-close tiket (status: selesai)
+  /// - H+1 (>=24 jam tanpa respon sivitas setelah jawaban staf): Kirim reminder push ke pegawai
+  /// - H+2 (>=48 jam tanpa respon sivitas setelah jawaban staf): Auto-close tiket (status: selesai)
   ///   dengan resolved_at dicatat ke waktu jawaban staf terakhir (agar SLA tim tetap adil & cepat).
   static Future<void> checkAndProcessAutoResolveQuestions(List<QuestionModel> questions) async {
     if (questions.isEmpty) return;
@@ -1642,7 +1752,37 @@ class QuestionService {
     return null;
   }
 
-  /// Ambil tiket aktif terbaru milik pengguna (status != CLOSED / selesai) untuk deteksi F-03
+  /// Menghitung jumlah tiket aktif milik pengguna (status belum selesai/dibatalkan)
+  /// Digunakan untuk memastikan batas kuota maksimal 10 tiket aktif per pegawai.
+  static Future<int> getUserActiveTicketCount({required String userId}) async {
+    try {
+      final response = await _client
+          .from('questions')
+          .select('id, status, is_deleted')
+          .eq('user_id', userId);
+
+      final list = List<Map<String, dynamic>>.from(response);
+      final activeList = list.where((item) {
+        final isDeleted = item['is_deleted'] == true;
+        if (isDeleted) return false;
+        final status = (item['status'] ?? '').toString().toLowerCase();
+        if (status == 'selesai' ||
+            status == 'closed' ||
+            status == 'resolved' ||
+            status == 'dibatalkan') {
+          return false;
+        }
+        return true;
+      }).toList();
+
+      return activeList.length;
+    } catch (e) {
+      debugPrint('Error getting user active ticket count: $e');
+      return 0;
+    }
+  }
+
+  /// Ambil tiket aktif terbaru milik pengguna (status != CLOSED / selesai / dibatalkan) untuk deteksi F-03
   static Future<QuestionModel?> getUserActiveTicket({
     required String userId,
     String? lksdmKawasan,
@@ -1658,23 +1798,229 @@ class QuestionService {
         lksdm_kawasan,
         tugas_fungsi_nama,
         is_public,
+        is_deleted,
         created_at
       ''').eq('user_id', userId);
 
-      query = query.neq('status', 'selesai').neq('status', 'CLOSED');
+      query = query
+          .neq('status', 'selesai')
+          .neq('status', 'CLOSED')
+          .neq('status', 'dibatalkan')
+          .neq('status', 'DIBATALKAN');
 
       if (lksdmKawasan != null && lksdmKawasan.isNotEmpty) {
         query = query.ilike('lksdm_kawasan', '%$lksdmKawasan%');
       }
 
       final response =
-          await query.order('created_at', ascending: false).limit(1);
-      if (response.isNotEmpty) {
-        return QuestionModel.fromJson(
-            Map<String, dynamic>.from(response.first));
+          await query.order('created_at', ascending: false).limit(10);
+      for (final item in response) {
+        final map = Map<String, dynamic>.from(item);
+        if (map['is_deleted'] != true) {
+          return QuestionModel.fromJson(map);
+        }
       }
     } catch (_) {}
     return null;
+  }
+
+  /// Membatalkan tiket / pertanyaan oleh pembuat (jika belum ditangani staf)
+  static Future<bool> cancelQuestion({
+    required int questionId,
+    required String userId,
+  }) async {
+    try {
+      // Ambil pertanyaan untuk validasi
+      final res = await _client
+          .from('questions')
+          .select('id, user_id, status, is_deleted')
+          .eq('id', questionId)
+          .maybeSingle();
+
+      if (res == null) {
+        throw Exception('Pertanyaan tidak ditemukan.');
+      }
+
+      final status = (res['status'] ?? '').toString().toLowerCase();
+      if (status == 'selesai' || status == 'closed' || status == 'dibatalkan') {
+        throw Exception('Tiket dengan status "$status" tidak dapat dibatalkan.');
+      }
+
+      // Pastikan belum ditangani / belum ada jawaban staf
+      final answersRes = await _client
+          .from('answers')
+          .select('id, sender_role, is_deleted')
+          .eq('question_id', questionId);
+
+      final hasStaffResponse = (answersRes as List).any((ans) {
+        final role = (ans['sender_role'] ?? '').toString().toLowerCase();
+        final isDel = ans['is_deleted'] == true;
+        return !isDel && (role != 'pegawai');
+      });
+
+      if (hasStaffResponse) {
+        throw Exception('Tiket sudah mulai ditangani oleh staf sehingga tidak dapat dibatalkan.');
+      }
+
+      // Soft cancel tiket
+      await _client.from('questions').update({
+        'status': 'dibatalkan',
+        'is_deleted': true,
+        'deleted_at': DateTime.now().toIso8601String(),
+        'deleted_by': userId,
+      }).eq('id', questionId);
+
+      return true;
+    } catch (e) {
+      debugPrint('Error cancelling question: $e');
+      rethrow;
+    }
+  }
+
+  /// Mengedit pertanyaan (maksimal 15 menit setelah dibuat)
+  static Future<bool> editQuestion({
+    required int questionId,
+    required String userId,
+    required String judul,
+    required String isi,
+    int? serviceCategoryId,
+    String? kategoriLayanan,
+  }) async {
+    try {
+      final res = await _client
+          .from('questions')
+          .select('id, user_id, created_at, status, is_deleted')
+          .eq('id', questionId)
+          .maybeSingle();
+
+      if (res == null) {
+        throw Exception('Pertanyaan tidak ditemukan.');
+      }
+
+      if (res['is_deleted'] == true) {
+        throw Exception('Pertanyaan yang telah dihapus atau dibatalkan tidak dapat diedit.');
+      }
+
+      final createdAtRaw = res['created_at'];
+      if (createdAtRaw != null) {
+        final createdAt = DateTime.tryParse(createdAtRaw.toString());
+        if (createdAt != null) {
+          final diff = DateTime.now().difference(createdAt);
+          if (diff.inMinutes >= 15) {
+            throw Exception('Batas waktu pengeditan tiket telah berakhir (maksimal 15 menit).');
+          }
+        }
+      }
+
+      final updateData = <String, dynamic>{
+        'judul': judul,
+        'isi': isi,
+        'is_edited': true,
+        'edited_at': DateTime.now().toIso8601String(),
+      };
+
+      if (serviceCategoryId != null) {
+        updateData['service_category_id'] = serviceCategoryId;
+      }
+      if (kategoriLayanan != null && kategoriLayanan.isNotEmpty) {
+        updateData['kategori_layanan'] = kategoriLayanan;
+      }
+
+      await _client.from('questions').update(updateData).eq('id', questionId);
+      return true;
+    } catch (e) {
+      debugPrint('Error editing question: $e');
+      rethrow;
+    }
+  }
+
+  /// Mengedit jawaban / tanggapan (maksimal 15 menit setelah dikirim)
+  static Future<bool> editAnswer({
+    required int answerId,
+    required String userId,
+    required String isiPesan,
+  }) async {
+    try {
+      final res = await _client
+          .from('answers')
+          .select('id, user_id, created_at, is_deleted')
+          .eq('id', answerId)
+          .maybeSingle();
+
+      if (res == null) {
+        throw Exception('Pesan tidak ditemukan.');
+      }
+
+      if (res['is_deleted'] == true) {
+        throw Exception('Pesan yang telah ditarik tidak dapat diedit.');
+      }
+
+      final createdAtRaw = res['created_at'];
+      if (createdAtRaw != null) {
+        final createdAt = DateTime.tryParse(createdAtRaw.toString());
+        if (createdAt != null) {
+          final diff = DateTime.now().difference(createdAt);
+          if (diff.inMinutes >= 15) {
+            throw Exception('Batas waktu pengeditan pesan telah berakhir (maksimal 15 menit).');
+          }
+        }
+      }
+
+      await _client.from('answers').update({
+        'isi_jawaban': isiPesan,
+        'is_edited': true,
+        'edited_at': DateTime.now().toIso8601String(),
+      }).eq('id', answerId);
+
+      return true;
+    } catch (e) {
+      debugPrint('Error editing answer: $e');
+      rethrow;
+    }
+  }
+
+  /// Menarik / soft delete pesan jawaban (maksimal 15 menit setelah dikirim)
+  static Future<bool> deleteAnswer({
+    required int answerId,
+    required String userId,
+  }) async {
+    try {
+      final res = await _client
+          .from('answers')
+          .select('id, user_id, created_at, is_deleted')
+          .eq('id', answerId)
+          .maybeSingle();
+
+      if (res == null) {
+        throw Exception('Pesan tidak ditemukan.');
+      }
+
+      if (res['is_deleted'] == true) {
+        return true; // Sudah ditarik sebelumnya
+      }
+
+      final createdAtRaw = res['created_at'];
+      if (createdAtRaw != null) {
+        final createdAt = DateTime.tryParse(createdAtRaw.toString());
+        if (createdAt != null) {
+          final diff = DateTime.now().difference(createdAt);
+          if (diff.inMinutes >= 15) {
+            throw Exception('Pesan hanya dapat ditarik dalam 15 menit pertama.');
+          }
+        }
+      }
+
+      await _client.from('answers').update({
+        'is_deleted': true,
+        'deleted_at': DateTime.now().toIso8601String(),
+        'deleted_by': userId,
+      }).eq('id', answerId);
+
+      return true;
+    } catch (e) {
+      debugPrint('Error deleting answer: $e');
+      rethrow;
+    }
   }
 
   /// Memberikan Tanggapan oleh Staf Admin LKSDM / Admin Pusat / Ketua Tim

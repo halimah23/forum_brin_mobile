@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../auth/models/user_model.dart';
 import 'member_dashboard_screen.dart';
 
-/// Backward-compatible alias untuk MemberDashboardScreen
+/// Backward-compatible alias untuk SivitasDashboardScreen / MemberDashboardScreen
 class DashboardScreen extends StatelessWidget {
   final UserModel user;
 

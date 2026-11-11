@@ -33,8 +33,8 @@ class UserService {
         return 'ketua_tim';
       case UserRole.eksekutif:
         return 'eksekutif';
-      case UserRole.member:
-        return 'pegawai';
+      case UserRole.sivitas:
+        return 'sivitas';
     }
   }
 

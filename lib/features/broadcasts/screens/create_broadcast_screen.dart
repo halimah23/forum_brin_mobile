@@ -34,7 +34,6 @@ class _CreateBroadcastScreenState extends State<CreateBroadcastScreen> {
   String? _selectedUnit;
   List<UserModel> _eligibleUsers = [];
   final Set<String> _selectedUserIds = {};
-  bool _isLoadingEligible = true;
 
   // Berkas Lampiran
   String? _attachmentName;
@@ -61,14 +60,12 @@ class _CreateBroadcastScreenState extends State<CreateBroadcastScreen> {
   }
 
   Future<void> _loadEligibleUsers() async {
-    setState(() => _isLoadingEligible = true);
     final users = await BroadcastService.getEligibleRecipients(
       lksdmScope: _lksdmScope,
     );
     if (mounted) {
       setState(() {
         _eligibleUsers = users;
-        _isLoadingEligible = false;
       });
     }
   }
@@ -506,10 +503,10 @@ class _CreateBroadcastScreenState extends State<CreateBroadcastScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
-                  color: AppColors.colorPrimary.withOpacity(0.08),
+                  color: AppColors.colorPrimary.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: AppColors.colorPrimary.withOpacity(0.2),
+                    color: AppColors.colorPrimary.withValues(alpha: 0.2),
                   ),
                 ),
                 child: Row(
@@ -566,7 +563,7 @@ class _CreateBroadcastScreenState extends State<CreateBroadcastScreen> {
                     style: TextStyle(fontSize: 12),
                   ),
                   value: _isUrgent,
-                  activeColor: Colors.red,
+                  activeThumbColor: Colors.red,
                   onChanged: (val) => setState(() => _isUrgent = val),
                 ),
               ),
@@ -624,92 +621,98 @@ class _CreateBroadcastScreenState extends State<CreateBroadcastScreen> {
               Text('Target Penerima Siaran', style: AppTypography.heading4),
               const SizedBox(height: 8),
 
-              // Opsi 1: Semua Pegawai LKSDM
-              RadioListTile<String>(
-                value: 'all_lksdm',
+              RadioGroup<String>(
                 groupValue: _targetType,
-                title: Text(
-                  'Semua Pegawai di $_lksdmScope',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text(
-                  'Siarkan ke seluruh ${_eligibleUsers.length} pegawai dalam naungan wilayah ini',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                onChanged: (val) => setState(() => _targetType = val!),
-              ),
-
-              // Opsi 2: Berdasarkan Unit / Kawasan
-              RadioListTile<String>(
-                value: 'unit_filter',
-                groupValue: _targetType,
-                title: const Text(
-                  'Berdasarkan Satuan Kerja / Kawasan',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: const Text(
-                  'Kirim ke kelompok unit kerja tertentu di bawah LKSDM',
-                  style: TextStyle(fontSize: 12),
-                ),
-                onChanged: (val) => setState(() => _targetType = val!),
-              ),
-
-              if (_targetType == 'unit_filter')
-                Padding(
-                  padding: const EdgeInsets.only(left: 48, right: 16, bottom: 8),
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedUnit,
-                    decoration: InputDecoration(
-                      hintText: 'Pilih Satuan Kerja / Kawasan',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
-                    ),
-                    items: coverageUnits.map((u) {
-                      return DropdownMenuItem<String>(
-                        value: u,
-                        child: Text(u, style: const TextStyle(fontSize: 14)),
-                      );
-                    }).toList(),
-                    onChanged: (val) => setState(() => _selectedUnit = val),
-                    validator: (val) {
-                      if (_targetType == 'unit_filter' &&
-                          (val == null || val.isEmpty)) {
-                        return 'Silakan pilih satuan kerja target';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-
-              // Opsi 3: Pilih Manual Pegawai Tertentu
-              RadioListTile<String>(
-                value: 'custom_users',
-                groupValue: _targetType,
-                title: const Text(
-                  'Pilih Manual Pegawai Tertentu',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text(
-                  _selectedUserIds.isEmpty
-                      ? 'Pilih satu atau beberapa pegawai spesifik'
-                      : '${_selectedUserIds.length} Pegawai Dipilih',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _selectedUserIds.isNotEmpty
-                        ? AppColors.colorPrimary
-                        : Colors.grey.shade700,
-                    fontWeight: _selectedUserIds.isNotEmpty
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                  ),
-                ),
                 onChanged: (val) {
-                  setState(() => _targetType = val!);
-                  _openManualUserSelector();
+                  if (val != null) {
+                    setState(() => _targetType = val);
+                    if (val == 'custom_users') {
+                      _openManualUserSelector();
+                    }
+                  }
                 },
+                child: Column(
+                  children: [
+                    // Opsi 1: Semua Pegawai LKSDM
+                    RadioListTile<String>(
+                      value: 'all_lksdm',
+                      title: Text(
+                        'Semua Pegawai di $_lksdmScope',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        'Siarkan ke seluruh ${_eligibleUsers.length} pegawai dalam naungan wilayah ini',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+
+                    // Opsi 2: Berdasarkan Unit / Kawasan
+                    RadioListTile<String>(
+                      value: 'unit_filter',
+                      title: const Text(
+                        'Berdasarkan Satuan Kerja / Kawasan',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: const Text(
+                        'Kirim ke kelompok unit kerja tertentu di bawah LKSDM',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+
+                    if (_targetType == 'unit_filter')
+                      Padding(
+                        padding: const EdgeInsets.only(left: 48, right: 16, bottom: 8),
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _selectedUnit,
+                          decoration: InputDecoration(
+                            hintText: 'Pilih Satuan Kerja / Kawasan',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                          ),
+                          items: coverageUnits.map((u) {
+                            return DropdownMenuItem<String>(
+                              value: u,
+                              child: Text(u, style: const TextStyle(fontSize: 14)),
+                            );
+                          }).toList(),
+                          onChanged: (val) => setState(() => _selectedUnit = val),
+                          validator: (val) {
+                            if (_targetType == 'unit_filter' &&
+                                (val == null || val.isEmpty)) {
+                              return 'Silakan pilih satuan kerja target';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+
+                    // Opsi 3: Pilih Manual Pegawai Tertentu
+                    RadioListTile<String>(
+                      value: 'custom_users',
+                      title: const Text(
+                        'Pilih Manual Pegawai Tertentu',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        _selectedUserIds.isEmpty
+                            ? 'Pilih satu atau beberapa pegawai spesifik'
+                            : '${_selectedUserIds.length} Pegawai Dipilih',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _selectedUserIds.isNotEmpty
+                              ? AppColors.colorPrimary
+                              : Colors.grey.shade700,
+                          fontWeight: _selectedUserIds.isNotEmpty
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
 
               if (_targetType == 'custom_users')

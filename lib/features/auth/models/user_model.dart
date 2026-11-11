@@ -43,8 +43,9 @@ class UserModel {
   UserRole get userRole => UserRole.fromString(role, eskalasi: eskalasi);
 
   /// Helper penanda peran pengguna
-  bool get isPegawai => userRole == UserRole.member;
-  bool get isMember => userRole == UserRole.member;
+  bool get isSivitas => userRole == UserRole.sivitas;
+  bool get isPegawai => isSivitas;
+  bool get isMember => isSivitas;
   bool get isEksekutif => userRole == UserRole.eksekutif;
   bool get isKetuaTim => userRole == UserRole.ketuaTim;
   bool get isSuperAdmin => userRole == UserRole.superAdmin;
@@ -75,7 +76,8 @@ class UserModel {
     return false;
   }
 
-  bool get isLksdmMember => isAdminLksdm || isKetuaTimLksdm;
+  bool get isLksdmStaff => isAdminLksdm || isKetuaTimLksdm;
+  bool get isLksdmMember => isLksdmStaff;
 
   String? get satuanKerja => unit;
 

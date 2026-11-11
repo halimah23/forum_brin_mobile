@@ -270,7 +270,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                     child: Row(
                       children: [
                         _roleChip(null, 'Semua Role'),
-                        _roleChip(UserRole.member, 'Pegawai'),
+                        _roleChip(UserRole.sivitas, 'Sivitas'),
                         _roleChip(UserRole.adminLksdm, 'Staf LKSDM'),
                         _roleChip(UserRole.adminPusat, 'Staf Pusat'),
                         _roleChip(UserRole.ketuaTim, 'Ketua Tim'),

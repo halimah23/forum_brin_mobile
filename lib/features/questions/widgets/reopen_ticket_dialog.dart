@@ -103,14 +103,22 @@ class _ReopenTicketDialogState extends State<ReopenTicketDialog> {
 
     if (mounted) {
       setState(() => _isSubmitting = false);
-      Navigator.pop(context, success);
+      if (success) {
+        Navigator.pop(context, true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal membuka kembali tiket. Silakan coba lagi.'),
+            backgroundColor: AppColors.colorPrimary,
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final tktNo = widget.question.ticketNumber ?? '#${widget.question.id}';
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Dialog(
       backgroundColor: AppColors.surface,
@@ -122,10 +130,10 @@ class _ReopenTicketDialogState extends State<ReopenTicketDialog> {
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: 480,
-          maxHeight: MediaQuery.of(context).size.height * 0.9,
+          maxHeight: MediaQuery.of(context).size.height * 0.88,
         ),
         child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
+          padding: const EdgeInsets.all(18),
           child: Form(
             key: _formKey,
             child: Column(
@@ -428,9 +436,12 @@ class _ReopenTicketDialogState extends State<ReopenTicketDialog> {
                 const Divider(height: 1, color: AppColors.border),
                 const SizedBox(height: 14),
 
-                // Tombol Aksi
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                // Tombol Aksi (Wrap agar anti overflow pada layar sempit)
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
                     TextButton(
                       onPressed:
@@ -440,7 +451,6 @@ class _ReopenTicketDialogState extends State<ReopenTicketDialog> {
                         style: TextStyle(color: AppColors.slate600),
                       ),
                     ),
-                    const SizedBox(width: 8),
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.amber.shade900,
@@ -449,8 +459,8 @@ class _ReopenTicketDialogState extends State<ReopenTicketDialog> {
                           borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 11,
+                          horizontal: 14,
+                          vertical: 10,
                         ),
                       ),
                       onPressed: _isSubmitting ? null : _handleConfirm,
@@ -468,7 +478,7 @@ class _ReopenTicketDialogState extends State<ReopenTicketDialog> {
                         'Aktifkan Kembali Tiket',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 12.5,
+                          fontSize: 12,
                         ),
                       ),
                     ),

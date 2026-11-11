@@ -79,6 +79,8 @@ class StaffPerformanceStat {
   }
 }
 
+typedef SivitasActivityStat = MemberActivityStat;
+
 class MemberActivityStat {
   final String userId;
   final String name;
@@ -233,7 +235,11 @@ class PerformanceAnalyticsService {
     );
   }
 
-  /// Leaderboard pegawai yang paling aktif mengajukan pertanyaan
+  /// Leaderboard sivitas yang paling aktif mengajukan pertanyaan
+  static List<MemberActivityStat> getTopActiveSivitas(
+    List<QuestionModel> questions, {
+    int limit = 5,
+  }) => getTopActiveMembers(questions, limit: limit);
   static List<MemberActivityStat> getTopActiveMembers(
     List<QuestionModel> questions, {
     int limit = 5,

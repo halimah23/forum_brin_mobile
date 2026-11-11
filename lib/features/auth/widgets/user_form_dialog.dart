@@ -55,7 +55,7 @@ class _UserFormDialogState extends State<UserFormDialog> {
     _unitController = TextEditingController(text: u?.unit ?? 'BOSDM BRIN');
     _jabatanController = TextEditingController(text: u?.jabatan ?? 'Pegawai');
 
-    _selectedRole = u?.userRole ?? UserRole.member;
+    _selectedRole = u?.userRole ?? UserRole.sivitas;
     _selectedTimOrLksdm = u?.tim ?? (u?.lksdm);
   }
 
@@ -300,7 +300,7 @@ class _UserFormDialogState extends State<UserFormDialog> {
                           initialValue: _selectedRole,
                           decoration: _inputDecoration(prefixIcon: Icons.badge_outlined),
                           items: const [
-                            DropdownMenuItem(value: UserRole.member, child: Text('Pegawai (Member)')),
+                            DropdownMenuItem(value: UserRole.sivitas, child: Text('Sivitas')),
                             DropdownMenuItem(value: UserRole.adminLksdm, child: Text('Staf Admin LKSDM Kawasan')),
                             DropdownMenuItem(value: UserRole.adminPusat, child: Text('Staf Admin Layanan Pusat')),
                             DropdownMenuItem(value: UserRole.ketuaTim, child: Text('Ketua Tim Layanan SDM')),

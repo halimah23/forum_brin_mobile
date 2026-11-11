@@ -1,21 +1,29 @@
 import 'package:flutter/material.dart';
 import '../constants/app_radius.dart';
 import '../constants/app_typography.dart';
+import '../utils/operational_hours_helper.dart';
 import '../../features/questions/models/ticket_status.dart';
 
 class StatusBadge extends StatelessWidget {
   final String status;
   final bool useShortLabel;
+  final TicketStatus? ticketStatusOverride;
 
   const StatusBadge({
     super.key,
     required this.status,
     this.useShortLabel = false,
+    this.ticketStatusOverride,
   });
 
   @override
   Widget build(BuildContext context) {
-    final ticketStatus = TicketStatus.fromString(status);
+    TicketStatus ticketStatus = ticketStatusOverride ?? TicketStatus.fromString(status);
+
+    // Auto-resolve jika tiket luar jam kerja sudah memasuki jam operasional resmi
+    if (ticketStatus == TicketStatus.offHoursQueue && OperationalHoursHelper.isWithinWorkingHours()) {
+      ticketStatus = TicketStatus.open;
+    }
 
     return Container(
       constraints: const BoxConstraints(maxWidth: 180),

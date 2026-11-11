@@ -13,6 +13,7 @@ import '../models/answer_model.dart';
 import '../models/question_model.dart';
 import '../models/ticket_status.dart';
 import '../services/question_service.dart';
+import '../services/ticket_read_service.dart';
 import '../widgets/csat_rating_card.dart';
 import '../widgets/attachment_viewer_helper.dart';
 import '../widgets/reopen_ticket_dialog.dart';
@@ -290,6 +291,11 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
   void initState() {
     super.initState();
     question = widget.question;
+    TicketReadService.markAsRead(
+      questionId: question.id,
+      totalAnswers: question.answers?.length ?? 0,
+      userId: widget.currentUser?.id?.toString(),
+    );
     _setupRealtimeSubscription();
     _loadFreshDetails();
     _scrollToBottom(isInstant: true);
@@ -337,6 +343,11 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
       setState(() {
         question = fresh;
       });
+      TicketReadService.markAsRead(
+        questionId: fresh.id,
+        totalAnswers: fresh.answers?.length ?? 0,
+        userId: widget.currentUser?.id?.toString(),
+      );
       _scrollToBottom(isInstant: true);
     }
   }
@@ -403,6 +414,354 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
         user.userRole == UserRole.ketuaTim ||
         user.userRole == UserRole.eksekutif ||
         user.userRole == UserRole.superAdmin;
+  }
+
+  void _showCancelQuestionDialog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626)),
+            SizedBox(width: 8),
+            Text('Batalkan Tiket', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          'Apakah Anda yakin ingin membatalkan pertanyaan ini? '
+          'Tiket yang dibatalkan tidak akan ditangani oleh staf dan statusnya menjadi Dibatalkan.',
+          style: TextStyle(fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Kembali', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Ya, Batalkan Tiket'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      setState(() => isProcessing = true);
+      try {
+        final userId = widget.currentUser?.id ?? Supabase.instance.client.auth.currentUser?.id ?? '';
+        await QuestionService.cancelQuestion(
+          questionId: question.id ?? 0,
+          userId: userId,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tiket pertanyaan berhasil dibatalkan.'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          _loadFreshDetails();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal membatalkan tiket: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => isProcessing = false);
+      }
+    }
+  }
+
+  void _showEditQuestionDialog() async {
+    final titleCtrl = TextEditingController(text: question.judul);
+    final isiCtrl = TextEditingController(text: question.isi);
+
+    final updated = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.edit_note_rounded, color: AppColors.colorPrimary),
+            SizedBox(width: 8),
+            Text('Edit Pertanyaan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.access_time, size: 14, color: Colors.blue),
+                    SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Pertanyaan hanya dapat diedit dalam rentang 15 menit pertama.',
+                        style: TextStyle(fontSize: 11, color: Colors.blue),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: titleCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Judul Pertanyaan',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                style: const TextStyle(fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: isiCtrl,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Uraian Pertanyaan',
+                  border: OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                style: const TextStyle(fontSize: 13),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.colorPrimary,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              if (titleCtrl.text.trim().isEmpty || isiCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx, true);
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+
+    if (updated == true && mounted) {
+      setState(() => isProcessing = true);
+      try {
+        final userId = widget.currentUser?.id ?? Supabase.instance.client.auth.currentUser?.id ?? '';
+        await QuestionService.editQuestion(
+          questionId: question.id ?? 0,
+          userId: userId,
+          judul: titleCtrl.text.trim(),
+          isi: isiCtrl.text.trim(),
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pertanyaan berhasil diperbarui.'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          _loadFreshDetails();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal mengubah pertanyaan: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => isProcessing = false);
+      }
+    }
+  }
+
+  void _showEditAnswerDialog(AnswerModel ans) async {
+    final isiCtrl = TextEditingController(text: ans.isiJawaban);
+
+    final updated = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.edit_note_rounded, color: AppColors.colorPrimary),
+            SizedBox(width: 8),
+            Text('Edit Pesan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.access_time, size: 14, color: Colors.blue),
+                  SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Pesan hanya dapat diedit dalam rentang 15 menit pertama sejak dikirim.',
+                      style: TextStyle(fontSize: 11, color: Colors.blue),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: isiCtrl,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'Isi Pesan',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+              style: const TextStyle(fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.colorPrimary,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              if (isiCtrl.text.trim().isEmpty) return;
+              Navigator.pop(ctx, true);
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+
+    if (updated == true && mounted) {
+      setState(() => isProcessing = true);
+      try {
+        final userId = widget.currentUser?.id ?? Supabase.instance.client.auth.currentUser?.id ?? '';
+        await QuestionService.editAnswer(
+          answerId: ans.id ?? 0,
+          userId: userId,
+          isiPesan: isiCtrl.text.trim(),
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pesan berhasil diperbarui.'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          _loadFreshDetails();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal mengubah pesan: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => isProcessing = false);
+      }
+    }
+  }
+
+  void _showDeleteAnswerDialog(AnswerModel ans) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.delete_outline, color: Color(0xFFDC2626)),
+            SizedBox(width: 8),
+            Text('Tarik Pesan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          'Apakah Anda yakin ingin menarik pesan ini? '
+          'Pesan ini akan dihapus dan digantikan tanda bahwa pesan telah ditarik.',
+          style: TextStyle(fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Tarik Pesan'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      setState(() => isProcessing = true);
+      try {
+        final userId = widget.currentUser?.id ?? Supabase.instance.client.auth.currentUser?.id ?? '';
+        await QuestionService.deleteAnswer(
+          answerId: ans.id ?? 0,
+          userId: userId,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pesan berhasil ditarik.'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          _loadFreshDetails();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal menarik pesan: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => isProcessing = false);
+      }
+    }
   }
 
   void _handleConfirmResolution(bool isResolved) async {
@@ -1031,21 +1390,17 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                               spacing: 8,
                               runSpacing: 6,
                               children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      question.ticketNumber ?? '#TIKET',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryRed),
-                                    ),
-                                  ],
+                                Text(
+                                  question.ticketNumber ?? '#TIKET',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.primaryRed),
                                 ),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 4,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
                                     StatusBadge(status: question.status, useShortLabel: true),
-                                    if (question.isMandiriLksdm) ...[
-                                      const SizedBox(width: 6),
+                                    if (question.isMandiriLksdm)
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
@@ -1069,7 +1424,6 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                           ],
                                         ),
                                       ),
-                                    ],
                                   ],
                                 ),
                               ],
@@ -1332,6 +1686,42 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                           style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: AppColors.colorPrimary),
                                         ),
                                       ),
+                                      if (question.canEdit(widget.currentUser) || question.canCancel(widget.currentUser)) ...[
+                                        const SizedBox(width: 4),
+                                        PopupMenuButton<String>(
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          icon: const Icon(Icons.more_vert, size: 16, color: Colors.grey),
+                                          onSelected: (val) {
+                                            if (val == 'edit') _showEditQuestionDialog();
+                                            if (val == 'cancel') _showCancelQuestionDialog();
+                                          },
+                                          itemBuilder: (ctx) => [
+                                            if (question.canEdit(widget.currentUser))
+                                              const PopupMenuItem(
+                                                value: 'edit',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.edit_outlined, size: 15, color: Colors.blue),
+                                                    SizedBox(width: 8),
+                                                    Text('Edit Pertanyaan', style: TextStyle(fontSize: 12)),
+                                                  ],
+                                                ),
+                                              ),
+                                            if (question.canCancel(widget.currentUser))
+                                              const PopupMenuItem(
+                                                value: 'cancel',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.cancel_outlined, size: 15, color: Colors.red),
+                                                    SizedBox(width: 8),
+                                                    Text('Batalkan Tiket', style: TextStyle(fontSize: 12, color: Colors.red)),
+                                                  ],
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
                                     ],
                                   ),
                                   const SizedBox(height: 5),
@@ -1355,6 +1745,13 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                     mainAxisSize: MainAxisSize.min,
                                     mainAxisAlignment: MainAxisAlignment.end,
                                     children: [
+                                      if (question.isEdited == true) ...[
+                                        const Text(
+                                          '(diedit)',
+                                          style: TextStyle(fontSize: 9.5, fontStyle: FontStyle.italic, color: AppColors.colorTextMuted),
+                                        ),
+                                        const SizedBox(width: 4),
+                                      ],
                                       if (question.createdAt != null)
                                         Text(
                                           question.createdAt!.split('T').first,
@@ -1551,6 +1948,48 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                         }
 
                         final bool isMe = _checkIsMe(ans);
+                        final currentUserId = widget.currentUser?.id ?? Supabase.instance.client.auth.currentUser?.id;
+
+                        if (ans.isDeleted) {
+                          return Align(
+                            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                            child: Container(
+                              margin: EdgeInsets.only(
+                                bottom: 12,
+                                left: isMe ? 40 : 0,
+                                right: isMe ? 0 : 40,
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.block_outlined, size: 14, color: Colors.grey.shade500),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    isMe ? 'Anda telah menarik pesan ini' : 'Pesan telah ditarik oleh pengirim',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontStyle: FontStyle.italic,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                                  if (ans.createdAt != null) ...[
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      ans.createdAt!.split('T').first,
+                                      style: TextStyle(fontSize: 9, color: Colors.grey.shade400),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          );
+                        }
 
                         if (isMe) {
                           // BUBBLE PENGGUNA AKTIF (Sisi Kanan - WhatsApp Light Green Bubble)
@@ -1572,9 +2011,50 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    ans.penjawabNama,
-                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.colorPrimary),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        ans.penjawabNama,
+                                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.colorPrimary),
+                                      ),
+                                      if (ans.canEdit(currentUserId) || ans.canDelete(currentUserId)) ...[
+                                        const SizedBox(width: 4),
+                                        PopupMenuButton<String>(
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          icon: const Icon(Icons.more_vert, size: 15, color: Colors.grey),
+                                          onSelected: (val) {
+                                            if (val == 'edit') _showEditAnswerDialog(ans);
+                                            if (val == 'delete') _showDeleteAnswerDialog(ans);
+                                          },
+                                          itemBuilder: (ctx) => [
+                                            if (ans.canEdit(currentUserId))
+                                              const PopupMenuItem(
+                                                value: 'edit',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.edit_outlined, size: 15, color: Colors.blue),
+                                                    SizedBox(width: 8),
+                                                    Text('Edit Pesan', style: TextStyle(fontSize: 12)),
+                                                  ],
+                                                ),
+                                              ),
+                                            if (ans.canDelete(currentUserId))
+                                              const PopupMenuItem(
+                                                value: 'delete',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.delete_outline, size: 15, color: Colors.red),
+                                                    SizedBox(width: 8),
+                                                    Text('Tarik Pesan', style: TextStyle(fontSize: 12, color: Colors.red)),
+                                                  ],
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
@@ -1592,6 +2072,13 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                                     mainAxisSize: MainAxisSize.min,
                                     mainAxisAlignment: MainAxisAlignment.end,
                                     children: [
+                                      if (ans.isEdited == true) ...[
+                                        const Text(
+                                          '(diedit)',
+                                          style: TextStyle(fontSize: 9.5, fontStyle: FontStyle.italic, color: AppColors.colorTextMuted),
+                                        ),
+                                        const SizedBox(width: 4),
+                                      ],
                                       if (ans.createdAt != null)
                                         Text(
                                           ans.createdAt!.split('T').first,
@@ -1993,7 +2480,7 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                   ),
                 ),
 
-              // INPUT BAR PERTANYAAN LANJUTAN MEMBER / MONITORING BANNER
+              // INPUT BAR PERTANYAAN LANJUTAN SIVITAS / MONITORING BANNER
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
@@ -2032,19 +2519,41 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                           ? Container(
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
+                                color: question.isCancelled || question.isDeleted == true
+                                    ? const Color(0xFFFEF2F2)
+                                    : Colors.grey.shade100,
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: Colors.grey.shade300),
+                                border: Border.all(
+                                  color: question.isCancelled || question.isDeleted == true
+                                      ? const Color(0xFFFECACA)
+                                      : Colors.grey.shade300,
+                                ),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  const Icon(Icons.lock_rounded, size: 16, color: Colors.grey),
+                                  Icon(
+                                    question.isCancelled || question.isDeleted == true
+                                        ? Icons.cancel_outlined
+                                        : Icons.lock_rounded,
+                                    size: 16,
+                                    color: question.isCancelled || question.isDeleted == true
+                                        ? const Color(0xFFDC2626)
+                                        : Colors.grey,
+                                  ),
                                   const SizedBox(width: 8),
-                                  const Expanded(
+                                  Expanded(
                                     child: Text(
-                                      'Tiket telah selesai diakhiri oleh Pegawai.',
-                                      style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
+                                      question.isCancelled || question.isDeleted == true
+                                          ? 'Tiket ini telah dibatalkan oleh pembuatnya sehingga percakapan ditutup.'
+                                          : 'Tiket telah selesai diakhiri oleh Pegawai.',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: question.isCancelled || question.isDeleted == true
+                                            ? const Color(0xFF991B1B)
+                                            : Colors.grey,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                   if (widget.currentUser?.userRole == UserRole.superAdmin || widget.currentUser?.isSuperAdmin == true) ...[
@@ -2067,6 +2576,28 @@ class _QuestionDetailScreenState extends State<QuestionDetailScreen> {
                           : Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                if (question.isOffHoursQueue)
+                                  Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEFF6FF),
+                                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                                    ),
+                                    child: const Row(
+                                      children: [
+                                        Icon(Icons.access_time_rounded, size: 14, color: Color(0xFF2563EB)),
+                                        SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            'Antrean Luar Jam Operasional (08:00 - 16:00 WIB). Penanganan SLA aktif pada hari kerja berikutnya.',
+                                            style: TextStyle(fontSize: 11, color: Color(0xFF1D4ED8)),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 if (_pendingAttachmentName != null)
                                   Container(
                                     margin: const EdgeInsets.only(bottom: 8),

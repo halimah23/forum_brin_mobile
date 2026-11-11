@@ -36,7 +36,7 @@ class UserAccountCard extends StatelessWidget {
         return const Color(0xFFC2410C); // Amber / Orange
       case UserRole.eksekutif:
         return const Color(0xFF16A34A); // Green Emerald
-      case UserRole.member:
+      case UserRole.sivitas:
         return AppColors.slate700;
     }
   }

@@ -83,7 +83,14 @@ class BroadcastService {
     List<String> recipientUserIds = [];
 
     if (targetType == 'custom_users' && selectedUserIds != null) {
-      recipientUserIds = selectedUserIds;
+      if (sender.isSuperAdmin) {
+        recipientUserIds = selectedUserIds;
+      } else {
+        // Hanya sivitas di bawah binaan wilayah LKSDM pengirim yang berhak menerima
+        final eligiblePegawai = await getEligibleRecipients(lksdmScope: lksdmScope);
+        final eligibleSet = eligiblePegawai.map((u) => u.id ?? '').toSet();
+        recipientUserIds = selectedUserIds.where((id) => eligibleSet.contains(id)).toList();
+      }
     } else {
       final eligiblePegawai = await getEligibleRecipients(
         lksdmScope: lksdmScope,

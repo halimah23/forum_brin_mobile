@@ -10,6 +10,8 @@ import '../widgets/question_card.dart';
 import 'ask_question_screen.dart';
 import 'question_detail_screen.dart';
 
+typedef SivitasTicketsScreen = MemberTicketsScreen;
+
 class MemberTicketsScreen extends StatefulWidget {
   final UserModel user;
   final int initialTabIndex;

@@ -98,7 +98,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Open (Antrean LKSDM)'), findsOneWidget);
+      expect(find.text('Belum Ditangani'), findsOneWidget);
     });
 
     testWidgets('Merender badge Sedang Diproses', (WidgetTester tester) async {
@@ -110,7 +110,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Ditangani LKSDM'), findsOneWidget);
+      expect(find.text('Sedang Ditangani'), findsOneWidget);
     });
 
     testWidgets('Merender badge Selesai', (WidgetTester tester) async {
@@ -122,7 +122,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Selesai (Closed)'), findsOneWidget);
+      expect(find.text('Selesai'), findsOneWidget);
     });
   });
 }

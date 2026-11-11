@@ -7,6 +7,7 @@ import '../../questions/models/question_model.dart';
 import '../../questions/screens/faq_detail_screen.dart';
 import '../../questions/screens/faq_screen.dart';
 import '../../questions/services/question_service.dart';
+import '../../questions/widgets/tupoksi_bottom_sheet.dart';
 
 class DashboardFaqWidget extends StatefulWidget {
   final UserModel? currentUser;
@@ -143,6 +144,41 @@ class _DashboardFaqWidgetState extends State<DashboardFaqWidget> {
                 ),
               ),
             ],
+          ),
+
+          const SizedBox(height: 10),
+
+          // Banner Pintasan Buku Saku Tupoksi 14 Tim BOSDM
+          InkWell(
+            onTap: () => TupoksiBottomSheet.show(context),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.menu_book_rounded, size: 16, color: AppColors.primaryRed),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Buku Saku Tupoksi: Pembagian Tugas & Fungsi 14 Tim BOSDM',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF334155),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded, size: 11, color: Color(0xFF64748B)),
+                ],
+              ),
+            ),
           ),
 
           const SizedBox(height: 14),

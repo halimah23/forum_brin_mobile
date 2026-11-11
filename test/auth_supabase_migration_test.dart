@@ -51,7 +51,7 @@ void main() {
       // 5. Pegawai / Member
       final manda = users.firstWhere((u) => u.username == 'mand001' || u.email.contains('manda.talita'));
       expect(manda.name, contains('Manda Talita'));
-      expect(manda.userRole, UserRole.member);
+      expect(manda.userRole, UserRole.sivitas);
 
       // Verify no legacy manual users exist
       final hasLegacyAhmad = users.any((u) => u.name == 'Ahmad Syahputra, M.Si.');

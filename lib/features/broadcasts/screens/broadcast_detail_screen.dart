@@ -130,7 +130,7 @@ class _BroadcastDetailScreenState extends State<BroadcastDetailScreen> {
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: AppColors.colorPrimary.withOpacity(0.1),
+                    backgroundColor: AppColors.colorPrimary.withValues(alpha: 0.1),
                     child: const Icon(
                       Icons.account_balance_outlined,
                       color: AppColors.colorPrimary,
@@ -192,7 +192,7 @@ class _BroadcastDetailScreenState extends State<BroadcastDetailScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50.withOpacity(0.5),
+                  color: Colors.blue.shade50.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.blue.shade200),
                 ),

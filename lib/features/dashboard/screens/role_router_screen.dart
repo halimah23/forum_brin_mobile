@@ -44,7 +44,7 @@ class _RoleRouterScreenState extends State<RoleRouterScreen> {
       case UserRole.eksekutif:
         return EksekutifMainTabPage(user: widget.user);
 
-      case UserRole.member:
+      case UserRole.sivitas:
         return MemberMainTabPage(user: widget.user);
     }
   }

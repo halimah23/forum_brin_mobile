@@ -269,8 +269,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 runSpacing: 8,
                                 children: [
                                   _buildRoleTile(
-                                    roleName: 'Manda Talita TH (Member LK1)',
-                                    roleTag: 'Member',
+                                    roleName: 'Manda Talita TH (Sivitas LK1)',
+                                    roleTag: 'Sivitas',
                                     email: 'manda.talita.taruli.hasibuan.@brin.go.id',
                                   ),
                                   _buildRoleTile(
@@ -294,8 +294,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     email: 'abid.omar.tusta@brin.go.id',
                                   ),
                                   _buildRoleTile(
-                                    roleName: 'Rizka FL (Member LK6)',
-                                    roleTag: 'Member',
+                                    roleName: 'Rizka FL (Sivitas LK6)',
+                                    roleTag: 'Sivitas',
                                     email: 'rizka.fazri.lestari@brin.go.id',
                                   ),
                                   _buildRoleTile(
@@ -319,8 +319,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                     email: 'merlina.meiriyanti@brin.go.id',
                                   ),
                                   _buildRoleTile(
-                                    roleName: 'Haliza FA (Member LK3)',
-                                    roleTag: 'Member',
+                                    roleName: 'Haliza FA (Sivitas LK3)',
+                                    roleTag: 'Sivitas',
                                     email: 'haliza.fawwaz.ayuningtyas@brin.go.id',
                                   ),
                                   _buildRoleTile(
@@ -388,7 +388,7 @@ class _LoginScreenState extends State<LoginScreen> {
     Color tagBg;
     Color tagFg;
 
-    if (roleTag.contains('Member')) {
+    if (roleTag.contains('Sivitas') || roleTag.contains('Member')) {
       tagBg = AppColors.colorPrimarySoft;
       tagFg = AppColors.colorPrimary;
     } else if (roleTag.contains('LKSDM')) {

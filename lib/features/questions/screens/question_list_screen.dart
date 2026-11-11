@@ -78,18 +78,14 @@ class _QuestionListViewState extends State<QuestionListView> with SingleTickerPr
   @override
   void initState() {
     super.initState();
-    final bool isLksdm = widget.user.isAdminLksdm;
-    final bool isPusat = widget.user.isAdminPusat;
+    final bool isLksdm = widget.user.isLksdmStaff;
 
     if (isLksdm) {
       _statuses = ['semua', 'menunggu_lksdm', 'ditangani_lksdm', 'dialihkan_ke_pusat', 'selesai'];
-      _tabLabels = ['Semua', 'Antrean LKSDM', 'Ditangani', 'Eskalasi Pusat', 'Selesai'];
-    } else if (isPusat) {
-      _statuses = ['semua', 'dialihkan_ke_pusat', 'ditangani_lksdm', 'selesai'];
-      _tabLabels = ['Semua', 'Antrean Pusat', 'Aktif', 'Selesai'];
+      _tabLabels = ['Semua', 'Belum Ditangani', 'Sedang Ditangani', 'Eskalasi Pusat', 'Selesai'];
     } else {
-      _statuses = ['semua', 'menunggu_lksdm', 'ditangani_lksdm', 'dialihkan_ke_pusat', 'selesai'];
-      _tabLabels = ['Semua', 'Menunggu', 'Diproses', 'Eskalasi Pusat', 'Selesai'];
+      _statuses = ['semua', 'menunggu_lksdm', 'ditangani_lksdm', 'selesai'];
+      _tabLabels = ['Semua', 'Belum Ditangani', 'Sedang Ditangani', 'Selesai'];
     }
 
     int initialIndex = 0;
@@ -97,9 +93,9 @@ class _QuestionListViewState extends State<QuestionListView> with SingleTickerPr
       final filter = widget.initialStatusFilter!;
       int idx = _statuses.indexOf(filter);
       if (idx == -1) {
-        if (filter == 'menunggu_disposisi') idx = _statuses.indexOf('menunggu_lksdm');
-        if (filter == 'sedang_diproses') idx = _statuses.indexOf('ditangani_lksdm');
-        if (filter == 'eskalasi_pusat') idx = _statuses.indexOf('dialihkan_ke_pusat');
+        if (filter == 'antrean_luar_jam_kerja' || filter == 'luar_jam_kerja' || filter == 'menunggu_disposisi' || filter == 'belum_ditangani' || filter == 'open') idx = _statuses.indexOf('menunggu_lksdm');
+        if (filter == 'sedang_diproses' || filter == 'sedang_ditangani' || filter == 'in_progress') idx = _statuses.indexOf('ditangani_lksdm');
+        if (filter == 'dialihkan_ke_pusat' || filter == 'eskalasi_pusat' || filter == 'escalated') idx = _statuses.indexOf('dialihkan_ke_pusat');
       }
       if (idx != -1) initialIndex = idx;
     }
@@ -149,7 +145,7 @@ class _QuestionListViewState extends State<QuestionListView> with SingleTickerPr
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
         actions: [
-          if (widget.user.userRole != UserRole.member)
+          if (widget.user.userRole != UserRole.sivitas)
             BlocBuilder<QuestionListCubit, QuestionListState>(
               builder: (context, state) {
                 final list = state is QuestionListLoaded

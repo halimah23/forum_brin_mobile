@@ -3,6 +3,8 @@ import 'package:iconoir_flutter/iconoir_flutter.dart';
 
 typedef IconWidgetBuilder = Widget Function(Color color, double size);
 
+typedef SivitasMenuType = MemberMenuType;
+
 enum MemberMenuType {
   home(
     'Beranda',

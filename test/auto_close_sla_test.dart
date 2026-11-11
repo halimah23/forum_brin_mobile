@@ -12,7 +12,7 @@ void main() {
       id: 'member-pegawai-1',
       name: 'Rudi Peneliti',
       email: 'rudi@brin.go.id',
-      role: 'member',
+      role: 'sivitas',
       kawasan: 'KST Habibie Serpong',
       unit: 'LKSDM 1',
     );
@@ -74,7 +74,7 @@ void main() {
             senderName: 'Rudi Peneliti',
             isiPesan: 'Maaf pak, berkas bagian lampiran 2 masih belum bisa diakses.',
             senderRole: 'pegawai',
-            senderRoleType: 'member',
+            senderRoleType: 'sivitas',
             createdAt: now.subtract(const Duration(days: 3)).toIso8601String(),
           ),
         ],

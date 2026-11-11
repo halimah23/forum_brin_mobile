@@ -7,6 +7,7 @@ import '../../../core/widgets/custom_fab.dart';
 import '../../auth/models/user_model.dart';
 import '../../questions/data/service_category_catalog.dart';
 import '../../questions/models/question_model.dart';
+import '../../questions/models/ticket_status.dart';
 import '../../questions/screens/ask_question_screen.dart';
 import '../../questions/screens/lksdm_consultation_tickets_screen.dart';
 import '../../questions/screens/question_detail_screen.dart';
@@ -36,11 +37,19 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
   bool isLoading = true;
   String _selectedFilter = 'all_active';
   String _selectedCategoryFilter = 'all';
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -65,8 +74,9 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
         : (widget.user.tim ?? 'Tim Layanan SDM BOSDM');
 
     final allActiveQuestions = teamQuestions.where((q) => q.isActive).toList();
-    final pendingQuestions = teamQuestions.where((q) => q.ticketStatus.dbKey == 'OPEN').toList();
-    final inProgressQuestions = teamQuestions.where((q) => q.isActive && q.ticketStatus.dbKey != 'OPEN').toList();
+    final pendingQuestions = teamQuestions.where((q) => q.ticketStatus == TicketStatus.open || q.ticketStatus == TicketStatus.offHoursQueue).toList();
+    final inProgressQuestions = teamQuestions.where((q) => q.isActive && q.ticketStatus != TicketStatus.open && q.ticketStatus != TicketStatus.offHoursQueue && q.ticketStatus != TicketStatus.escalated && q.ticketStatus != TicketStatus.inProgressCenter).toList();
+    final escalatedQuestions = teamQuestions.where((q) => q.ticketStatus == TicketStatus.escalated || q.ticketStatus == TicketStatus.inProgressCenter).toList();
     final closedQuestions = teamQuestions.where((q) => q.isClosed).toList();
 
     List<QuestionModel> displayedQuestions;
@@ -76,6 +86,9 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
         break;
       case 'in_progress':
         displayedQuestions = inProgressQuestions;
+        break;
+      case 'escalated':
+        displayedQuestions = escalatedQuestions;
         break;
       case 'closed':
         displayedQuestions = closedQuestions;
@@ -91,6 +104,19 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
       displayedQuestions = displayedQuestions
           .where((q) => q.displayCategory.toLowerCase().contains(_selectedCategoryFilter.toLowerCase()))
           .toList();
+    }
+
+    if (_searchQuery.trim().isNotEmpty) {
+      final qLower = _searchQuery.trim().toLowerCase();
+      displayedQuestions = displayedQuestions.where((q) {
+        final matchTitle = q.judul.toLowerCase().contains(qLower);
+        final matchContent = q.isi.toLowerCase().contains(qLower);
+        final matchTicket = (q.ticketNumber ?? '').toLowerCase().contains(qLower);
+        final matchCat = q.displayCategory.toLowerCase().contains(qLower);
+        final matchAuthor = q.officialAuthorName.toLowerCase().contains(qLower);
+        final matchLksdm = q.authorAsalLksdm.toLowerCase().contains(qLower);
+        return matchTitle || matchContent || matchTicket || matchCat || matchAuthor || matchLksdm;
+      }).toList();
     }
 
     final csatOverview = PerformanceAnalyticsService.calculateCsatOverview(teamQuestions);
@@ -167,101 +193,35 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Greeting
-                    Text(
-                      'Selamat datang Ketua Tim,',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.user.name,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-
-                    const SizedBox(height: 18),
-
-                    // 4 Real-time KPI Cards (Interactive Filters)
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      childAspectRatio: 1.6,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        _kpiTile(
-                          'Semua Aktif',
-                          '${allActiveQuestions.length}',
-                          primaryTeal,
-                          Icons.mark_chat_unread_outlined,
-                          isSelected: _selectedFilter == 'all_active',
-                          onTap: () => setState(() => _selectedFilter = 'all_active'),
-                        ),
-                        _kpiTile(
-                          'Perlu Disposisi',
-                          '${pendingQuestions.length}',
-                          const Color(0xFFD97706),
-                          Icons.hourglass_top_rounded,
-                          isSelected: _selectedFilter == 'open',
-                          onTap: () => setState(() => _selectedFilter = 'open'),
-                        ),
-                        _kpiTile(
-                          'Sedang Diproses',
-                          '${inProgressQuestions.length}',
-                          const Color(0xFF0D9488),
-                          Icons.engineering_rounded,
-                          isSelected: _selectedFilter == 'in_progress',
-                          onTap: () => setState(() => _selectedFilter = 'in_progress'),
-                        ),
-                        _kpiTile(
-                          'Tiket Selesai',
-                          '${closedQuestions.length}',
-                          const Color(0xFF16A34A),
-                          Icons.check_circle_rounded,
-                          isSelected: _selectedFilter == 'closed',
-                          onTap: () => setState(() => _selectedFilter = 'closed'),
-                        ),
-                      ],
-                    ),
-
-                    if (widget.user.isKetuaTimLksdm) ...[
-                      const SizedBox(height: 16),
-                      _buildLksdmBroadcastCard(context),
-                      const SizedBox(height: 16),
-                      _buildLksdmConsultationCard(context),
-                    ],
-
-                    const SizedBox(height: 24),
-
-                    // DAFTAR TIKET LAYANAN TIM SECTION & BULLET FILTER
+                    // 1. Compact Greeting Header
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Daftar Tiket Layanan Tim',
-                                style: AppTypography.heading3,
+                              Text(
+                                'Halo, ${widget.user.name}',
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.slate900,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                _selectedFilter == 'all_active'
-                                    ? 'Menampilkan semua tiket aktif (belum selesai)'
-                                    : _selectedFilter == 'open'
-                                        ? 'Menampilkan antrean tiket yang perlu disposisi'
-                                        : _selectedFilter == 'in_progress'
-                                            ? 'Menampilkan tiket sedang ditangani tim'
-                                            : 'Menampilkan riwayat tiket selesai',
-                                style: const TextStyle(fontSize: 11, color: AppColors.slate500),
+                                widget.user.isKetuaTimLksdm
+                                    ? 'Ketua Tim Kawasan • $teamName'
+                                    : 'Ketua Tim Pusat • $teamName',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.slate500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
@@ -274,7 +234,7 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
                             border: Border.all(color: primaryTeal.withValues(alpha: 0.3)),
                           ),
                           child: Text(
-                            '${displayedQuestions.length} Tiket',
+                            '${allActiveQuestions.length} Aktif',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
@@ -284,34 +244,91 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
                         ),
                       ],
                     ),
+
                     const SizedBox(height: 12),
 
-                    // Bullet Filter Bar (● Semua Aktif, ● Perlu Disposisi, ● Sedang Diproses, ● Selesai)
+                    // 2. Search Bar Langsung di Atas Beranda
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: AppColors.border),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (val) {
+                          setState(() {
+                            _searchQuery = val;
+                          });
+                        },
+                        style: const TextStyle(fontSize: 13),
+                        decoration: InputDecoration(
+                          hintText: 'Cari tiket, judul, nomor, pengaju...',
+                          hintStyle: const TextStyle(fontSize: 12, color: AppColors.slate400),
+                          prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppColors.slate400),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear_rounded, size: 18, color: AppColors.slate400),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {
+                                      _searchQuery = '';
+                                    });
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // 3. Bullet Filter Chips (Aktif, Belum Ditangani, Sedang Ditangani, Eskalasi Pusat, Selesai)
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
                       child: Row(
                         children: [
                           _buildBulletFilterChip(
                             id: 'all_active',
-                            label: 'Semua Aktif',
+                            label: 'Aktif',
                             count: allActiveQuestions.length,
                             color: primaryTeal,
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           _buildBulletFilterChip(
                             id: 'open',
-                            label: 'Perlu Disposisi',
+                            label: 'Belum Ditangani',
                             count: pendingQuestions.length,
                             color: const Color(0xFFD97706),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           _buildBulletFilterChip(
                             id: 'in_progress',
-                            label: 'Sedang Diproses',
+                            label: 'Sedang Ditangani',
                             count: inProgressQuestions.length,
                             color: const Color(0xFF0D9488),
                           ),
-                          const SizedBox(width: 8),
+                          if (widget.user.isKetuaTimLksdm) ...[
+                            const SizedBox(width: 6),
+                            _buildBulletFilterChip(
+                              id: 'escalated',
+                              label: 'Eskalasi Pusat',
+                              count: escalatedQuestions.length,
+                              color: const Color(0xFF8B5CF6),
+                            ),
+                          ],
+                          const SizedBox(width: 6),
                           _buildBulletFilterChip(
                             id: 'closed',
                             label: 'Selesai',
@@ -321,11 +338,13 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 8),
 
-                    // Category Filter Chip Row (Semua, Kehadiran, Mutasi Unit, dsb)
+                    // 4. Category Filter Chip Row
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
                       child: Row(
                         children: [
                           _buildCategoryFilterChip(
@@ -350,8 +369,60 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 12),
 
+                    // 5. Header Section Daftar Tiket Layanan Tim (Paling Teratas)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Daftar Tiket Layanan Tim',
+                                style: AppTypography.heading3,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _selectedFilter == 'all_active'
+                                    ? 'Menampilkan semua tiket aktif (belum selesai)'
+                                    : _selectedFilter == 'open'
+                                        ? 'Menampilkan antrean tiket yang perlu disposisi'
+                                        : _selectedFilter == 'in_progress'
+                                            ? 'Menampilkan tiket sedang ditangani tim'
+                                            : _selectedFilter == 'escalated'
+                                                ? 'Menampilkan tiket dialihkan ke pusat'
+                                                : 'Menampilkan riwayat tiket selesai',
+                                style: const TextStyle(fontSize: 11, color: AppColors.slate500),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: primaryTeal.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(AppRadius.full),
+                            border: Border.all(color: primaryTeal.withValues(alpha: 0.3)),
+                          ),
+                          child: Text(
+                            '${displayedQuestions.length} Tiket',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: primaryTeal,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // 6. LISTING TIKET LANGSUNG PALING TERATAS
                     if (isLoading)
                       const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
                     else if (displayedQuestions.isEmpty)
@@ -367,21 +438,27 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
                         child: Column(
                           children: [
                             Icon(
-                              _selectedFilter == 'closed'
-                                  ? Icons.task_alt_rounded
-                                  : Icons.inbox_outlined,
+                              _searchQuery.isNotEmpty
+                                  ? Icons.search_off_rounded
+                                  : _selectedFilter == 'closed'
+                                      ? Icons.task_alt_rounded
+                                      : Icons.inbox_outlined,
                               size: 36,
                               color: Colors.grey.shade400,
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              _selectedFilter == 'all_active'
-                                  ? 'Tidak ada tiket aktif saat ini. Semua tiket tim telah tuntas.'
-                                  : _selectedFilter == 'open'
-                                      ? 'Semua tiket tim telah didisposisi/ditangani.'
-                                      : _selectedFilter == 'in_progress'
-                                          ? 'Belum ada tiket yang sedang dalam penanganan aktif.'
-                                          : 'Belum ada riwayat tiket selesai.',
+                              _searchQuery.isNotEmpty
+                                  ? 'Tidak ditemukan tiket dengan kata kunci "$_searchQuery".'
+                                  : _selectedFilter == 'all_active'
+                                      ? 'Tidak ada tiket aktif saat ini. Semua tiket tim telah tuntas.'
+                                      : _selectedFilter == 'open'
+                                          ? 'Semua tiket tim telah didisposisi/ditangani.'
+                                          : _selectedFilter == 'in_progress'
+                                              ? 'Belum ada tiket yang sedang dalam penanganan aktif.'
+                                              : _selectedFilter == 'escalated'
+                                                  ? 'Belum ada tiket yang dialihkan ke pusat.'
+                                                  : 'Belum ada riwayat tiket selesai.',
                               style: const TextStyle(fontSize: 12, color: AppColors.slate600),
                               textAlign: TextAlign.center,
                             ),
@@ -414,6 +491,59 @@ class _KetuaTimDashboardScreenState extends State<KetuaTimDashboardScreen> {
                           );
                         },
                       ),
+
+                    const SizedBox(height: 18),
+
+                    // 7. 4 Real-time KPI Cards (Interactive Filters)
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: 1.6,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: [
+                        _kpiTile(
+                          'Semua Aktif',
+                          '${allActiveQuestions.length}',
+                          primaryTeal,
+                          Icons.mark_chat_unread_outlined,
+                          isSelected: _selectedFilter == 'all_active',
+                          onTap: () => setState(() => _selectedFilter = 'all_active'),
+                        ),
+                        _kpiTile(
+                          'Belum Ditangani',
+                          '${pendingQuestions.length}',
+                          const Color(0xFFD97706),
+                          Icons.hourglass_top_rounded,
+                          isSelected: _selectedFilter == 'open',
+                          onTap: () => setState(() => _selectedFilter = 'open'),
+                        ),
+                        _kpiTile(
+                          'Sedang Ditangani',
+                          '${inProgressQuestions.length}',
+                          const Color(0xFF0D9488),
+                          Icons.engineering_rounded,
+                          isSelected: _selectedFilter == 'in_progress',
+                          onTap: () => setState(() => _selectedFilter = 'in_progress'),
+                        ),
+                        _kpiTile(
+                          'Selesai',
+                          '${closedQuestions.length}',
+                          const Color(0xFF16A34A),
+                          Icons.check_circle_rounded,
+                          isSelected: _selectedFilter == 'closed',
+                          onTap: () => setState(() => _selectedFilter = 'closed'),
+                        ),
+                      ],
+                    ),
+
+                    if (widget.user.isKetuaTimLksdm) ...[
+                      const SizedBox(height: 16),
+                      _buildLksdmBroadcastCard(context),
+                      const SizedBox(height: 16),
+                      _buildLksdmConsultationCard(context),
+                    ],
 
                     const SizedBox(height: 20),
 

@@ -120,7 +120,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Antrean LKSDM'), findsOneWidget);
+      expect(find.text('Belum Ditangani'), findsOneWidget);
     });
 
     testWidgets('Minimalist Floating Dock Bottom Navigation Bar merender floating container dan pill aktif', (tester) async {

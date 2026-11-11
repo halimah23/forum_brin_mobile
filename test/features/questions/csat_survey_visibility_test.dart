@@ -10,14 +10,14 @@ void main() {
       id: 'user-pegawai-1',
       name: 'Budi Santoso',
       email: 'budi@brin.go.id',
-      role: 'member',
+      role: 'sivitas',
     );
 
     const pegawaiB = UserModel(
       id: 'user-pegawai-2',
       name: 'Siti Aminah',
       email: 'siti@brin.go.id',
-      role: 'member',
+      role: 'sivitas',
     );
 
     const staffLksdm = UserModel(

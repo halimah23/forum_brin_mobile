@@ -447,6 +447,8 @@ class StaffLeaderboardCardWidget extends StatelessWidget {
 }
 
 /// Kartu Anggota Paling Sering Bertanya (Top Frequent Askers)
+typedef TopSivitasCardWidget = TopMembersCardWidget;
+
 class TopMembersCardWidget extends StatelessWidget {
   final List<MemberActivityStat> memberList;
   final String title;
@@ -455,8 +457,8 @@ class TopMembersCardWidget extends StatelessWidget {
   const TopMembersCardWidget({
     super.key,
     required this.memberList,
-    this.title = 'Pegawai Paling Aktif Berkonsultasi',
-    this.subtitle = 'Pegawai yang rutin menyampaikan kendala & pertanyaan kepegawaian',
+    this.title = 'Sivitas Paling Aktif Berkonsultasi',
+    this.subtitle = 'Sivitas yang rutin menyampaikan kendala & pertanyaan kepegawaian',
   });
 
   @override
@@ -717,7 +719,9 @@ class PersonalPerformanceCardWidget extends StatelessWidget {
                       const SizedBox(height: 2),
                       const Text(
                         'Respon Gercep ⚡',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
+                        style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),

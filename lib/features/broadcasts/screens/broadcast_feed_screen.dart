@@ -138,7 +138,7 @@ class _BroadcastFeedScreenState extends State<BroadcastFeedScreen> {
                                 borderRadius: BorderRadius.circular(12),
                                 side: BorderSide(
                                   color: !b.isReadByMe
-                                      ? AppColors.colorPrimary.withOpacity(0.4)
+                                      ? AppColors.colorPrimary.withValues(alpha: 0.4)
                                       : Colors.grey.shade200,
                                   width: !b.isReadByMe ? 1.5 : 1,
                                 ),

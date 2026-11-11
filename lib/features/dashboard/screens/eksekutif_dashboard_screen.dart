@@ -50,7 +50,7 @@ class _EksekutifDashboardScreenState extends State<EksekutifDashboardScreen> {
 
     final totalCount = allQuestions.length;
     final totalAnswersCount = allQuestions.fold<int>(0, (sum, q) => sum + (q.answers?.length ?? 0));
-    final waitingCount = allQuestions.where((q) => q.ticketStatus == TicketStatus.open).length;
+    final waitingCount = allQuestions.where((q) => q.ticketStatus == TicketStatus.open || q.ticketStatus == TicketStatus.offHoursQueue).length;
     final inProgressCount = allQuestions.where((q) => q.ticketStatus == TicketStatus.inProgress || q.ticketStatus == TicketStatus.waitingUser).length;
     final escalatedCount = allQuestions.where((q) => q.isEscalated).length;
     final closedCount = allQuestions.where((q) => q.isClosed).length;

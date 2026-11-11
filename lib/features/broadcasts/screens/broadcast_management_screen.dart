@@ -347,7 +347,7 @@ class _BroadcastManagementScreenState extends State<BroadcastManagementScreen> {
                                     decoration: BoxDecoration(
                                       color: b.isUrgent
                                           ? Colors.red.shade50
-                                          : AppColors.colorPrimary.withOpacity(0.1),
+                                          : AppColors.colorPrimary.withValues(alpha: 0.1),
                                       shape: BoxShape.circle,
                                     ),
                                     child: Icon(

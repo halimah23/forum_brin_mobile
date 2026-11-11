@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 
 enum TicketStatus {
-  open('OPEN', 'Open (Antrean LKSDM)', AppColors.colorAccentWarm, Icons.hourglass_top_rounded),
-  inProgress('IN_PROGRESS', 'Ditangani LKSDM', AppColors.colorSecondary, Icons.support_agent_rounded),
-  waitingUser('WAITING_USER', 'Menunggu Konfirmasi Pegawai', AppColors.colorPrimary, Icons.mark_chat_unread_outlined),
-  escalated('ESCALATED', 'Dialihkan ke Pusat', AppColors.colorAccentWarm, Icons.alt_route_rounded),
+  open('OPEN', 'Belum Ditangani', AppColors.colorAccentWarm, Icons.hourglass_top_rounded),
+  inProgress('IN_PROGRESS', 'Sedang Ditangani', AppColors.colorSecondary, Icons.support_agent_rounded),
+  waitingUser('WAITING_USER', 'Menunggu Konfirmasi', AppColors.colorPrimary, Icons.mark_chat_unread_outlined),
+  escalated('ESCALATED', 'Eskalasi Pusat', AppColors.colorAccentWarm, Icons.alt_route_rounded),
   inProgressCenter('IN_PROGRESS_CENTER', 'Ditangani Staf Pusat', AppColors.colorSecondaryStrong, Icons.engineering_outlined),
   mandiriLksdm('TIKET_MANDIRI_LKSDM', 'Konsultasi LKSDM ke Pusat', AppColors.colorPrimaryHover, Icons.badge_outlined),
-  resolved('RESOLVED', 'Solusi Diberikan', AppColors.success, Icons.task_alt_rounded),
-  closed('CLOSED', 'Selesai (Closed)', AppColors.colorTextMuted, Icons.check_circle_outline_rounded);
+  offHoursQueue('ANTREAN_LUAR_JAM_KERJA', 'Antrean Luar Jam Kerja', Color(0xFF64748B), Icons.nightlight_round),
+  resolved('RESOLVED', 'Selesai', AppColors.success, Icons.task_alt_rounded),
+  closed('CLOSED', 'Selesai', AppColors.colorTextMuted, Icons.check_circle_outline_rounded),
+  cancelled('DIBATALKAN', 'Dibatalkan', Color(0xFFEF4444), Icons.cancel_outlined);
 
   final String dbKey;
   final String label;
@@ -22,21 +24,24 @@ enum TicketStatus {
   String get shortLabel {
     switch (this) {
       case TicketStatus.open:
-        return 'Antrean LKSDM';
+        return 'Belum Ditangani';
       case TicketStatus.inProgress:
-        return 'Ditangani LKSDM';
+        return 'Sedang Ditangani';
       case TicketStatus.waitingUser:
-        return 'Konfirmasi Pegawai';
+        return 'Menunggu Konfirmasi';
       case TicketStatus.escalated:
-        return 'Dialihkan ke Pusat';
+        return 'Eskalasi Pusat';
       case TicketStatus.inProgressCenter:
         return 'Ditangani Pusat';
       case TicketStatus.mandiriLksdm:
         return 'Konsultasi LKSDM';
+      case TicketStatus.offHoursQueue:
+        return 'Luar Jam Kerja';
       case TicketStatus.resolved:
-        return 'Solusi Diberikan';
       case TicketStatus.closed:
         return 'Selesai';
+      case TicketStatus.cancelled:
+        return 'Dibatalkan';
     }
   }
 
@@ -78,6 +83,11 @@ enum TicketStatus {
       case 'MANDIRI_LKSDM':
         return TicketStatus.mandiriLksdm;
 
+      case 'ANTREAN_LUAR_JAM_KERJA':
+      case 'LUAR_JAM_KERJA':
+      case 'OFF_HOURS':
+        return TicketStatus.offHoursQueue;
+
       case 'RESOLVED':
       case 'DIJAWAB':
         return TicketStatus.resolved;
@@ -86,11 +96,16 @@ enum TicketStatus {
       case 'SELESAI':
         return TicketStatus.closed;
 
+      case 'DIBATALKAN':
+      case 'CANCELLED':
+      case 'DELETED':
+        return TicketStatus.cancelled;
+
       default:
         return TicketStatus.open;
     }
   }
 
-  bool get isClosed => this == TicketStatus.closed;
-  bool get isActive => this != TicketStatus.closed;
+  bool get isClosed => this == TicketStatus.closed || this == TicketStatus.cancelled;
+  bool get isActive => this != TicketStatus.closed && this != TicketStatus.cancelled;
 }

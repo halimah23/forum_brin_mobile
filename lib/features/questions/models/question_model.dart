@@ -1,3 +1,4 @@
+import '../../../core/utils/operational_hours_helper.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/models/user_role.dart';
 import 'answer_model.dart';
@@ -37,6 +38,13 @@ class QuestionModel {
   final String? ratingTags;
   final String? resolvedAt;
   final String? summaryJawaban;
+  final bool isDeleted;
+  final String? deletedAt;
+  final String? deletedBy;
+  final bool isEdited;
+  final String? editedAt;
+  final bool isOffHours;
+  final String? slaStartAt;
 
   List<String> get ratingTagsList =>
       ratingTags?.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList() ?? [];
@@ -50,9 +58,80 @@ class QuestionModel {
           ? kategoriLayanan!
           : (tugasFungsiNama ?? 'Layanan Umum');
 
-  TicketStatus get ticketStatus => TicketStatus.fromString(status);
-  bool get isClosed => ticketStatus.isClosed;
-  bool get isActive => ticketStatus.isActive;
+  TicketStatus get ticketStatus {
+    final baseStatus = TicketStatus.fromString(status);
+    if (baseStatus == TicketStatus.offHoursQueue) {
+      final isWorking = OperationalHoursHelper.isWithinWorkingHours();
+      final hasSlaPassed = slaStartAt != null &&
+          DateTime.tryParse(slaStartAt!) != null &&
+          OperationalHoursHelper.currentTime.isAfter(DateTime.parse(slaStartAt!));
+
+      // Jika waktu sekarang sudah masuk jam dinas resmi atau sudah melewati sla_start_at,
+      // tiket antrean luar jam kerja otomatis bertransisi ke OPEN (atau mandiri LKSDM).
+      if (isWorking || hasSlaPassed) {
+        if (isMandiriLksdm) {
+          return TicketStatus.mandiriLksdm;
+        }
+        return TicketStatus.open;
+      }
+    }
+    return baseStatus;
+  }
+
+  bool get isClosed => ticketStatus.isClosed || isDeleted;
+  bool get isActive => ticketStatus.isActive && !isDeleted;
+  bool get isCancelled => status.toLowerCase() == 'dibatalkan' || isDeleted;
+
+  /// Penanda apakah tiket saat ini sedang berada dalam antrean luar jam dinas
+  /// HANYA bernilai true jika saat ini masih di luar jam operasional resmi.
+  bool get isOffHoursQueue {
+    final s = status.toLowerCase();
+    final isRawOff = s == 'antrean_luar_jam_kerja' || s == 'luar_jam_kerja' || s == 'off_hours';
+    if (!isRawOff && ticketStatus != TicketStatus.offHoursQueue) {
+      return false;
+    }
+    return !OperationalHoursHelper.isWithinWorkingHours();
+  }
+
+  /// Memeriksa apakah pengguna tertentu dapat mengedit pertanyaan ini (Maksimal 15 menit dan belum dibalas staf)
+  bool canEdit(UserModel? currentUser) {
+    if (isDeleted || isCancelled) return false;
+    if (!isCreatedBy(currentUser)) return false;
+    if (answers != null && answers!.isNotEmpty) return false;
+    if (createdAt == null) return false;
+    try {
+      final dt = DateTime.parse(createdAt!);
+      return DateTime.now().difference(dt).inMinutes <= 15;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Memeriksa apakah pengguna tertentu dapat membatalkan / menarik tiket ini (Sebelum mulai ditangani staf)
+  bool canCancel(UserModel? currentUser) {
+    if (isDeleted || isCancelled) return false;
+    if (!isCreatedBy(currentUser)) return false;
+
+    // Jika sudah ada jawaban staf/admin yang belum ditarik, tidak bisa dibatalkan
+    final hasStaffAnswer = (answers ?? []).any((a) {
+      final role = a.senderRole.toLowerCase();
+      final isDel = a.isDeleted;
+      return !isDel && (role != 'pegawai' && a.userId != userId);
+    });
+    if (hasStaffAnswer) return false;
+
+    final s = status.toLowerCase();
+    return s == 'open' ||
+        s == 'menunggu_lksdm' ||
+        s == 'menunggu_disposisi' ||
+        s == 'diajukan' ||
+        s == 'pending' ||
+        s == 'antrean_luar_jam_kerja' ||
+        s == 'tiket_mandiri_lksdm' ||
+        ticketStatus == TicketStatus.open ||
+        ticketStatus == TicketStatus.offHoursQueue ||
+        ticketStatus == TicketStatus.mandiriLksdm;
+  }
 
   /// Memeriksa apakah pengguna tertentu (currentUser) adalah pihak yang mengajukan pertanyaan ini.
   /// Mendukung identifikasi Pegawai pengaju, maupun Staf/Ketua LKSDM yang mengajukan tiket konsultasi ke Pusat.
@@ -96,7 +175,9 @@ class QuestionModel {
   /// Apakah tiket ini merupakan konsultasi mandiri dari staf/ketua LKSDM ke Tim Pusat
   bool get isMandiriLksdm =>
       status.toLowerCase().contains('mandiri') ||
-      ticketStatus == TicketStatus.mandiriLksdm;
+      (targetTimPusat != null &&
+          targetTimPusat!.isNotEmpty &&
+          !targetTimPusat!.contains('LKSDM'));
 
   /// Penanda apakah pertanyaan telah dibakukan dari teks aslinya
   bool get isStandardized =>
@@ -175,6 +256,13 @@ class QuestionModel {
     this.ratingTags,
     this.resolvedAt,
     this.summaryJawaban,
+    this.isDeleted = false,
+    this.deletedAt,
+    this.deletedBy,
+    this.isEdited = false,
+    this.editedAt,
+    this.isOffHours = false,
+    this.slaStartAt,
   })  : lksdmWilayah = lksdmWilayah ?? lksdmKawasan,
         targetTimPusat = targetTimPusat ?? escalatedToTeam,
         rawUserId = rawUserId ?? userId;
@@ -379,6 +467,13 @@ class QuestionModel {
       ratingTags: json['rating_tags']?.toString(),
       resolvedAt: json['resolved_at']?.toString(),
       summaryJawaban: json['summary_jawaban']?.toString() ?? json['official_summary']?.toString(),
+      isDeleted: json['is_deleted'] == true || json['is_deleted'] == 1,
+      deletedAt: json['deleted_at']?.toString(),
+      deletedBy: json['deleted_by']?.toString(),
+      isEdited: json['is_edited'] == true || json['is_edited'] == 1,
+      editedAt: json['edited_at']?.toString(),
+      isOffHours: json['is_off_hours'] == true || json['is_off_hours'] == 1,
+      slaStartAt: json['sla_start_at']?.toString(),
     );
   }
 
@@ -416,6 +511,13 @@ class QuestionModel {
       'rating_tags': ratingTags,
       'resolved_at': resolvedAt,
       if (summaryJawaban != null) 'summary_jawaban': summaryJawaban,
+      'is_deleted': isDeleted,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (deletedBy != null) 'deleted_by': deletedBy,
+      'is_edited': isEdited,
+      if (editedAt != null) 'edited_at': editedAt,
+      'is_off_hours': isOffHours,
+      if (slaStartAt != null) 'sla_start_at': slaStartAt,
     };
   }
 
@@ -455,6 +557,13 @@ class QuestionModel {
     String? ratingTags,
     String? resolvedAt,
     String? summaryJawaban,
+    bool? isDeleted,
+    String? deletedAt,
+    String? deletedBy,
+    bool? isEdited,
+    String? editedAt,
+    bool? isOffHours,
+    String? slaStartAt,
   }) {
     return QuestionModel(
       id: id ?? this.id,
@@ -489,6 +598,13 @@ class QuestionModel {
       ratingTags: ratingTags ?? this.ratingTags,
       resolvedAt: resolvedAt ?? this.resolvedAt,
       summaryJawaban: summaryJawaban ?? this.summaryJawaban,
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: deletedAt ?? this.deletedAt,
+      deletedBy: deletedBy ?? this.deletedBy,
+      isEdited: isEdited ?? this.isEdited,
+      editedAt: editedAt ?? this.editedAt,
+      isOffHours: isOffHours ?? this.isOffHours,
+      slaStartAt: slaStartAt ?? this.slaStartAt,
     );
   }
 }
