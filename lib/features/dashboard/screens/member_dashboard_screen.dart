@@ -10,6 +10,7 @@ import '../../questions/screens/ask_question_screen.dart';
 import '../../questions/screens/question_detail_screen.dart';
 import '../../questions/services/question_service.dart';
 import '../../questions/widgets/question_card.dart';
+import '../../questions/widgets/tupoksi_bottom_sheet.dart';
 import '../../notifications/widgets/notification_bell_widget.dart';
 import '../widgets/dashboard_faq_widget.dart';
 import '../../broadcasts/screens/broadcast_feed_screen.dart';
@@ -56,6 +57,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
     setState(() => isLoading = true);
     final questions = await QuestionService.getMyQuestions(
       userId: widget.user.id?.toString(),
+      user: widget.user,
       token: widget.user.token,
     );
     if (mounted) {
@@ -69,7 +71,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final activeTickets = myQuestions.where((q) => q.isActive).toList();
-    final openTickets = myQuestions.where((q) => q.ticketStatus == TicketStatus.open || q.ticketStatus == TicketStatus.offHoursQueue).toList();
+    final openTickets = myQuestions.where((q) => q.isActive && (q.ticketStatus == TicketStatus.open || q.ticketStatus == TicketStatus.offHoursQueue)).toList();
     final inProgressTickets = myQuestions.where((q) => q.isActive && q.ticketStatus != TicketStatus.open && q.ticketStatus != TicketStatus.offHoursQueue).toList();
     final closedTickets = myQuestions.where((q) => q.isClosed).toList();
 
@@ -91,11 +93,16 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
         break;
     }
 
+    final statusFilteredQuestions = displayedTickets;
+
     // 2. Filter by Category
     if (_selectedCategoryFilter != 'all') {
-      displayedTickets = displayedTickets
-          .where((q) => q.displayCategory.toLowerCase().contains(_selectedCategoryFilter.toLowerCase()))
-          .toList();
+      final catQuery = _selectedCategoryFilter.toLowerCase();
+      displayedTickets = displayedTickets.where((q) {
+        return q.displayCategory.toLowerCase().contains(catQuery) ||
+            (q.kategoriLayanan ?? '').toLowerCase().contains(catQuery) ||
+            (q.tugasFungsiNama ?? '').toLowerCase().contains(catQuery);
+      }).toList();
     }
 
     // 3. Filter by Search Query
@@ -316,14 +323,22 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                         _buildCategoryFilterChip(
                           id: 'all',
                           label: 'Semua Kategori',
+                          count: statusFilteredQuestions.length,
                         ),
                         const SizedBox(width: 6),
                         ...ServiceCategoryCatalog.defaultCategories.map((cat) {
+                          final catCount = statusFilteredQuestions.where((q) {
+                            final catQuery = cat.nama.toLowerCase();
+                            return q.displayCategory.toLowerCase().contains(catQuery) ||
+                                (q.kategoriLayanan ?? '').toLowerCase().contains(catQuery) ||
+                                (q.tugasFungsiNama ?? '').toLowerCase().contains(catQuery);
+                          }).length;
                           return Padding(
                             padding: const EdgeInsets.only(right: 6),
                             child: _buildCategoryFilterChip(
                               id: cat.nama,
                               label: cat.nama,
+                              count: catCount,
                             ),
                           );
                         }),
@@ -337,26 +352,55 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        _selectedStatusFilter == 'closed'
-                            ? 'Daftar Tiket Selesai'
-                            : _selectedStatusFilter == 'open'
-                                ? 'Daftar Tiket Belum Ditangani'
-                                : _selectedStatusFilter == 'in_progress'
-                                    ? 'Daftar Tiket Sedang Ditangani'
-                                    : 'Daftar Tiket Aktif',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.colorText,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _selectedStatusFilter == 'closed'
+                                  ? 'Daftar Tiket Selesai'
+                                  : _selectedStatusFilter == 'open'
+                                      ? 'Daftar Tiket Belum Ditangani'
+                                      : _selectedStatusFilter == 'in_progress'
+                                          ? 'Daftar Tiket Sedang Ditangani'
+                                          : 'Daftar Tiket Aktif',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.colorText,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _selectedStatusFilter == 'closed'
+                                  ? 'Menampilkan riwayat tiket selesai'
+                                  : _selectedStatusFilter == 'open'
+                                      ? 'Menampilkan antrean tiket baru belum ditangani'
+                                      : _selectedStatusFilter == 'in_progress'
+                                          ? 'Menampilkan tiket sedang dalam proses penanganan'
+                                          : 'Menampilkan semua tiket aktif (belum selesai)',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.colorTextMuted,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Text(
-                        '${displayedTickets.length} Tiket',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.colorTextMuted,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.colorPrimary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppRadius.full),
+                          border: Border.all(color: AppColors.colorPrimary.withValues(alpha: 0.3)),
+                        ),
+                        child: Text(
+                          '${displayedTickets.length} Tiket',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.colorPrimary,
+                          ),
                         ),
                       ),
                     ],
@@ -411,6 +455,30 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                             textAlign: TextAlign.center,
                             style: const TextStyle(fontSize: 11, color: AppColors.colorTextMuted),
                           ),
+                          if (_selectedCategoryFilter != 'all' || _searchQuery.isNotEmpty || _selectedStatusFilter != 'all_active') ...[
+                            const SizedBox(height: 12),
+                            OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppColors.colorPrimary,
+                                side: const BorderSide(color: AppColors.colorPrimary),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                                ),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              icon: const Icon(Icons.refresh_rounded, size: 14),
+                              label: const Text('Tampilkan Semua Tiket Aktif', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _selectedStatusFilter = 'all_active';
+                                  _selectedCategoryFilter = 'all';
+                                  _searchQuery = '';
+                                });
+                              },
+                            ),
+                          ],
                         ],
                       ),
                     )
@@ -442,7 +510,65 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
 
                   const SizedBox(height: 18),
 
-                  // 7. Pengumuman LKSDM (Compact Banner di Bawah List)
+                  // 7. Buku Saku Tupoksi 14 Tim BOSDM (Khusus Sivitas di Halaman Beranda)
+                  InkWell(
+                    key: const ValueKey('member_buku_saku_beranda'),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    onTap: () => TupoksiBottomSheet.show(context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2563EB),
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                            ),
+                            child: const Icon(Icons.menu_book_rounded, color: Colors.white, size: 18),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Buku Saku Tupoksi 14 Tim BOSDM',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12.5,
+                                    color: Color(0xFF1E3A8A),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'Panduan tugas, fungsi & alur layanan resmi kepegawaian',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    color: Color(0xFF3B82F6),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right, size: 20, color: Color(0xFF1E3A8A)),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // 8. Pengumuman LKSDM (Compact Banner di Bawah List)
                   InkWell(
                     borderRadius: BorderRadius.circular(AppRadius.md),
                     onTap: () {
@@ -528,6 +654,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
   }) {
     final isSelected = _selectedStatusFilter == id;
     return InkWell(
+      key: ValueKey('bullet_filter_$id'),
       onTap: () => setState(() => _selectedStatusFilter = id),
       borderRadius: BorderRadius.circular(AppRadius.full),
       child: AnimatedContainer(
@@ -586,13 +713,18 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
   Widget _buildCategoryFilterChip({
     required String id,
     required String label,
+    required int count,
   }) {
     final isSelected = _selectedCategoryFilter == id;
     return InkWell(
       key: ValueKey('member_category_filter_$id'),
       onTap: () {
         setState(() {
-          _selectedCategoryFilter = id;
+          if (_selectedCategoryFilter == id) {
+            _selectedCategoryFilter = 'all';
+          } else {
+            _selectedCategoryFilter = id;
+          }
         });
       },
       borderRadius: BorderRadius.circular(AppRadius.full),
@@ -622,6 +754,22 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                 fontSize: 10.5,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 color: isSelected ? Colors.white : AppColors.colorText,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.white.withValues(alpha: 0.25) : AppColors.slate200,
+                borderRadius: BorderRadius.circular(AppRadius.full),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? Colors.white : AppColors.slate700,
+                ),
               ),
             ),
           ],

@@ -106,6 +106,9 @@ enum TicketStatus {
     }
   }
 
-  bool get isClosed => this == TicketStatus.closed || this == TicketStatus.cancelled;
-  bool get isActive => this != TicketStatus.closed && this != TicketStatus.cancelled;
+  bool get isClosed =>
+      this == TicketStatus.closed ||
+      this == TicketStatus.resolved ||
+      this == TicketStatus.cancelled;
+  bool get isActive => !isClosed;
 }

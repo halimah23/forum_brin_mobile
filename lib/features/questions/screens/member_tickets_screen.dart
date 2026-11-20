@@ -5,6 +5,7 @@ import '../../../core/constants/app_typography.dart';
 import '../../../core/widgets/search_filter_bar.dart';
 import '../../auth/models/user_model.dart';
 import '../models/question_model.dart';
+import '../models/ticket_status.dart';
 import '../services/question_service.dart';
 import '../widgets/question_card.dart';
 import 'ask_question_screen.dart';
@@ -37,9 +38,9 @@ class _MemberTicketsScreenState extends State<MemberTicketsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(
-      length: 2,
+      length: 4,
       vsync: this,
-      initialIndex: widget.initialTabIndex.clamp(0, 1),
+      initialIndex: widget.initialTabIndex.clamp(0, 3),
     );
     _loadTickets();
   }
@@ -55,6 +56,7 @@ class _MemberTicketsScreenState extends State<MemberTicketsScreen>
     try {
       final questions = await QuestionService.getMyQuestions(
         userId: widget.user.id?.toString(),
+        user: widget.user,
         token: widget.user.token,
       );
       if (mounted) {
@@ -72,26 +74,22 @@ class _MemberTicketsScreenState extends State<MemberTicketsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final activeTickets = _allQuestions.where((q) => q.isActive).toList();
+    final allActiveTickets = _allQuestions.where((q) => q.isActive).toList();
+    final openTickets = _allQuestions.where((q) => q.isActive && (q.ticketStatus == TicketStatus.open || q.ticketStatus == TicketStatus.offHoursQueue)).toList();
+    final inProgressTickets = _allQuestions.where((q) => q.isActive && q.ticketStatus != TicketStatus.open && q.ticketStatus != TicketStatus.offHoursQueue).toList();
     final closedTickets = _allQuestions.where((q) => q.isClosed).toList();
 
-    final filteredActiveTickets = activeTickets.where((q) {
-      if (_searchQuery.isEmpty) return true;
-      final matchTitle = q.judul.toLowerCase().contains(_searchQuery);
-      final matchContent = q.isi.toLowerCase().contains(_searchQuery);
-      final matchTicket = (q.ticketNumber ?? '').toLowerCase().contains(_searchQuery);
-      final matchTeam = (q.targetTim ?? '').toLowerCase().contains(_searchQuery);
-      return matchTitle || matchContent || matchTicket || matchTeam;
-    }).toList();
-
-    final filteredClosedTickets = closedTickets.where((q) {
-      if (_searchQuery.isEmpty) return true;
-      final matchTitle = q.judul.toLowerCase().contains(_searchQuery);
-      final matchContent = q.isi.toLowerCase().contains(_searchQuery);
-      final matchTicket = (q.ticketNumber ?? '').toLowerCase().contains(_searchQuery);
-      final matchTeam = (q.targetTim ?? '').toLowerCase().contains(_searchQuery);
-      return matchTitle || matchContent || matchTicket || matchTeam;
-    }).toList();
+    List<QuestionModel> filterBySearch(List<QuestionModel> list) {
+      if (_searchQuery.isEmpty) return list;
+      return list.where((q) {
+        final matchTitle = q.judul.toLowerCase().contains(_searchQuery);
+        final matchContent = q.isi.toLowerCase().contains(_searchQuery);
+        final matchTicket = (q.ticketNumber ?? '').toLowerCase().contains(_searchQuery);
+        final matchTeam = (q.targetTimPusat ?? q.targetTim ?? '').toLowerCase().contains(_searchQuery);
+        final matchCat = q.displayCategory.toLowerCase().contains(_searchQuery);
+        return matchTitle || matchContent || matchTicket || matchTeam || matchCat;
+      }).toList();
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -115,59 +113,13 @@ class _MemberTicketsScreenState extends State<MemberTicketsScreen>
           unselectedLabelColor: AppColors.colorTextMuted,
           indicatorColor: AppColors.colorPrimary,
           indicatorWeight: 3,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           tabs: [
-            Tab(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Tiket Aktif'),
-                  if (!_isLoading && activeTickets.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '${activeTickets.length}',
-                        style: const TextStyle(
-                          color: AppColors.colorPrimary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Tab(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Tiket Selesai'),
-                  if (!_isLoading && closedTickets.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0x33FFFFFF),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        '${closedTickets.length}',
-                        style: const TextStyle(
-                          color: AppColors.colorSecondaryStrong,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+            _buildTabItem(label: 'Semua Aktif', count: allActiveTickets.length),
+            _buildTabItem(label: 'Belum Ditangani', count: openTickets.length),
+            _buildTabItem(label: 'Sedang Ditangani', count: inProgressTickets.length),
+            _buildTabItem(label: 'Selesai', count: closedTickets.length),
           ],
         ),
       ),
@@ -190,7 +142,7 @@ class _MemberTicketsScreenState extends State<MemberTicketsScreen>
                     controller: _tabController,
                     children: [
                       _buildTicketListView(
-                        tickets: filteredActiveTickets,
+                        tickets: filterBySearch(allActiveTickets),
                         emptyTitle: _searchQuery.isNotEmpty
                             ? 'Tiket tidak ditemukan'
                             : 'Tidak ada tiket aktif',
@@ -203,7 +155,33 @@ class _MemberTicketsScreenState extends State<MemberTicketsScreen>
                         showAskButton: _searchQuery.isEmpty,
                       ),
                       _buildTicketListView(
-                        tickets: filteredClosedTickets,
+                        tickets: filterBySearch(openTickets),
+                        emptyTitle: _searchQuery.isNotEmpty
+                            ? 'Tiket tidak ditemukan'
+                            : 'Tidak ada tiket belum ditangani',
+                        emptySubtitle: _searchQuery.isNotEmpty
+                            ? 'Tidak ada tiket baru yang sesuai dengan pencarian "$_searchQuery".'
+                            : 'Semua tiket baru Anda telah mulai diproses oleh tim layanan.',
+                        emptyIcon: _searchQuery.isNotEmpty
+                            ? Icons.search_off_rounded
+                            : Icons.hourglass_empty_rounded,
+                        showAskButton: false,
+                      ),
+                      _buildTicketListView(
+                        tickets: filterBySearch(inProgressTickets),
+                        emptyTitle: _searchQuery.isNotEmpty
+                            ? 'Tiket tidak ditemukan'
+                            : 'Tidak ada tiket sedang ditangani',
+                        emptySubtitle: _searchQuery.isNotEmpty
+                            ? 'Tidak ada tiket sedang ditangani yang sesuai dengan pencarian "$_searchQuery".'
+                            : 'Belum ada tiket yang sedang diproses atau ditangani tim saat ini.',
+                        emptyIcon: _searchQuery.isNotEmpty
+                            ? Icons.search_off_rounded
+                            : Icons.support_agent_rounded,
+                        showAskButton: false,
+                      ),
+                      _buildTicketListView(
+                        tickets: filterBySearch(closedTickets),
                         emptyTitle: _searchQuery.isNotEmpty
                             ? 'Tiket tidak ditemukan'
                             : 'Belum ada tiket selesai',
@@ -220,6 +198,35 @@ class _MemberTicketsScreenState extends State<MemberTicketsScreen>
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _buildTabItem({required String label, required int count}) {
+    return Tab(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label),
+          if (!_isLoading) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+              decoration: BoxDecoration(
+                color: count > 0 ? AppColors.colorPrimary.withValues(alpha: 0.12) : AppColors.slate200,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  color: count > 0 ? AppColors.colorPrimary : AppColors.slate600,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 

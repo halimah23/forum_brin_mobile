@@ -9,6 +9,7 @@ import '../models/category_model.dart';
 import '../models/question_model.dart';
 import '../models/service_category_model.dart';
 import '../../notifications/services/notification_service.dart';
+import '../../auth/models/user_model.dart';
 import '../../../core/utils/operational_hours_helper.dart';
 
 class QuestionService {
@@ -119,6 +120,11 @@ class QuestionService {
     String? token,
   }) async {
     try {
+      try {
+        Supabase.instance.client;
+      } catch (_) {
+        return [];
+      }
       // 1. Ambil pertanyaan beserta profil pembuat dan tugas fungsi
       PostgrestFilterBuilder<List<Map<String, dynamic>>> buildQuery(String selectClause) {
         var q = _client.from('questions').select(selectClause);
@@ -456,12 +462,16 @@ class QuestionService {
   /// Ambil pertanyaan milik Sivitas yang sedang login
   static Future<List<QuestionModel>> getMyQuestions({
     String? userId,
+    UserModel? user,
     String? statusFilter,
     String? token,
   }) async {
-    final currentUserId = userId ??
-        _client.auth.currentUser?.id ??
-        (await SessionManager.getUser())?.id?.toString();
+    String? currentUserId = userId ?? user?.id?.toString();
+    if (currentUserId == null || currentUserId.isEmpty) {
+      try {
+        currentUserId = (await SessionManager.getUser())?.id?.toString();
+      } catch (_) {}
+    }
     return getQuestions(
       userIdFilter: currentUserId,
       statusFilter: statusFilter,
