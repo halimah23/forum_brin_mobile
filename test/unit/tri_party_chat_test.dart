@@ -17,11 +17,11 @@ void main() {
         'target_tim': 'Tim Mutasi dan Pengelolaan JF 1',
         'is_public': true,
         'created_at': '2026-10-01T10:00:00Z',
-        'profiles': {
-          'id': '77777777-7777-7777-7777-777777777777',
-          'name': 'Budi Pegawai',
+        'users': {
+          'id_user': 'usr_001',
+          'first_name': 'Budi Pegawai',
           'email': 'pegawai@brin.go.id',
-          'role': 'pegawai',
+          'role': 'sivitas',
         },
       };
 

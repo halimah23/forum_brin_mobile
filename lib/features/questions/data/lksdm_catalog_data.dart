@@ -199,37 +199,4 @@ class LksdmCatalogData {
       catatan: 'Pengelolaan SDM DPKI di KST Cibinong & KKI ditarik ke pengelolaan LKSDM 8.',
     ),
   ];
-
-  /// Identifikasi LKSDM 1 - 8 secara otomatis berdasarkan unit/lokasi kerja pegawai
-  static LksdmItem identifyLksdmFromUserUnit(String? unit, [String? location]) {
-    final query = '${unit ?? ""} ${location ?? ""}'.toLowerCase();
-
-    if (query.contains('pusdatin') || query.contains('inspektorat') || query.contains('rawamangun') || query.contains('gunung sindur') || query.contains('magelang') || query.contains('makassar')) {
-      return allLksdm[0]; // LKSDM 1
-    }
-    if (query.contains('dkp') || query.contains('dkri') || query.contains('drid') || query.contains('dfri') || query.contains('dpri') || query.contains('dsdmi') || query.contains('pasar jumat') || query.contains('ancol')) {
-      return allLksdm[1]; // LKSDM 2
-    }
-    if (query.contains('gatot subroto') || query.contains('gastu') || query.contains('abastra') || query.contains('tpkekm') || query.contains('ipsh') || query.contains('pasar minggu') || query.contains('ambon')) {
-      return allLksdm[2]; // LKSDM 3
-    }
-    if (query.contains('tanjung bintang') || query.contains('or tn') || query.contains('or em')) {
-      return allLksdm[3]; // LKSDM 4
-    }
-    if (query.contains('rumpin') || query.contains('rancabungur') || query.contains('tarogong') || query.contains('or nm') || query.contains('or pa')) {
-      return allLksdm[4]; // LKSDM 5
-    }
-    if (query.contains('or kes') || query.contains('or hl') || query.contains('cibinong')) {
-      return allLksdm[5]; // LKSDM 6
-    }
-    if (query.contains('bandung') || query.contains('cisitu') || query.contains('subang') || query.contains('or ei') || query.contains('orkm') || query.contains('ksl') || query.contains('biak') || query.contains('agam') || query.contains('parepare')) {
-      return allLksdm[6]; // LKSDM 7
-    }
-    if (query.contains('polteknuklir') || query.contains('babarsari') || query.contains('gunung kidul') || query.contains('surabaya') || query.contains('yogyakarta') || query.contains('kki') || query.contains('kebun raya') || query.contains('or pp')) {
-      return allLksdm[7]; // LKSDM 8
-    }
-
-    // Default LKSDM 1 jika tidak ada kata kunci spesifik
-    return allLksdm[0];
-  }
 }

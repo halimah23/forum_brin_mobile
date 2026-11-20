@@ -5,7 +5,6 @@ import '../../../core/services/storage/session_manager.dart';
 import '../data/service_category_catalog.dart';
 import '../data/tusi_catalog_data.dart';
 import '../models/answer_model.dart';
-import '../models/category_model.dart';
 import '../models/question_model.dart';
 import '../models/service_category_model.dart';
 import '../../notifications/services/notification_service.dart';
@@ -41,72 +40,6 @@ class QuestionService {
   /// Helper untuk menentukan Nama Tim berdasarkan Kode atau Nama Tugas & Fungsi
   static String determineTeamName(String? categoryName) {
     return TusiCatalogData.resolveTeam(categoryName);
-  }
-
-  /// Ambil daftar seluruh 15 Tim BOSDM
-  static Future<List<String>> getTeams() async {
-    try {
-      final response = await _client.from('teams').select();
-      final list = response
-          .map((item) => (item['detail_nama_tim'] ?? item['tim'] ?? item['nama'])?.toString() ?? '')
-          .where((name) => name.isNotEmpty)
-          .toList();
-      if (list.isNotEmpty) return list;
-    } catch (_) {
-      // Gunakan fallback lokal jika tabel teams belum diisi
-    }
-    return TusiCatalogData.allTeams;
-  }
-
-  /// Ambil daftar Tugas & Fungsi (bisa difilter per Tim)
-  static Future<List<CategoryModel>> getTugasFungsi({
-    String? teamName,
-    String? token,
-  }) async {
-    try {
-      if (teamName != null && teamName.isNotEmpty) {
-        // Query via relasi team_tusi
-        try {
-          final response = await _client
-              .from('team_tusi')
-              .select('tugas_fungsi:id_tusi(*), teams:id_tim(*)')
-              .or('teams.tim.ilike.%$teamName%,teams.detail_nama_tim.ilike.%$teamName%');
-          final list = response.map((item) {
-            final tusi = item['tugas_fungsi'] as Map<String, dynamic>? ?? {};
-            final team = item['teams'] as Map<String, dynamic>? ?? {};
-            return CategoryModel(
-              id: int.tryParse(tusi['id_tusi']?.toString().replaceAll(RegExp(r'[^0-9]'), '') ?? '') ?? 0,
-              idTusi: tusi['id_tusi']?.toString(),
-              nama: tusi['tugas_fungsi']?.toString() ?? '-',
-              kode: tusi['id_tusi']?.toString(),
-              teamName: team['detail_nama_tim']?.toString() ?? team['tim']?.toString(),
-            );
-          }).toList();
-          if (list.isNotEmpty) return list;
-        } catch (_) {}
-
-        var query = _client.from('tugas_fungsi').select();
-        query = query.ilike('team_nama', '%$teamName%');
-        final response = await query;
-        final list = response
-            .map((item) => CategoryModel.fromJson(Map<String, dynamic>.from(item)))
-            .toList();
-        if (list.isNotEmpty) return list;
-      } else {
-        final response = await _client.from('tugas_fungsi').select();
-        final list = response
-            .map((item) => CategoryModel.fromJson(Map<String, dynamic>.from(item)))
-            .toList();
-        if (list.isNotEmpty) return list;
-      }
-    } catch (_) {
-      // Fallback lokal
-    }
-
-    if (teamName != null && teamName.isNotEmpty) {
-      return TusiCatalogData.getTugasFungsiByTeam(teamName);
-    }
-    return TusiCatalogData.allTugasFungsi;
   }
 
   /// Ambil seluruh pertanyaan / tiket dengan filter opsional (Tim, Status, Kategori, dsb)
@@ -1042,25 +975,6 @@ class QuestionService {
     }
   }
 
-  /// Disposisi Tiket oleh Ketua Tim ke Anggota Tim / Staf Teknis
-  static Future<bool> disposisiTicket({
-    required int questionId,
-    required String namaPetugas,
-    String? catatanDisposisi,
-  }) async {
-    try {
-      await _safeUpdateQuestion(questionId, {
-        'status': 'ditangani_lksdm',
-        'assigned_to': namaPetugas,
-        'updated_at': DateTime.now().toIso8601String(),
-      });
-
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
   /// Eskalasikan Tiket dari Staf Admin LKSDM ke Tim Pusat (1 dari 14 Tim) -> Mengaktifkan Bubble Chat 3 Pihak
   static Future<bool> escalateToCentralTeam({
     required int questionId,
@@ -1729,39 +1643,6 @@ class QuestionService {
     }
   }
 
-  /// Cek apakah Pegawai sudah memiliki tiket berstatus aktif pada Tusi yang sama
-  static Future<QuestionModel?> getActiveTicketByTusi({
-    required String userId,
-    required String tusiNama,
-  }) async {
-    try {
-      final response = await _client
-          .from('questions')
-          .select('''
-        id,
-        ticket_number,
-        judul,
-        isi,
-        status,
-        target_tim_pusat,
-        tugas_fungsi_nama,
-        is_public,
-        created_at
-      ''')
-          .eq('user_id', userId)
-          .ilike('tugas_fungsi_nama', '%$tusiNama%')
-          .neq('status', 'selesai')
-          .order('created_at', ascending: false)
-          .limit(1);
-
-      if (response.isNotEmpty) {
-        return QuestionModel.fromJson(
-            Map<String, dynamic>.from(response.first));
-      }
-    } catch (_) {}
-    return null;
-  }
-
   /// Menghitung jumlah tiket aktif milik pengguna (status belum selesai/dibatalkan)
   /// Digunakan untuk memastikan batas kuota maksimal 10 tiket aktif per pegawai.
   static Future<int> getUserActiveTicketCount({required String userId}) async {
@@ -2033,94 +1914,6 @@ class QuestionService {
     }
   }
 
-  /// Memberikan Tanggapan oleh Staf Admin LKSDM / Admin Pusat / Ketua Tim
-  /// (Hanya Pegawai yang berhak mengakhiri dan menandai tiket sebagai 'selesai')
-  static Future<bool> answerAndResolveTicket({
-    required int questionId,
-    required String penjawabNama,
-    required String penjawabRole,
-    required String isiJawaban,
-    String? senderRoleType,
-    String? attachmentUrl,
-    String? currentStatus,
-    bool markResolved = false,
-    String? questionAuthorId,
-  }) async {
-    try {
-      final currentUser = _client.auth.currentUser;
-      String? userId = currentUser?.id;
-      if (userId == null || !_isValidUuid(userId)) {
-        final savedUser = await SessionManager.getUser();
-        if (savedUser?.id != null && _isValidUuid(savedUser!.id!)) {
-          userId = savedUser.id;
-        }
-      }
-
-      final String validSenderRole;
-      final roleToCheck = (senderRoleType ?? penjawabRole).toLowerCase();
-      if (roleToCheck.contains('pusat')) {
-        validSenderRole = 'admin_pusat';
-      } else if (roleToCheck.contains('lksdm')) {
-        validSenderRole = 'admin_lksdm';
-      } else if (roleToCheck.contains('ketua')) {
-        validSenderRole = 'ketua_tim';
-      } else if (roleToCheck.contains('sistem') ||
-          roleToCheck.contains('system')) {
-        validSenderRole = 'system';
-      } else {
-        validSenderRole = 'pegawai';
-      }
-
-      // 1. Simpan jawaban ke tabel answers
-      await _safeInsertAnswer({
-        'question_id': questionId,
-        if (userId != null && _isValidUuid(userId)) 'user_id': userId,
-        'sender_name': penjawabNama,
-        'sender_role': validSenderRole,
-        'isi_pesan': isiJawaban,
-        if (attachmentUrl != null) 'attachment_url': attachmentUrl,
-      });
-
-      // 2. Update status pertanyaan:
-      final nextStatus = markResolved
-          ? 'selesai'
-          : ((currentStatus == 'dialihkan_ke_pusat' ||
-                  currentStatus == 'eskalasi_pusat')
-              ? 'dialihkan_ke_pusat'
-              : 'ditangani_lksdm');
-
-      final updateMap = <String, dynamic>{
-        'status': nextStatus,
-        'updated_at': DateTime.now().toIso8601String(),
-      };
-      if (nextStatus == 'selesai') {
-        updateMap['resolved_at'] = DateTime.now().toIso8601String();
-      }
-
-      await _safeUpdateQuestion(questionId, updateMap);
-
-      // 3. Trigger notifikasi in-app ke pembuat tiket
-      if (questionAuthorId != null && questionAuthorId.isNotEmpty) {
-        NotificationService.createNotification(
-          userId: questionAuthorId,
-          questionId: questionId,
-          title: markResolved
-              ? 'Tiket Telah Selesai'
-              : 'Tanggapan Baru untuk Tiket',
-          message: markResolved
-              ? 'Pertanyaan Anda telah selesai ditangani. Mohon luangkan waktu untuk mengisi survei kepuasan layanan.'
-              : '$penjawabNama ($penjawabRole) telah memberikan jawaban pada tiket Anda.',
-          type: markResolved ? 'tiket_selesai' : 'jawaban_baru',
-        );
-      }
-
-      return true;
-    } catch (e) {
-      debugPrint('Error answering ticket: $e');
-      return false;
-    }
-  }
-
   /// Kirim penilaian kepuasan layanan (CSAT) untuk tiket yang telah selesai
   static Future<bool> submitRating({
     required int questionId,
@@ -2150,35 +1943,6 @@ class QuestionService {
       return true;
     } catch (e) {
       debugPrint('Error submitRating: $e');
-      return false;
-    }
-  }
-
-  /// Menandai tiket selesai oleh Pegawai
-  static Future<bool> resolveTicketByUser({
-    required int questionId,
-    String? questionAuthorId,
-  }) async {
-    try {
-      final now = DateTime.now().toIso8601String();
-      await _safeUpdateQuestion(questionId, {
-        'status': 'selesai',
-        'resolved_at': now,
-        'updated_at': now,
-      });
-      if (questionAuthorId != null && questionAuthorId.isNotEmpty) {
-        NotificationService.createNotification(
-          userId: questionAuthorId,
-          questionId: questionId,
-          title: 'Tiket Telah Selesai',
-          message:
-              'Tiket konsultasi Anda telah diselesaikan. Silakan berikan penilaian kepuasan layanan.',
-          type: 'tiket_selesai',
-        );
-      }
-      return true;
-    } catch (e) {
-      debugPrint('Error resolveTicketByUser: $e');
       return false;
     }
   }
@@ -2219,7 +1983,7 @@ class QuestionService {
     } catch (_) {}
   }
 
-  /// Mengambil detail profil pengguna lengkap (untuk popup profil di chat)
+  /// Mengambil detail profil pengguna lengkap dari `public.users` (untuk popup profil di chat)
   static Future<Map<String, dynamic>?> getUserProfileDetails({
     String? userId,
     String? userName,
@@ -2232,15 +1996,6 @@ class QuestionService {
               .from('users')
               .select('*, teams:id_tim(*)')
               .eq('id_user', userId)
-              .maybeSingle();
-          if (res != null) return Map<String, dynamic>.from(res);
-        } catch (_) {}
-
-        try {
-          final res = await _client
-              .from('profiles')
-              .select()
-              .eq('id', userId)
               .maybeSingle();
           if (res != null) return Map<String, dynamic>.from(res);
         } catch (_) {}

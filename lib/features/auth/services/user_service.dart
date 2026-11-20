@@ -124,7 +124,7 @@ class UserService {
       debugPrint('Notice Supabase Auth signUp: $authError');
     }
 
-    // 2. Simpan record pengguna ke tabel `users` atau fallback `profiles`
+    // 2. Simpan record pengguna ke tabel `public.users`
     final newUserData = {
       'id_user': assignedId,
       'first_name': cleanName,
@@ -135,27 +135,11 @@ class UserService {
       'jabatan': cleanJabatan,
     };
 
-    try {
-      await _client.from('users').upsert(newUserData);
-      return UserModel.fromJson(newUserData);
-    } catch (e) {
-      debugPrint('Notice insert to users failed, trying profiles: $e');
-      final legacyData = {
-        'id': assignedId,
-        'name': cleanName,
-        'email': cleanEmail,
-        'role': dbRole,
-        'unit': cleanUnit,
-        'tim': cleanTim,
-        'jabatan': cleanJabatan,
-        'created_at': DateTime.now().toIso8601String(),
-      };
-      await _client.from('profiles').upsert(legacyData);
-      return UserModel.fromJson(legacyData);
-    }
+    await _client.from('users').upsert(newUserData);
+    return UserModel.fromJson(newUserData);
   }
 
-  /// Mengedit data profil akun pengguna di Supabase
+  /// Mengedit data profil akun pengguna di tabel `public.users` Supabase
   static Future<bool> updateUser({
     required String id,
     required String name,
@@ -166,32 +150,19 @@ class UserService {
   }) async {
     final cleanName = name.trim();
     final cleanUnit = unit.trim();
-    final cleanTim = tim.trim();
     final cleanJabatan = jabatan.trim();
     final dbRole = _mapRoleToDbString(role);
 
-    try {
-      await _client.from('users').update({
-        'first_name': cleanName,
-        'role': dbRole,
-        'satuan_kerja': cleanUnit,
-        'jabatan': cleanJabatan,
-      }).eq('id_user', id);
-      return true;
-    } catch (_) {
-      final updateData = {
-        'name': cleanName,
-        'role': dbRole,
-        'unit': cleanUnit,
-        'tim': cleanTim,
-        'jabatan': cleanJabatan,
-      };
-      await _client.from('profiles').update(updateData).eq('id', id);
-      return true;
-    }
+    await _client.from('users').update({
+      'first_name': cleanName,
+      'role': dbRole,
+      'satuan_kerja': cleanUnit,
+      'jabatan': cleanJabatan,
+    }).eq('id_user', id);
+    return true;
   }
 
-  /// Menghapus akun pengguna dari tabel `public.users` atau `public.profiles` di Supabase secara permanen
+  /// Menghapus akun pengguna dari tabel `public.users` di Supabase secara permanen
   static Future<bool> deleteUser({
     required String userId,
     required String currentSuperAdminId,
@@ -201,38 +172,23 @@ class UserService {
       throw Exception('Tindakan ditolak: Anda tidak dapat menghapus akun Superadmin Anda sendiri.');
     }
 
-    try {
-      await _client.from('users').delete().eq('id_user', userId);
-      return true;
-    } catch (_) {
-      await _client.from('profiles').delete().eq('id', userId);
-      return true;
-    }
+    await _client.from('users').delete().eq('id_user', userId);
+    return true;
   }
 
-  /// Memperbarui foto profil pengguna di tabel `public.users` dan `public.profiles`
+  /// Memperbarui foto profil pengguna di tabel `public.users`
   static Future<bool> updateProfilePhoto({
     required String userId,
     required String photoUrl,
   }) async {
-    bool updatedInUsers = false;
     try {
       await _client.from('users').update({
         'photo_url': photoUrl,
       }).eq('id_user', userId);
-      updatedInUsers = true;
-    } catch (e) {
-      debugPrint('Notice updating photo_url on users: $e');
-    }
-
-    try {
-      await _client.from('profiles').update({
-        'photo_url': photoUrl,
-      }).eq('id', userId);
       return true;
     } catch (e) {
-      debugPrint('Notice updating photo_url on profiles: $e');
-      return updatedInUsers;
+      debugPrint('Notice updating photo_url on users: $e');
+      return false;
     }
   }
 }

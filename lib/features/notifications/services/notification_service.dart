@@ -7,9 +7,6 @@ import '../models/notification_model.dart';
 class NotificationService {
   static SupabaseClient get _client => Supabase.instance.client;
 
-  // Fallback in-memory jika tabel notifications belum dibuat di Supabase
-  static final List<NotificationModel> _fallbackNotifications = [];
-
   static RealtimeChannel? _notificationChannel;
   static String? _activeSubscribedUserId;
 
@@ -90,7 +87,7 @@ class NotificationService {
     }
   }
 
-  /// Ambil daftar seluruh notifikasi milik user
+  /// Ambil daftar seluruh notifikasi milik user dari Supabase
   static Future<List<NotificationModel>> getNotifications(String userId) async {
     try {
       final response = await _client
@@ -104,11 +101,8 @@ class NotificationService {
 
       return list.map((item) => NotificationModel.fromJson(item)).toList();
     } catch (e) {
-      debugPrint('Fallback getNotifications: $e');
-      return _fallbackNotifications
-          .where((n) => n.userId == userId)
-          .toList()
-        ..sort((a, b) => (b.createdAt ?? '').compareTo(a.createdAt ?? ''));
+      debugPrint('Error getNotifications: $e');
+      return [];
     }
   }
 
@@ -122,10 +116,9 @@ class NotificationService {
           .eq('is_read', false);
 
       return (response as List).length;
-    } catch (_) {
-      return _fallbackNotifications
-          .where((n) => n.userId == userId && !n.isRead)
-          .length;
+    } catch (e) {
+      debugPrint('Error getUnreadCount: $e');
+      return 0;
     }
   }
 
@@ -137,14 +130,9 @@ class NotificationService {
           .update({'is_read': true})
           .eq('id', notificationId);
       return true;
-    } catch (_) {
-      final idx =
-          _fallbackNotifications.indexWhere((n) => n.id == notificationId);
-      if (idx != -1) {
-        _fallbackNotifications[idx] =
-            _fallbackNotifications[idx].copyWith(isRead: true);
-      }
-      return true;
+    } catch (e) {
+      debugPrint('Error markAsRead: $e');
+      return false;
     }
   }
 
@@ -157,18 +145,13 @@ class NotificationService {
           .eq('user_id', userId)
           .eq('is_read', false);
       return true;
-    } catch (_) {
-      for (int i = 0; i < _fallbackNotifications.length; i++) {
-        if (_fallbackNotifications[i].userId == userId) {
-          _fallbackNotifications[i] =
-              _fallbackNotifications[i].copyWith(isRead: true);
-        }
-      }
-      return true;
+    } catch (e) {
+      debugPrint('Error markAllAsRead: $e');
+      return false;
     }
   }
 
-  /// Buat notifikasi baru
+  /// Buat notifikasi baru di Supabase
   static Future<NotificationModel?> createNotification({
     required String userId,
     int? questionId,
@@ -203,20 +186,10 @@ class NotificationService {
             .select()
             .single();
         return NotificationModel.fromJson(res);
-      } catch (_) {}
-      debugPrint('Fallback createNotification: $e');
-      final fallbackItem = NotificationModel(
-        id: DateTime.now().millisecondsSinceEpoch,
-        userId: userId,
-        questionId: questionId,
-        title: title,
-        message: message,
-        type: type,
-        isRead: false,
-        createdAt: DateTime.now().toIso8601String(),
-      );
-      _fallbackNotifications.insert(0, fallbackItem);
-      return fallbackItem;
+      } catch (retryError) {
+        debugPrint('Error createNotification: $retryError');
+        return null;
+      }
     }
   }
 }

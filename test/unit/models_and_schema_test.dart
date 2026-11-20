@@ -127,19 +127,27 @@ void main() {
       expect(question.tugasFungsi!.first.idTusi, 'tusi_005');
     });
 
-    test('SQL migration file exists and contains all required SOP tables and seed rows', () {
-      final sqlFile = File('supabase/migrations/supabase_migration_sop_instansi.sql');
-      expect(sqlFile.existsSync(), isTrue);
+    test('Active SQL migration files exist and contain required master tables and seed rows', () {
+      final schemaFile = File('supabase/manual_migration/01_schema_master.sql');
+      final teamsSeedFile = File('supabase/manual_migration/05_seed_teams_and_tusi.sql');
+      final usersSeedFile = File('supabase/manual_migration/06_seed_users_240.sql');
+      expect(schemaFile.existsSync(), isTrue);
+      expect(teamsSeedFile.existsSync(), isTrue);
+      expect(usersSeedFile.existsSync(), isTrue);
 
-      final content = sqlFile.readAsStringSync();
-      expect(content, contains('CREATE TABLE public.teams'));
-      expect(content, contains('CREATE TABLE public.tugas_fungsi'));
-      expect(content, contains('CREATE TABLE public.team_tusi'));
-      expect(content, contains('CREATE TABLE public.users'));
-      expect(content, contains('usr_001'));
-      expect(content, contains('usr_240'));
-      expect(content, contains('tim_022'));
-      expect(content, contains('ts_091'));
+      final schemaContent = schemaFile.readAsStringSync();
+      expect(schemaContent, contains('public.teams'));
+      expect(schemaContent, contains('public.tugas_fungsi'));
+      expect(schemaContent, contains('public.team_tusi'));
+      expect(schemaContent, contains('public.users'));
+
+      final teamsSeed = teamsSeedFile.readAsStringSync();
+      expect(teamsSeed, contains('tim_022'));
+      expect(teamsSeed, contains('ts_091'));
+
+      final usersSeed = usersSeedFile.readAsStringSync();
+      expect(usersSeed, contains('usr_001'));
+      expect(usersSeed, contains('usr_240'));
     });
   });
 }

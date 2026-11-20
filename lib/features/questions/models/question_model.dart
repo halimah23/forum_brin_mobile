@@ -370,8 +370,6 @@ class QuestionModel {
       author = UserModel.fromJson(Map<String, dynamic>.from(json['users']));
     } else if (json['author'] is Map<String, dynamic>) {
       author = UserModel.fromJson(Map<String, dynamic>.from(json['author']));
-    } else if (json['profiles'] is Map<String, dynamic>) {
-      author = UserModel.fromJson(Map<String, dynamic>.from(json['profiles']));
     } else if (json['user'] is Map<String, dynamic>) {
       author = UserModel.fromJson(Map<String, dynamic>.from(json['user']));
     } else if (json['user'] != null) {

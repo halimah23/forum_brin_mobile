@@ -10,10 +10,6 @@ import '../models/broadcast_recipient_model.dart';
 class BroadcastService {
   static SupabaseClient get _client => Supabase.instance.client;
 
-  // Fallback in-memory list jika tabel belum dimigrasikan di Supabase
-  static final List<BroadcastModel> _fallbackBroadcasts = [];
-  static final List<Map<String, dynamic>> _fallbackRecipients = [];
-
   static String _generateUuid() {
     final random = Random.secure();
     final bytes = List<int>.generate(16, (_) => random.nextInt(256));
@@ -62,7 +58,7 @@ class BroadcastService {
     }
   }
 
-  /// Membuat dan menyiarkan broadcast baru
+  /// Membuat dan menyiarkan broadcast baru ke Supabase
   static Future<BroadcastModel?> createBroadcast({
     required UserModel sender,
     required String lksdmScope,
@@ -161,50 +157,8 @@ class BroadcastService {
         readCount: 0,
       );
     } catch (e) {
-      debugPrint('Error createBroadcast via Supabase, using fallback: $e');
-
-      // Fallback in-memory jika tabel belum tersedia
-      final fallbackItem = BroadcastModel(
-        id: broadcastId,
-        senderId: sender.id ?? 'sender-1',
-        senderName: sender.name,
-        senderRole: sender.role ?? 'Admin LKSDM',
-        lksdmScope: lksdmScope,
-        title: title,
-        content: content,
-        priority: priority,
-        targetType: targetType,
-        targetFilterValue: targetFilterValue,
-        attachmentUrl: attachmentUrl,
-        attachmentName: attachmentName,
-        attachmentSize: attachmentSize,
-        createdAt: nowStr,
-        updatedAt: nowStr,
-        totalRecipients: recipientUserIds.length,
-        readCount: 0,
-      );
-
-      _fallbackBroadcasts.insert(0, fallbackItem);
-
-      for (final uId in recipientUserIds) {
-        _fallbackRecipients.add({
-          'id': DateTime.now().millisecondsSinceEpoch + _fallbackRecipients.length,
-          'broadcast_id': broadcastId,
-          'user_id': uId,
-          'is_read': false,
-          'read_at': null,
-          'created_at': nowStr,
-        });
-
-        NotificationService.createNotification(
-          userId: uId,
-          title: (priority == 'urgent' ? '🚨 [PENTING] ' : '📢 ') + title,
-          message: content.length > 120 ? '${content.substring(0, 117)}...' : content,
-          type: 'broadcast',
-        );
-      }
-
-      return fallbackItem;
+      debugPrint('Error createBroadcast via Supabase: $e');
+      rethrow;
     }
   }
 
@@ -233,8 +187,8 @@ class BroadcastService {
         }
       }
 
-      // Jika kosong (mungkin broadcast ditargetkan untuk all_lksdm tanpa entri recipient individu),
-      // fallback ambil berdasarkan lksdm_scope
+      // Jika kosong (misal broadcast ditargetkan untuk all_lksdm tanpa entri recipient individu),
+      // ambil berdasarkan lksdm_scope
       if (result.isEmpty) {
         final broadRes = await _client
             .from('broadcasts')
@@ -247,13 +201,8 @@ class BroadcastService {
 
       return result;
     } catch (e) {
-      debugPrint('Error getBroadcastsForUser, fallback used: $e');
-      return _fallbackBroadcasts.where((b) {
-        final matchesScope = b.lksdmScope == lksdmScope || b.lksdmScope == 'ALL';
-        final isRecipient = _fallbackRecipients.any((r) =>
-            r['broadcast_id'] == b.id && r['user_id'] == userId);
-        return matchesScope || isRecipient;
-      }).toList();
+      debugPrint('Error getBroadcastsForUser: $e');
+      return [];
     }
   }
 
@@ -277,13 +226,8 @@ class BroadcastService {
         return BroadcastModel.fromJson(item, currentUserId: senderId);
       }).toList();
     } catch (e) {
-      debugPrint('Error getBroadcastsCreatedBy, fallback used: $e');
-      return _fallbackBroadcasts.where((b) {
-        if (lksdmScope != null && lksdmScope != 'ALL') {
-          return b.lksdmScope == lksdmScope;
-        }
-        return b.senderId == senderId;
-      }).toList();
+      debugPrint('Error getBroadcastsCreatedBy: $e');
+      return [];
     }
   }
 
@@ -300,12 +244,8 @@ class BroadcastService {
       final rawList = List<Map<String, dynamic>>.from(response);
       return rawList.map((r) => BroadcastRecipientModel.fromJson(r)).toList();
     } catch (e) {
-      debugPrint('Error getBroadcastRecipients fallback: $e');
-      final list = _fallbackRecipients
-          .where((r) => r['broadcast_id'] == broadcastId)
-          .map((r) => BroadcastRecipientModel.fromJson(r))
-          .toList();
-      return list;
+      debugPrint('Error getBroadcastRecipients: $e');
+      return [];
     }
   }
 
@@ -326,13 +266,7 @@ class BroadcastService {
       return true;
     } catch (e) {
       debugPrint('Error markAsRead: $e');
-      final idx = _fallbackRecipients.indexWhere((r) =>
-          r['broadcast_id'] == broadcastId && r['user_id'] == userId);
-      if (idx != -1) {
-        _fallbackRecipients[idx]['is_read'] = true;
-        _fallbackRecipients[idx]['read_at'] = DateTime.now().toIso8601String();
-      }
-      return true;
+      return false;
     }
   }
 
@@ -360,10 +294,8 @@ class BroadcastService {
       await _client.from('broadcasts').delete().eq('id', broadcastId);
       return true;
     } catch (e) {
-      debugPrint('Error deleteBroadcast fallback: $e');
-      _fallbackBroadcasts.removeWhere((b) => b.id == broadcastId);
-      _fallbackRecipients.removeWhere((r) => r['broadcast_id'] == broadcastId);
-      return true;
+      debugPrint('Error deleteBroadcast: $e');
+      return false;
     }
   }
 }

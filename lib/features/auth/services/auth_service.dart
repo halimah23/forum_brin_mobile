@@ -25,7 +25,7 @@ class AuthService {
         final session = authResponse.session;
 
         if (user != null) {
-          // Cari record di tabel users terlebih dahulu
+          // Cari record di tabel users
           try {
             final userRes = await _client
                 .from('users')
@@ -41,40 +41,20 @@ class AuthService {
               await SessionManager.saveUser(userModel);
               return userModel;
             }
-          } catch (_) {}
-
-          // Fallback ke tabel profiles
-          Map<String, dynamic> profileData = {};
-          try {
-            final profile = await _client
-                .from('profiles')
-                .select()
-                .eq('id', user.id)
-                .maybeSingle();
-
-            if (profile != null) {
-              profileData = Map<String, dynamic>.from(profile);
-            }
           } catch (e) {
-            debugPrint('Warning: Gagal mengambil data profiles: $e');
+            debugPrint('Warning: Gagal mengambil data users: $e');
           }
-
-          final rawRole = profileData['role']?.toString() ??
-              user.userMetadata?['role']?.toString() ??
-              'sivitas';
 
           final userModel = UserModel(
             id: user.id,
-            name: profileData['name']?.toString() ??
-                profileData['nama']?.toString() ??
-                user.userMetadata?['name']?.toString() ??
+            name: user.userMetadata?['name']?.toString() ??
                 user.email?.split('@').first ??
                 '-',
             email: user.email ?? cleanInput,
-            role: rawRole,
-            unit: profileData['unit']?.toString(),
-            tim: profileData['tim']?.toString(),
-            jabatan: profileData['jabatan']?.toString(),
+            role: user.userMetadata?['role']?.toString() ?? 'sivitas',
+            unit: user.userMetadata?['unit']?.toString(),
+            tim: user.userMetadata?['tim']?.toString(),
+            jabatan: user.userMetadata?['jabatan']?.toString(),
             token: session?.accessToken ?? 'supabase-token-${user.id}',
           );
 
@@ -128,48 +108,31 @@ class AuthService {
       final session = _client.auth.currentSession;
 
       if (user != null) {
-        try {
-          final userRecord = await _client
-              .from('users')
-              .select('*, teams:id_tim(*)')
-              .or('id_user.eq.${user.id},email.ilike.${user.email}')
-              .maybeSingle();
-
-          if (userRecord != null) {
-            final updated = UserModel.fromJson(
-              Map<String, dynamic>.from(userRecord),
-              token: session?.accessToken ?? 'supabase-token-${user.id}',
-            );
-            await SessionManager.saveUser(updated);
-            return updated;
-          }
-        } catch (_) {}
-
-        final profile = await _client
-            .from('profiles')
-            .select()
-            .eq('id', user.id)
+        final userRecord = await _client
+            .from('users')
+            .select('*, teams:id_tim(*)')
+            .or('id_user.eq.${user.id},email.ilike.${user.email}')
             .maybeSingle();
 
-        final profileData =
-            profile != null ? Map<String, dynamic>.from(profile) : <String, dynamic>{};
-
-        final rawRole = profileData['role']?.toString() ??
-            user.userMetadata?['role']?.toString() ??
-            'sivitas';
+        if (userRecord != null) {
+          final updated = UserModel.fromJson(
+            Map<String, dynamic>.from(userRecord),
+            token: session?.accessToken ?? 'supabase-token-${user.id}',
+          );
+          await SessionManager.saveUser(updated);
+          return updated;
+        }
 
         final userModel = UserModel(
           id: user.id,
-          name: profileData['name']?.toString() ??
-              profileData['nama']?.toString() ??
-              user.userMetadata?['name']?.toString() ??
+          name: user.userMetadata?['name']?.toString() ??
               user.email?.split('@').first ??
               '-',
           email: user.email ?? '',
-          role: rawRole,
-          unit: profileData['unit']?.toString(),
-          tim: profileData['tim']?.toString(),
-          jabatan: profileData['jabatan']?.toString(),
+          role: user.userMetadata?['role']?.toString() ?? 'sivitas',
+          unit: user.userMetadata?['unit']?.toString(),
+          tim: user.userMetadata?['tim']?.toString(),
+          jabatan: user.userMetadata?['jabatan']?.toString(),
           token: session?.accessToken ?? 'supabase-token-${user.id}',
         );
 
@@ -177,13 +140,12 @@ class AuthService {
         return userModel;
       }
     } catch (e) {
-      debugPrint('Warning fetch profile from Supabase Auth: $e');
+      debugPrint('Warning fetch user from Supabase Auth: $e');
     }
 
-    // Periksa sesi lokal dan sinkronkan dengan profil terbaru dari Supabase
+    // Periksa sesi lokal dan sinkronkan dengan profil terbaru dari tabel `public.users`
     final localUser = await SessionManager.getUser();
     if (localUser != null && localUser.id != null) {
-      // Prioritaskan tabel users
       try {
         final userRecord = await _client
             .from('users')
@@ -201,24 +163,6 @@ class AuthService {
         }
       } catch (e) {
         debugPrint('Notice refresh from users table: $e');
-      }
-
-      // Fallback ke tabel profiles jika tabel users belum tersedia
-      try {
-        final profile = await _client
-            .from('profiles')
-            .select()
-            .eq('id', localUser.id!)
-            .maybeSingle();
-
-        if (profile != null) {
-          final profileData = Map<String, dynamic>.from(profile);
-          final updated = UserModel.fromJson(profileData, token: localUser.token);
-          await SessionManager.saveUser(updated);
-          return updated;
-        }
-      } catch (e) {
-        debugPrint('Warning refresh profile from Supabase profiles: $e');
       }
     }
 

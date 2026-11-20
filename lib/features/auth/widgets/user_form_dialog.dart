@@ -197,7 +197,7 @@ class _UserFormDialogState extends State<UserFormDialog> {
                         Text(
                           isEditMode
                               ? 'Perbarui metadata & hak akses pengguna'
-                              : 'Akun akan terdaftar langsung di Supabase profiles',
+                              : 'Akun akan terdaftar langsung di Supabase users',
                           style: const TextStyle(fontSize: 11.5, color: AppColors.slate500),
                         ),
                       ],

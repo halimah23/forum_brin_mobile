@@ -524,7 +524,7 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        const Text('7 Wilayah Kawasan SDM (LKSDM):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text('${LksdmCatalogData.allLksdm.length} Wilayah Kawasan SDM (LKSDM):', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         const SizedBox(height: 8),
                         ...LksdmCatalogData.allLksdm.map(
                           (l) => Container(
@@ -561,6 +561,24 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
   }
 
   void _showMonitoringDialog(BuildContext context) {
+    final total = questions.length;
+    final activeCount = questions.where((q) => q.isActive).length;
+    final escalatedCount = questions.where((q) => q.isEscalated).length;
+    final breachedSlaCount = questions.where((q) => q.isSlaBreached).length;
+    final slaComplianceRate =
+        total == 0 ? 100.0 : ((total - breachedSlaCount) / total * 100.0);
+    final over24hUnanswered = questions.where((q) {
+      if (q.isClosed || q.createdDateTime == null) return false;
+      final hasAnswers = q.answers != null && q.answers!.isNotEmpty;
+      return !hasAnswers &&
+          DateTime.now().difference(q.createdDateTime!).inHours >= 24;
+    }).length;
+
+    final Color slaColor = slaComplianceRate >= 90
+        ? Colors.green
+        : (slaComplianceRate >= 75 ? Colors.orange : Colors.red);
+    final Color queueColor = over24hUnanswered == 0 ? Colors.green : Colors.orange;
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -576,17 +594,33 @@ class _SuperAdminDashboardScreenState extends State<SuperAdminDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Status Infrastruktur & Layanan:',
+              'Status Layanan & Kepatuhan SLA (Real-Time):',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
             const SizedBox(height: 8),
-            _statusRow('Supabase API Gateway', 'ONLINE', Colors.green),
-            _statusRow('Sinkronisasi Tiket Real-Time', 'NORMAL', Colors.green),
-            _statusRow('Antrean LKSDM ke Pusat', 'STABIL', Colors.green),
-            _statusRow('Tingkat Kepatuhan SLA', '98.4%', Colors.blue),
+            _statusRow(
+              'Koneksi Data Supabase',
+              isLoading ? 'MEMUAT...' : 'TERHUBUNG ($total tiket)',
+              isLoading ? Colors.orange : Colors.green,
+            ),
+            _statusRow(
+              'Antrean Tiket Aktif',
+              '$activeCount Aktif ($escalatedCount Eskalasi)',
+              escalatedCount > 0 ? Colors.blue : Colors.green,
+            ),
+            _statusRow(
+              'Belum Direspon > 24 Jam',
+              '$over24hUnanswered Tiket',
+              queueColor,
+            ),
+            _statusRow(
+              'Kepatuhan SLA (48 Jam)',
+              '${slaComplianceRate.toStringAsFixed(1)}%',
+              slaColor,
+            ),
             const Divider(height: 20),
             const Text(
-              'Superadmin memantau aliran eskalasi antar tim secara transparan tanpa batasan role unit.',
+              'Metrik dihitung langsung dari data tiket aktif di Supabase tanpa angka statis.',
               style: TextStyle(fontSize: 12, color: AppColors.slate600),
             ),
           ],
